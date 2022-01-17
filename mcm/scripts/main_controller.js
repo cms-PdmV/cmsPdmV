@@ -963,9 +963,10 @@ testApp.directive("sequenceDisplay", function ($http) {
       '    </a>' +
       '    <img ng-show="!driver" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>' +
       '    <ul ng-if="database == \'campaigns\'">' +
-      '      <li ng-repeat="sequence in driver">' +
-      '        <ul ng-repeat="(key,value) in sequence">' +
-      '          <li><b>{{key}}</b>: <div style="width:600px;overflow:auto"><pre>{{value}}</pre></div></li>' +
+      '      <li ng-repeat="(sequenceName,sequences) in driver">' +
+      '        <b>{{sequenceName}}</b>' +
+      '        <ul>' +
+      '          <li ng-repeat="sequence in sequences"><div style="width:600px;overflow:auto"><pre>{{sequence}}</pre></div></li>' +
       '        </ul>' +
       '      </li>' +
       '    </ul>' +

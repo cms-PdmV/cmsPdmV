@@ -6,6 +6,7 @@ from tools.communicator import Communicator
 from tools.locker import locker
 from copy import deepcopy
 from json_layer.user import Role, User
+from tools.utils import make_regex_matcher
 
 
 class json_base:
@@ -13,6 +14,15 @@ class json_base:
     __schema = {}
     __database = None
     logger = logging.getLogger("mcm_error")
+
+    # String pattern checkers
+    __campaign_prepid_pattern = '[a-zA-Z0-9]{3,60}'
+    campaign_prepid_regex = make_regex_matcher(__campaign_prepid_pattern)
+    __cmssw_pattern = 'CMSSW_[0-9]{1,3}_[0-9]{1,3}_[0-9]{1,3}.{0,20}'
+    cmssw_regex = make_regex_matcher(__cmssw_pattern)
+    __dataset_pattern = '^/[a-zA-Z0-9\\-_]{1,99}/[a-zA-Z0-9\\.\\-_]{1,199}/[A-Z\\-]{1,50}$'
+    dataset_regex = make_regex_matcher(__dataset_pattern)
+
 
     def __init__(self, data=None, validate=False):
         if not data:
@@ -181,7 +191,7 @@ class json_base:
         self.set_attribute('history', history)
 
     def set_attribute(self, attribute, value):
-        if attribute not in self.schema():
+        if attribute not in self.schema() and attribute != '_rev':
             raise Exception('Cannot set "%s" because it does not exist in schema' % (attribute))
 
         self.__json[attribute] = value
@@ -198,15 +208,6 @@ class json_base:
 
     def get(self, attribute):
         return self.get_attribute(attribute)
-
-    # TODO: Move history updates to appropriate places
-    """
-    def approve(self, step=-1, to_approval=None):
-        self.update_history({'action': 'approve', 'step': self.__json['approval']})
-
-    def set_status(self, step=-1, to_status=None):
-        self.update_history({'action': 'set status', 'step': self.__json['status']})
-    """
 
     def json(self):
         return self.__json

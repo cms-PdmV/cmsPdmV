@@ -1,3 +1,4 @@
+from hashlib import new
 import flask
 import time
 import traceback
@@ -15,44 +16,31 @@ from json_layer.user import Role
 class CreateCampaign(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def put(self):
+    @RESTResource.request_with_json
+    def put(self, data):
         """
         Create a campaign with the provided json content
         """
-        data = json.loads(flask.request.data)
-        campaign_db = Database('campaigns')
         campaign = Campaign(data)
         prepid = campaign.get_attribute('prepid')
-        if not prepid:
-            self.logger.error('Invalid prepid "%s"', prepid)
-            return {'results': False,
-                    'message': 'Invalid prepid "%s"' % (prepid)}
-
-        if not self.fullmatch(Campaign._prepid_pattern, prepid):
-            self.logger.error('Invalid campaign name %s', prepid)
-            return {'results': False,
-                    'message': 'Invalid campaign name "%s"' % (prepid)}
-
-        if campaign_db.document_exists(prepid):
+        if Campaign.fetch(prepid):
             self.logger.error('Campaign "%s" already exists', prepid)
             return {'results': False,
                     'message': 'Campaign "%s" already exists' % (prepid)}
 
+        # Validate
+        campaign.validate()
         # Ensure schema of sequences
-        sequences = campaign.get_attribute('sequences')
-        for sequence in sequences:
-            for label in sequence:
-                sequence[label] = Sequence(sequence[label]).json()
-
+        sequences = campaign.get('sequences')
+        sequences = {name: [Sequence(s).json() for s in seqs] for name, seqs in sequences.items()}
         campaign.set_attribute('sequences', sequences)
-
         campaign.set_attribute('_id', prepid)
         campaign.update_history({'action': 'created'})
+
         # Save to DB
-        if not campaign_db.save(campaign.json()):
-            self.logger.error('Could not save campaign %s to database', prepid)
+        if not campaign.save():
             return {'results': False,
-                    'message': 'Could not save campaign %s to database' % (prepid)}
+                    'message': 'Could not save %s to the database' % (prepid)}
 
         root = campaign.get_attribute('root')
         # If campaign is maybe root or root, create dedicated chained campaign
@@ -69,53 +57,49 @@ class CreateCampaign(RESTResource):
 class UpdateCampaign(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def post(self):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
         Update a campaign with the provided json content
         """
-        data = json.loads(flask.request.data)
-        if '_rev' not in data:
-            return {'results': False,
-                    'message': 'No revision provided'}
-
-        campaign_db = Database('campaigns')
-        campaign = Campaign(data)
-        prepid = campaign.get_attribute('prepid')
+        prepid = data.get('prepid', data.get('_id'))
         if not prepid:
-            self.logger.error('Invalid prepid "%s"', prepid)
             return {'results': False,
-                    'message': 'Invalid prepid "%s"' % (prepid)}
+                    'message': 'Missing prepid in submitted data'}
 
-        if not campaign_db.document_exists(prepid):
-            self.logger.error('Cannot update, %s does not exist', prepid)
+        old_campaign = Campaign.fetch(prepid)
+        if not old_campaign:
+            return {"results": False,
+                    'message': 'Object "%s" does not exist' % (prepid)}
+
+        new_campaign = Campaign(data)
+        if new_campaign.get('_rev') != old_campaign.get('_rev'):
             return {'results': False,
-                    'message': 'Cannot update, "%s" does not exist' % (prepid)}
+                    'message': 'Provided revision does not match revision in database'}
 
+        # Validate
+        new_campaign.validate()
         # Ensure schema of sequences
-        sequences = campaign.get_attribute('sequences')
-        for sequence in sequences:
-            for label in sequence:
-                sequence[label] = Sequence(sequence[label]).json()
-
-        campaign.set_attribute('sequences', sequences)
-
-        previous_version = Campaign(campaign_db.get(prepid))
-        difference = self.get_obj_diff(previous_version.json(),
-                                       campaign.json(),
+        sequences = new_campaign.get('sequences')
+        sequences = {name: [Sequence(s).json() for s in seqs] for name, seqs in sequences.items()}
+        new_campaign.set_attribute('sequences', sequences)
+        # Difference
+        difference = self.get_obj_diff(old_campaign.json(),
+                                       new_campaign.json(),
                                        ('history', '_rev'))
         if not difference:
             return {'results': True}
 
         difference = ', '.join(difference)
-        campaign.update_history({'action': 'update', 'step': difference})
+        new_campaign.set('history', old_campaign.get('history'))
+        new_campaign.update_history({'action': 'update', 'step': difference})
 
         # Save to DB
-        if not campaign_db.update(campaign.json()):
-            self.logger.error('Could not save campaign %s to database', prepid)
+        if not new_campaign.save():
             return {'results': False,
-                    'message': 'Could not save campaign %s to database' % (prepid)}
+                    'message': 'Could not save %s to the database' % (prepid)}
 
-        root = campaign.get_attribute('root')
+        root = new_campaign.get_attribute('root')
         # If campaign is maybe root (-1) or root (0), create dedicated chained campaign
         if root in (-1, 0):
             chained_campaign_db = Database('chained_campaigns')
@@ -213,17 +197,15 @@ class GetCampaign(RESTResource):
 class ToggleCampaignStatus(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
-    def get(self, campaign_id):
+    def post(self, campaign_id):
         """
         Toggle campaign status
         """
-        campaign_db = Database('campaigns')
-        if not campaign_db.document_exists(campaign_id):
-            self.logger.error('Campaign %s does not exist', campaign_id)
+        campaign = Campaign.fetch(campaign_id)
+        if not campaign:
             return {'results': False,
                     'message': 'Campaign "%s" does not exist' % (campaign_id)}
 
-        campaign = Campaign(campaign_db.get(campaign_id))
         try:
             campaign.toggle_status()
         except Exception as ex:
@@ -231,7 +213,6 @@ class ToggleCampaignStatus(RESTResource):
                     'message': str(ex)}
 
         if not campaign.save():
-            self.logger.error('Could not save campaign "%s" to database', campaign_id)
             return {'results': False,
                     'message': 'Could not save campaign "%s" to database' % (campaign_id)}
 

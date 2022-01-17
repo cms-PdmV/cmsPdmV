@@ -3,6 +3,7 @@ Common utils
 """
 import json
 import time
+import re
 import xml.etree.ElementTree as XMLet
 from tools.locker import locker
 from tools.connection_wrapper import ConnectionWrapper
@@ -107,3 +108,18 @@ def expand_range(start, end):
         raise Exception('Invalid range ...-%05d > ...-%05d' % (range_start, range_end))
 
     return ['%s-%05d' % (start, n) for n in numbers]
+
+
+def make_regex_matcher(pattern):
+    """
+    Compile a regex pattern and return a function that performs fullmatch on
+    given value
+    """
+    compiled_pattern = re.compile(pattern)
+    def matcher_function(self, value):
+        """
+        Return whether given value fully matches the pattern
+        """
+        return compiled_pattern.fullmatch(value) is not None
+
+    return matcher_function

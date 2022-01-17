@@ -9,30 +9,60 @@ class Campaign(json_base):
     _json_base__schema = {
         '_id': '',
         'prepid': '',
-        'energy': -1.0,
-        'type': '',
-        'next': [],
         'cmssw_release': '',
-        'input_dataset': '',
-        'notes': '',
-        'status': 'stopped',
-        'pileup_dataset_name': '',
+        'energy': -1.0,
+        'events_per_lumi': {'singlecore': 100, 'multicore': 1000},
         'generators': [],
-        'www': '',
-        'events_per_lumi': {'singlecore': 100, 'multicore': 1000},  # default events per lumi for single core.
-        # TODO: migrate existing campaigns to have the default value
-        'root': 1,  # -1: possible root, 0: root, 1: non-root
-        'sequences': [],  # list of jsons of jsons
         'history': [],
+        'input_dataset': '',
         'memory': 2000,
-        'no_output': False}
-
-    _prepid_pattern = '[a-zA-Z0-9]{3,60}'
+        'next': [],
+        'keep_output': {},  # dict of lists that correspond to sequences
+        'notes': '',
+        'pileup_dataset_name': '',
+        'root': 1,  # -1: possible root, 0: root, 1: non-root
+        'sequences': {},  # dict of lists of sequences
+        'status': 'stopped',
+        'type': '',  # 'LHE', 'Prod', 'MCReproc'
+        'www': '',
+    }
 
     def validate(self):
-        prepid = self.get_attribute('prepid')
-        if not self.fullmatch(self._prepid_pattern, prepid):
-            raise Exception('Invalid prepid, allowed pattern: %s' % (self._prepid_pattern))
+        prepid = self.get('prepid')
+        if not self.campaign_prepid_regex(prepid):
+            raise Exception('Invalid campaign prepid')
+
+        cmssw_release = self.get('cmssw_release')
+        if cmssw_release and not self.cmssw_regex(cmssw_release):
+            raise Exception('Invalid CMSSW release')
+
+        input_dataset = self.get('input_dataset')
+        if input_dataset and not self.dataset_regex(input_dataset):
+            raise Exception('Invalid input dataset')
+
+        pileup_dataset_name = self.get('pileup_dataset_name')
+        if pileup_dataset_name and not self.dataset_regex(pileup_dataset_name):
+            raise Exception('Invalid pileup dataset name')
+
+        status = self.get('status')
+        if status not in ('started', 'stopped'):
+            raise Exception('Invalid status')
+
+        campaign_type = self.get('type')
+        if campaign_type and campaign_type not in ('LHE', 'Prod', 'MCReproc'):
+            raise Exception('Invalid campaign type')
+
+        keep_output = self.get('keep_output')
+        sequences = self.get('sequences')
+        if sorted(list(keep_output.keys())) != sorted(list(sequences.keys())):
+            raise Exception('Different dictionaries for keep output and sequences')
+
+        for name, group in sequences.items():
+            if name not in keep_output:
+                raise Exception('Missing keep output for %s' % (name))
+
+            if len(group) != len(keep_output[name]):
+                raise Exception('Different lengths of sequences and keep output for %s' % (name))
 
         return super().validate()
 
@@ -41,12 +71,12 @@ class Campaign(json_base):
         Return a list of dictionaries of cmsDrivers
         """
         prepid = self.get_attribute('prepid')
-        drivers = []
-        sequences = self.get_attribute('sequences')
-        sequence_count = len(sequences)
-        for index, step in enumerate(sequences):
-            step_drivers = {}
-            for key, sequence_dict  in step.items():
+        drivers = {}
+        all_sequences = self.get_attribute('sequences')
+        for sequence_name, sequences in all_sequences.items():
+            drivers[sequence_name] = []
+            sequence_count = len(sequences)
+            for index, sequence_dict  in enumerate(sequences):
                 sequence = Sequence(sequence_dict)
                 sequence_args = {}
                 # --fileout is campaign name and index for non-last sequence
@@ -76,9 +106,8 @@ class Campaign(json_base):
                         sequence_args['pileup_input'] = 'dbs:%s' % (pileup_dataset_name)
 
                 driver = sequence.get_cmsdriver('NameOfFragment', sequence_args)
-                step_drivers[key] = driver
+                drivers[sequence_name].append(driver)
 
-            drivers.append(step_drivers)
         return drivers
 
     def toggle_status(self):
