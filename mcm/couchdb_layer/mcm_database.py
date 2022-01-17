@@ -84,7 +84,7 @@ class database:
             headers = {'Content-Type': 'application/json'}
 
         if data is not None and isinstance(data, dict):
-            data = json.dumps(data)
+            data = json.dumps(data, sort_keys=True)
 
         if data:
             data = data.encode('utf-8')
@@ -199,6 +199,40 @@ class database:
         results = json.loads(data.read())['results']
         results = [r['docs'][-1]['ok'] for r in results if r.get('docs') if r['docs'][-1].get('ok')]
         return results
+
+    def bulk_save(self, docs):
+        """
+        Save multiple documents at once
+        Returns list of True and False values indicating success
+        Order is preserved
+        """
+        request = self.couch_request('%s/_bulk_docs' % (self.db_name),
+                                     method='POST',
+                                     data={'docs': docs})
+        data = self.opener.open(request)
+        results = json.loads(data.read())
+        results = [r['ok'] for r in results]
+        return results
+
+    def bulk_yield(self, size=5000):
+        # ask for one more document than you need - /bob/_all_docs?limit=101
+        # apply changes and write them back in bulk (ignoring the 101st document)
+        # use the 101st document’s _id as the startkey_docid for the next block - /bob/_all_docs?limit=101&startkey_docid=8f31b4f..
+        results = [{}]
+        startkey = None
+        while results:
+            url = '%s/_all_docs?limit=%s&include_docs=True' % (self.db_name, size + 1)
+            if startkey:
+                url += '&startkey_docid=%s' % (startkey)
+
+            request = self.couch_request(url)
+            data = self.opener.open(request)
+            results = json.loads(data.read())['rows']
+            yield [r['doc'] for r in results[:size] if not r['id'].startswith('_design')]
+            if len(results) > size:
+                startkey = results[size]['id']
+            else:
+                return
 
     def document_exists(self, prepid, include_deleted=False):
         """
