@@ -5,7 +5,6 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
         { text: 'Actions', select: true, db_name: '' },
-        { text: 'Alias', select: true, db_name: 'alias' },
         { text: 'Campaigns', select: true, db_name: 'campaigns' }
       ];
       $scope.dbName = "chained_campaigns";

@@ -1,5 +1,3 @@
-import flask
-import json
 from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database as Database
 from json_layer.chained_campaign import ChainedCampaign
@@ -9,11 +7,11 @@ from json_layer.user import Role
 class CreateChainedCampaign(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def put(self):
+    @RESTResource.request_with_json
+    def put(self, data):
         """
         Create chained campaign with the provided json content
         """
-        data = json.loads(flask.request.data)
         chained_campaign_db = Database('chained_campaigns')
         chained_campaign = ChainedCampaign(data)
         campaigns = chained_campaign.get_attribute('campaigns')
@@ -37,7 +35,7 @@ class CreateChainedCampaign(RESTResource):
         chained_campaign.set_attribute('prepid', prepid)
         chained_campaign.set_attribute("_id", prepid)
         # update history
-        chained_campaign.update_history({'action' :'created'})
+        chained_campaign.update_history('created')
         if not chained_campaign_db.save(chained_campaign.json()):
             self.logger.error('Could not save chained campaign "%s" to database', prepid)
             return {'results': False,
@@ -50,17 +48,17 @@ class CreateChainedCampaign(RESTResource):
 class UpdateChainedCampaign(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def put(self):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
         Update a chained campaign with the provided json content
         """
-        data = json.loads(flask.request.data)
         if '_rev' not in data:
             return {'results': False,
                     'message': 'No revision provided'}
 
         chained_campaign_db = Database('chained_campaigns')
-        chained_campaign = ChainedCampaign(json_input=data)
+        chained_campaign = ChainedCampaign(data)
         prepid = chained_campaign.get_attribute('prepid')
         if not prepid:
             self.logger.error('Invalid prepid "%s"', prepid)
@@ -72,7 +70,7 @@ class UpdateChainedCampaign(RESTResource):
             return {'results': False,
                     'message': 'Cannot update, "%s" does not exist' % (prepid)}
 
-        previous_version = ChainedCampaign(json_input=chained_campaign_db.get(prepid))
+        previous_version = ChainedCampaign.fetch(prepid)
         difference = self.get_obj_diff(previous_version.json(),
                                        chained_campaign.json(),
                                        ('history', '_rev'))
@@ -80,7 +78,7 @@ class UpdateChainedCampaign(RESTResource):
             return {'results': True}
 
         difference = ', '.join(difference)
-        chained_campaign.update_history({'action': 'update', 'step': difference})
+        chained_campaign.update_history('update', difference)
 
         # Save to DB
         if not chained_campaign_db.update(chained_campaign.json()):

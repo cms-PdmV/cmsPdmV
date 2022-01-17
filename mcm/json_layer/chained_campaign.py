@@ -1,4 +1,3 @@
-# from chained_request import chained_request as ChainedRequest
 from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database as Database
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
@@ -9,13 +8,12 @@ class ChainedCampaign(json_base):
     _json_base__schema = {
         '_id': '',
         'prepid': '',
-        'alias': '',
-        'campaigns': [],  # list of lists [camp_id, flow]
+        'campaigns': [],  # list of lists [[campaign, flow]]
+        'check_cmssw_version': True,
         'enabled': True,
+        'history': [],
         'notes': '',
         'threshold': 0,
-        'history': [],
-        'do_not_check_cmssw_versions': False
     }
 
     def generate_request(self, root_request):
@@ -37,6 +35,7 @@ class ChainedCampaign(json_base):
             raise ValueError('Prepid returned was None')
 
         chained_request_db = Database('chained_requests')
+        from json_layer.chained_request import ChainedRequest
         chained_request = ChainedRequest(chained_request_db.get(chained_request_id))
 
         # set values
@@ -60,7 +59,7 @@ class ChainedCampaign(json_base):
         chained_request.set_attribute('chain', [root_request_id])
 
         # update history
-        chained_request.update_history({'action': 'created'})
+        chained_request.update_history('created')
         return chained_request
 
     def __getitem__(self, index):
@@ -92,3 +91,13 @@ class ChainedCampaign(json_base):
         Return campaign at given index
         """
         return self[index][0]
+
+    @classmethod
+    def get_database(cls):
+        """
+        Return shared database instance
+        """
+        if not hasattr(cls, 'database'):
+            cls.database = Database('chained_campaigns')
+
+        return cls.database

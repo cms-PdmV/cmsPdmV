@@ -156,7 +156,7 @@ class CreateFlow(FlowRESTResource):
             return parameter_check
 
         flow.set_attribute('_id', prepid)
-        flow.update_history({'action': 'created'})
+        flow.update_history('created')
         # Save to DB
         if not flow.save():
             return {'results': False,
@@ -265,7 +265,7 @@ class UpdateFlow(FlowRESTResource):
 
         difference = ', '.join(difference)
         new_flow.set('history', old_flow.get('history'))
-        new_flow.update_history({'action': 'update', 'step': difference})
+        new_flow.update_history('update', difference)
 
         # Save to DB
         if not new_flow.save():
@@ -387,7 +387,7 @@ class CloneFlow(RESTResource):
 
         new_flow = Flow(new_json)
         new_flow.validate()
-        new_flow.update_history({'action': 'clone', 'step': flow_id})
+        new_flow.update_history('clone', flow_id)
         if not new_flow.save():
             return {'results': False,
                     'message': 'Error saving new flow'}

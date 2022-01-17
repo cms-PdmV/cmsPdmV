@@ -29,6 +29,8 @@ class RESTResource(Resource):
                         status_code = result.status_code
                     except Exception as ex:
                         status_code = 500
+                        import traceback
+                        self.logger.error(traceback.format_exc())
                         return {'results': False,
                                 'message': str(ex)}
                     finally:

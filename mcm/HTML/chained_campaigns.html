@@ -58,12 +58,6 @@
                   <i class="icon-indent-left"></i>
                 </a>
               </div>
-              <div ng-switch-when="valid" align="center">
-                <a ng-href='chained_campaigns?valid={{data.valid}}&page=0' rel="tooltip" title="Show chained campaign in valid {{data.valid}}" target="_self">
-                  <i class="icon-ok" ng-show="data.valid"></i>
-                  <i class="icon-remove" ng-show="!data.valid"></i>
-                </a>
-              </div>
               <div ng-switch-when="notes">
                 <div style="width:400px">
                   <pre class="notes">{{data[column.db_name]}}</pre>
@@ -96,19 +90,16 @@
                   </li>
                 </ul>
               </div>
-              <div ng-switch-when="do_not_check_cmssw_versions" align="center" title="Do not check whether CMSSW versions in chained requests are the same or increasing">
-                <i class="icon-ok" ng-show="data.do_not_check_cmssw_versions"></i>
-                <i class="icon-remove" ng-show="!data.do_not_check_cmssw_versions"></i>
+              <div ng-switch-when="check_cmssw_version" align="center" title="Check whether CMSSW versions in chained requests are the same or increasing">
+                <i class="icon-ok" ng-show="data.check_cmssw_version"></i>
+                <i class="icon-remove" ng-show="!data.check_cmssw_version"></i>
+              </div>
+              <div ng-switch-when="enabled" align="center">
+                <i class="icon-ok" ng-show="data.enabled"></i>
+                <i class="icon-remove" ng-show="!data.enabled"></i>
               </div>
               <div ng-switch-when="history">
                 <div custom-history ng-model="data[column.db_name]"></div>
-              </div>
-              <div ng-switch-when="action_parameters">
-                <ul style="margin-bottom: 0px;">
-                  <li ng-repeat="(key, value) in data[column.db_name]">
-                    {{key}}: {{value}}
-                  </li>
-                </ul>
               </div>
 
               <div ng-switch-default>
