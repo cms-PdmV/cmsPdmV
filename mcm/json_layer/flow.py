@@ -24,6 +24,13 @@ class Flow(json_base):
         allowed_campaigns = sorted(list(set(self.get('allowed_campaigns'))))
         self.set('allowed_campaigns', allowed_campaigns)
 
+        request_parameters = self.get('request_parameters')
+        allowed_parameters = {'time_event', 'size_event', 'process_string', 'keep_output',
+                              'pileup_dataset_name', 'sequences', 'sequences_name'}
+        invalid_parameters = set(list(request_parameters.keys())) - allowed_parameters
+        if invalid_parameters:
+            raise Exception('Not allowed parameters: %s' % (', '.join(list(invalid_parameters))))
+
         return super().validate()
 
     def toggle_approval(self):

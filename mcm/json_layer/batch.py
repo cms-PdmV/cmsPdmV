@@ -5,7 +5,7 @@ from json_layer.json_base import json_base
 from tools.locator import locator
 import tools.settings as settings
 
-class batch(json_base):
+class Batch(json_base):
 
     _json_base__schema = {
         '_id': '',

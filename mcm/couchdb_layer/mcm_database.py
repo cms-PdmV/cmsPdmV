@@ -192,6 +192,9 @@ class database:
         Non existing documents are changed with None
         Order is preserved
         """
+        if not ids:
+            return []
+
         request = self.couch_request('%s/_bulk_get' % (self.db_name),
                                      method='POST',
                                      data={'docs': [{'id': x} for x in ids]})

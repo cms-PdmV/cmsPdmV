@@ -1,3 +1,4 @@
+from asyncio.log import logger
 import os
 import re
 import hashlib
@@ -11,10 +12,11 @@ from math import sqrt
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database as Database
+from json_layer.invalidation import Invalidation
 from json_layer.json_base import json_base
 from json_layer.campaign import Campaign
 from json_layer.flow import Flow
-from json_layer.batch import batch as Batch
+from json_layer.batch import Batch
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import Sequence
 from tools.ssh_executor import SSHExecutor
@@ -80,11 +82,15 @@ class Request(json_base):
         'version': 0,
     }
 
-    _cmssw_pattern = 'CMSSW_[0-9]{1,3}_[0-9]{1,3}_[0-9]{1,3}.{0,20}'
-    _dataset_name_pattern = '^[A-Za-z][A-Za-z0-9\-_]{5,99}$'
-    _processing_string_pattern = '[a-zA-Z0-9_]{3,100}'
-    # Approval ['none', 'validation', 'define', 'approve', 'submit']
-    # Status ['new', 'validation', 'defined', 'approved', 'submitted', 'done']
+    # approval-status order
+    order = ['none-new',
+             'validation-new',
+             'validation-validation',
+             'define-defined',
+             'approve-approved',
+             'submit-approved',
+             'submit-submitted',
+             'submit-done']
 
     @classmethod
     def get_database(cls):
@@ -116,7 +122,7 @@ class Request(json_base):
 
         # Dataset name
         dataset_name = self.get_attribute('dataset_name')
-        if dataset_name and not self.fullmatch(self._dataset_name_pattern, dataset_name):
+        if dataset_name and not self.primary_dataset_regex(dataset_name):
             raise Exception('Dataset name "%s" does not match required format' % (dataset_name))
 
         # Events per lumi
@@ -126,12 +132,12 @@ class Request(json_base):
 
         # CMSSW release
         cmssw_release = self.get_attribute('cmssw_release')
-        if not self.fullmatch(self._cmssw_pattern, cmssw_release):
+        if not self.cmssw_regex(cmssw_release):
             raise Exception('Invalid CMSSW release name "%s"' % (cmssw_release))
 
         # Processing string check
         processing_string = self.get_attribute('process_string')
-        if processing_string and not self.fullmatch(self._processing_string_pattern, processing_string):
+        if processing_string and not self.processing_string_regex(processing_string):
             raise Exception('Invalid processing string "%s"' % (processing_string))
 
         sequences = self.get_attribute('sequences')
@@ -277,7 +283,7 @@ class Request(json_base):
         if not chained_requests:
             return
 
-        from json_layer.chained_request import chained_request as ChainedRequest
+        from json_layer.chained_request import ChainedRequest
         for chained_request_json in chained_requests:
             chained_request = ChainedRequest(chained_request_json)
             if chained_request.set_last_status(status):
@@ -678,17 +684,10 @@ class Request(json_base):
         request_db = Database('requests')
         requests = request_db.bulk_get(list(prepids))
         approval_status = self.get_approval_status()
-        order = ['none-new',
-                 'validation-new',
-                 'validation-validation',
-                 'define-defined',
-                 'approve-approved',
-                 'submit-approved',
-                 'submit-submitted',
-                 'submit-done']
+
         for request in requests:
             request_approval_status = '%s-%s' % (request['approval'], request['status'])
-            if order.index(request_approval_status) < order.index(approval_status):
+            if self.order.index(request_approval_status) < self.order.index(approval_status):
                 raise Exception('%s status is %s which is lower than %s' % (request['prepid'],
                                                                             request_approval_status,
                                                                             approval_status))
@@ -945,76 +944,68 @@ class Request(json_base):
         Make sure there is correct number of time and size per event values
         """
         prepid = self.get_attribute('prepid')
-        campaign_db = Database('campaigns')
-        campaign_name = self.get_attribute('member_of_campaign')
-        campaign = campaign_db.get(campaign_name)
-        if not campaign:
-            raise Exception('"%s" could not find "%s" to reset options' % (prepid, campaign_name))
-
         if not self.get_attribute('status') == 'new':
             raise Exception('Cannot reset options for a non "new" request "%s"' % (prepid))
+
+        campaign_name = self.get_attribute('member_of_campaign')
+        campaign = Campaign.fetch(campaign_name)
+        if not campaign:
+            raise Exception('"%s" could not find "%s" to reset options' % (prepid, campaign_name))
 
         self.logger.info('Resetting options for "%s" from "%s"', prepid, campaign_name)
         # Copy values from campaign
         to_copy = ('energy', 'cmssw_release', 'pileup_dataset_name',
-                   'type', 'input_dataset', 'memory')
+                   'type', 'input_dataset', 'memory', 'keep_output')
         for attribute in to_copy:
-            self.set_attribute(attribute, campaign[attribute])
+            self.set_attribute(attribute, campaign.get(attribute))
 
+        # Get flow's request parameters
         request_parameters = {}
         flow_name = self.get_attribute('flown_with')
         if flow_name:
-            flow_db = Database('flows')
-            flow = flow_db.get(flow_name)
+            flow = Flow.fetch(flow_name)
             if not flow:
                 raise Exception('"%s" could not find "%s" to reset options' % (prepid, flow_name))
 
-            request_parameters = flow.get('request_parameters', {})
+            request_parameters = flow.get('request_parameters')
 
         sequences = []
-        campaign_sequences = campaign['sequences']
-        flow_sequences = request_parameters.get('sequences', [])
+        sequences_name = request_parameters.get('sequences_name', 'default')
+        campaign_sequences = campaign.get('sequences')[sequences_name]
+        flow_sequences = request_parameters.get('sequences', {}).get(sequences_name, [])
         # Add empty sequences to flow
-        flow_sequences += (len(campaign_sequences) - len(flow_sequences)) * [{'default': {}}]
+        flow_sequences += (len(campaign_sequences) - len(flow_sequences)) * [{}]
         assert len(campaign_sequences) == len(flow_sequences)
-        # Get sequence names from flow, usually "default"
-        sequence_names = [list(seq.keys())[0] for seq in flow_sequences]
-        # Pick sequences from the flow
-        flow_sequences = [seq[name] for seq, name in zip(flow_sequences, sequence_names)]
-        # Pick sequences from the campaign based on names in flow
-        campaign_sequences = [seq[name] for seq, name in zip(campaign_sequences, sequence_names)]
+        # Iterate through campaign and flow sequences
+        # Apply flow changes over campaign's sequence and add to list
         for flow_seq, campaign_seq in zip(flow_sequences, campaign_sequences):
             # Allow all attributes?
             campaign_seq.update(flow_seq)
             sequences.append(campaign_seq)
 
         self.set_attribute('sequences', sequences)
+        # Set values from request parameters
+        for key, value in request_parameters.items():
+            if key in ('sequences', 'sequences_name', 'keep_output'):
+                continue
+
+            self.set(key, value)
+
         # Keep output
-        if self.get_attribute('sequences'):
-            keep_output = len(self.get_attribute('sequences')) * [False]
-            keep_output[-1] = not campaign.get('no_output')
-        else:
-            keep_output = []
+        keep_output = campaign.get('keep_output')[sequences_name]
+        self.set('keep_output', keep_output)
+
+        # Assert Keep output
+        assert len(sequences) == len(self.get('keep_output'))
 
         # Number of time per event values
-        time_per_event = self.get_attribute('time_event')
-        if len(time_per_event) > len(sequences):
-            self.set_attribute('time_event', time_per_event[:len(sequences)])
-        elif len(time_per_event) < len(sequences):
-            time_per_event += [-1.0] * len(sequences) - len(time_per_event)
-            self.set_attribute('time_event', time_per_event)
+        assert len(sequences) == len(self.get('time_event'))
 
         # Number of size per event values
-        size_per_event = self.get_attribute('size_event')
-        if len(size_per_event) > len(sequences):
-            self.set_attribute('size_event', size_per_event[:len(sequences)])
-        elif len(size_per_event) < len(sequences):
-            size_per_event += [-1.0] * len(sequences) - len(size_per_event)
-            self.set_attribute('size_event', size_per_event)
+        assert len(sequences) == len(self.get('size_event'))
 
-        self.set_attribute('keep_output', keep_output)
         # Add hisotry entry
-        self.update_history({'action': 'reset', 'step': 'option'})
+        self.update_history('reset', 'option')
 
     def build_cmsDrivers(self):
         commands = []
@@ -1724,6 +1715,7 @@ class Request(json_base):
         self.reload()
 
     def get_stats(self, forced=False):
+        return 
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
         prepid = self.get_attribute('prepid')
         stats_workflows = stats_db.raw_query_view('_designDoc',
@@ -2420,132 +2412,190 @@ class Request(json_base):
         for key in to_be_transferred:
             next_request.set_attribute(key, current_request.get_attribute(key))
 
-    def reset(self, hard=True):
-        # check on who's trying to do so
-        if self.current_user_level <= access_rights.generator_convener and not self.get_attribute('status') in [
-            'validation', 'defined', 'new']:
-            raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
-                    'You have not enough karma to reset the request')
+    def get_parent_requests(self, chained_requests):
+        """
+        Return a list of requests that are considered as parents to the current
+        request
+        """
+        if not chained_requests:
+            return []
 
-        if self.current_user_level <= access_rights.generator_convener and self.get_attribute(
-                'approval') == 'validation' and self.get_attribute('status') == 'new':
-            raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
-                    'Cannot reset a request when running validation')
+        chained_request = chained_requests[0]
+        prepid = self.get_attribute('prepid')
+        chain = chained_request['chain']
+        if prepid not in chain:
+            raise Exception('%s is not a member of %s' % (prepid, chained_request['prepid']))
 
-        chains = self.get_attribute('member_of_chain')
-        from json_layer.chained_request import chained_request
+        request_db = Database('requests')
+        return request_db.bulk_get(chain[:chain.index(prepid)]) 
 
-        crdb = database('chained_requests')
-        rdb = database('requests')
-        for chain in chains:
-            cr = chained_request(crdb.get(chain))
-            if cr.get_attribute('chain').index(self.get_attribute('prepid')) < cr.get_attribute('step'):
-                # inspect the ones that would be further ahead
-                for rid in cr.get_attribute('chain')[cr.get_attribute('chain').index(self.get_attribute('prepid')):]:
-                    if rid == self.get_attribute('prepid'):
-                        continue
-                    mcm_r = request(rdb.get(rid))
-                    if mcm_r.get_attribute('status') in ['submitted', 'done']:
-                    # cannot reset a request that is part of a further on-going chain
-                        raise json_base.WrongStatusSequence(self.get_attribute('status'), self.get_attribute('approval'),
-                                'The request is part of a chain (%s) that is currently processing another request (%s) with incompatible status (%s)' % (
-                                    chain, mcm_r.get_attribute('prepid'), mcm_r.get_attribute('status')))
+    def get_derived_requests(self, chained_requests):
+        """
+        Go through all chains that request is in and fetch requests that have
+        current request as a parent
+        Return a dictionary where key is chained request prepid and value is a
+        list of request dictionaries
+        """
+        results = {}
+        prepid = self.get_attribute('prepid')
+        for chained_request in chained_requests:
+            chain = chained_request['chain']
+            if prepid not in chain:
+                raise Exception('%s is not a member of %s' % (prepid, chained_request['prepid']))
 
-        # If doing a soft reset, see if current status is submit/approved or submit submitted
-        if not hard:
-            approval = self.get_attribute('approval')
-            status = self.get_attribute('status')
-            if approval not in ['submit'] or status not in ['approved', 'submitted']:
-                self.logger.error("Trying to soft reset %s/%s request" % (approval, status))
-                raise json_base.WrongStatusSequence(status,
-                                                    approval,
-                                                    "You can soft reset only in submit/approved and submit/submitted")
+            results[chained_request['prepid']] = chain[chain.index(prepid) + 1:]
 
-        if hard:
-            self.approve(0)
+        request_db = Database('requests')
+        # Flatten list of lists and bulk fetch the requests
+        requests = request_db.bulk_get(set(item for chain in results.values() for item in chain))
+        requests = {r['prepid']: r for r in requests}
+        results = {key: [requests[c] for c in chain] for key, chain in results.items()}
+        return results
 
-        # make sure to keep track of what needs to be invalidated in case there is
-        invalidation = database('invalidations')
-        req_to_invalidate = []
-        ds_to_invalidate = []
+    def reset(self, soft=True):
+        """
+        Reset a request
+        Hard reset resets to initial state
+        Soft reset depends on current state, it's purpose is to move request
+        back to a stable state (in case it is stuck)
+        """
+        user = User()
+        role = user.get_role()
+        approval_status = self.get_approval_status()
+        # Check if soft reset can be done
+        if soft and approval_status != 'submit-approved':
+            raise Exception('Only submit-approved requests can be soft reset')
 
-        # retrieve the latest requests for it
+        # Check if user has permission to do the reset
+        if approval_status == 'none-new':
+            raise Exception('Request is already at initial state')
+        elif approval_status in ('validation-validation', 'define-defined'):
+            # Everyone can reset requests in none-new, validation-validation and
+            # define-defined status
+            pass
+        elif approval_status == 'validation-new':
+            raise Exception('Cannot reset a request that is being validated')
+        elif approval_status == 'approve-approved':
+            # Only GEN conveners and up can reset approve-approved
+            if role < Role.GEN_CONVENER:
+                username = user.get_username()
+                raise Exception('%s is not allowed to reset approve-approved requests' % (username))
+        elif approval_status in ('submit-approved', 'submit-submitted', 'submit-done'):
+            if role < Role.PRODUCTION_MANAGER:
+                username = user.get_username
+                raise Exception('%s is not allowed to reset %s requests' % (username,
+                                                                            approval_status))
+
+        chained_requests = self.get_chained_requests()
+        # Check if requests further down the chain are none-new
+        derived_requests = self.get_derived_requests(chained_requests)
+        for chain_prepid, requests in derived_requests.items():
+            for request in requests:
+                other_prepid = request['prepid']
+                other_approval_status = '%s-%s' % (request['approval'], request['status'])
+                if soft:
+                    # Soft reset - enough that status is lower
+                    if self.order.index(approval_status) <= self.order.index(other_approval_status):
+                        raise Exception('%s status is %s' % (other_prepid, other_approval_status))
+                else:
+                    # Hard reset - status must be none-new
+                    if other_approval_status != 'none-new':
+                        raise Exception('%s in %s is not none-new' % (other_prepid, chain_prepid))
+
+        prepid = self.get('prepid')
+        if not soft:
+            # Check if current step of chained requests is not further down
+            for chained_request in chained_requests:
+                if chained_request['step'] > chained_request['chain'].index(prepid):
+                    chain_prepid = chained_request['prepid']
+                    raise Exception('Current step of %s is after this request' % (chain_prepid))
+
+        # Update stats in order to do more accurate invalidations
         self.get_stats()
-        # increase the revision only if there was a request in req mng, or a dataset already on the table
-        increase_revision = False
 
-        # and put them in invalidation
-        for wma in self.get_attribute('reqmgr_name'):
-            # save the reqname to invalidate
-            req_to_invalidate.append(wma['name'])
-            new_invalidation = {"object": wma['name'], "type": "request",
-                    "status": "new", "prepid": self.get_attribute('prepid')}
+        # Invalidations
+        workflows_to_invalidate = set()
+        datasets_to_invalidate = set()
+        rejected_statuses = {'rejected', 'aborted', 'rejected-archived', 'aborted-archived'}
+        # Iterate through workflows and collect workflow names and datasets
+        for workflow in self.get_attribute('reqmgr_name'):
+            content = workflow.get('content', {})
+            workflow_statuses = set(content.get('pdmv_status_history_from_reqmngr', []))
+            if not (workflow_statuses & rejected_statuses):
+                # Add only if workflow was not rejected yet
+                workflows_to_invalidate.add(workflow['name'])
 
-            new_invalidation['_id'] = new_invalidation['object']
-            invalidation.save(new_invalidation)
+            for dataset, dataset_info in content.get('pdmv_dataset_statuses', {}).items():
+                if dataset_info.get('pdmv_status_in_DAS') not in {'DELETED', 'INVALID'}:
+                    datasets_to_invalidate.add(dataset)
 
-            # save all dataset to be invalidated
-            if 'content' in wma and 'pdmv_dataset_list' in wma['content']:
-                ds_to_invalidate.extend(wma['content']['pdmv_dataset_list'])
-            if 'content' in wma and 'pdmv_dataset_name' in wma['content']:
-                ds_to_invalidate.append(wma['content']['pdmv_dataset_name'])
-            ds_to_invalidate = list(set(ds_to_invalidate))
-            increase_revision = True
+        # Sort workflows
+        workflows_to_invalidate = sorted(list(workflows_to_invalidate),
+                                         key=lambda s: '_'.join(s.split('_')[-3:]))
+        # Sort datasets
+        datasets_to_invalidate = sorted(list(datasets_to_invalidate))
 
-        # create datset invalidation for those datasets produced by request itself.
-        # we check if dataset was produced in our previously reset workflow(-s)
-        for ds in self.get_attribute("output_dataset"):
-            if ds in ds_to_invalidate:
-                self.logger.debug("adding new invalidation for ds: %s" % (ds))
-                new_invalidation = {"object": ds, "type": "dataset", "status": "new", "prepid": self.get_attribute('prepid')}
-                new_invalidation['_id'] = new_invalidation['object'].replace('/', '')
-                invalidation.save(new_invalidation)
-                increase_revision = True
+        self.logger.info('Workflows/datasets to invalidate: %s/%s for %s',
+                         len(workflows_to_invalidate),
+                         len(datasets_to_invalidate),
+                         prepid)
+        if workflows_to_invalidate or datasets_to_invalidate:
+            invalidation_db = Database('invalidations')
+            with locker.lock('create-invalidations'):
+                for workflow in workflows_to_invalidate:
+                    if not invalidation_db.document_exists(workflow):
+                        self.logger.info('Creating invalidation for %s of %s', workflow, prepid)
+                        invalidation = Invalidation({'_id': workflow,
+                                                     'object': workflow,
+                                                     'type': 'request',
+                                                     'status': 'new',
+                                                     'prepid': prepid})
+                        invalidation.save()
 
-        # do not increase version if not in an announced batch
-        bdb = database('batches')
-        if increase_revision:
-            index = 0
-            fetched_batches = []
-            while len(req_to_invalidate) > index:
-                # find the batch it is in
-                fetched_batches += bdb.search({'contains': req_to_invalidate[index: index + 20]},
-                                              page=-1)
-                index += 20
-            for b in fetched_batches:
-                mcm_b = batch(b)
-                if not mcm_b.get_attribute('status') in ['done', 'announced']:
-                    increase_revision = False
-                    # we could be done checking, but we'll move along to remove the requests from all existing non announced batches
-                    mcm_b.remove_request(self.get_attribute('prepid'))
+                for dataset in datasets_to_invalidate:
+                    dataset = dataset.replace('/', '')
+                    if not invalidation_db.document_exists(dataset):
+                        self.logger.info('Creating invalidation for %s of %s', dataset, prepid)
+                        invalidation = Invalidation({'_id': dataset,
+                                                     'object': dataset,
+                                                     'type': 'dataset',
+                                                     'status': 'new',
+                                                     'prepid': prepid})
+                        invalidation.save()
 
-        # aditionnal value to reset
+        # Remove request from not-yet-announced batches
+        batch_db = Database('batches')
+        # Batches that have the request and are in status new
+        batches = batch_db.search({'contains': prepid, 'status': 'new'}, limit=-1)
+        for batch_dict in batches:
+            batch = Batch(batch_dict)
+            batch.remove_request(prepid)
+            if not batch.save():
+                raise Exception('Cannot save %s batch to database' % (batch.get('prepid')))
+
+        # Request attributes to reset
         self.set_attribute('completed_events', 0)
         self.set_attribute('reqmgr_name', [])
         self.set_attribute('config_id', [])
         self.set_attribute('output_dataset', [])
-        if increase_revision:
-            self.set_attribute('version', self.get_attribute('version') + 1)
 
+        # TODO: Delete configs from config database?
         # remove the configs doc hash in reset
-        hash_ids = database('configs')
-        for i in range(len(self.get_attribute('sequences'))):
-            hash_id = self.configuration_identifier(i)
-            if hash_ids.document_exists(hash_id):
-                hash_ids.delete(hash_id)
+        # hash_ids = database('configs')
+        # for i in range(len(self.get_attribute('sequences'))):
+        #     hash_id = self.configuration_identifier(i)
+        #     if hash_ids.document_exists(hash_id):
+        #         hash_ids.delete(hash_id)
 
-        if hard:
-            self.set_status(step=0, with_notification=True)
+        if soft:
+            if approval_status == 'submit-approved':
+                self.logger.info('Soft resetting %s', prepid)
+                self.set_approval_status('approve', 'approved')
+                self.update_history('soft_reset', '')
         else:
-            # Doing soft reset: we should go 1 status/approval back if request is not done
-            # when done, they need to do hard reset and invalidate wf's
-            self.logger.info("Soft resetting request: %s " % (self.get_attribute('prepid')))
-            __approval_index = self._json_base__approvalsteps.index(self.get_attribute('approval'))
-            __status_index = self._json_base__status.index(self.get_attribute('status'))
-            if self.get_attribute('status') == 'submitted':
-                __status_index -= 1
-            self.set_attribute('approval', self._json_base__approvalsteps[__approval_index - 1])
-            self.set_status(step=__status_index, with_notification=True)
+            self.logger.info('Resetting %s', prepid)
+            self.set_approval_status('none', 'new')
+            self.update_history('reset', '')
 
     def prepare_upload_command(self, cfgs, test_string):
         cmd = ''

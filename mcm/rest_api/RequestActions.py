@@ -321,36 +321,13 @@ class RequestOptionReset(RESTResource):
         """
         Reset the options for request
         """
-        prepids = data['prepid']
-        if not isinstance(prepids, list):
-            prepids = [prepids]
+        def reset_options(request):
+            if request.get_approval_status() != 'none-new':
+                raise Exception('%s it is not none-new' % (request.get('prepid')))
 
-        results = []
-        request_db = Database('requests')
-        requests = request_db.bulk_get(prepids)
-        for prepid, request_json in zip(prepids, requests):
-            if not request_json:
-                results.append({'results': False,
-                                'prepid': prepid,
-                                'message': 'Request %s could not be found' % (prepid)})
-                continue
-
-            prepid = request_json['prepid']
-            if request_json['approval'] != 'none' or request_json['status'] != 'new':
-                results.append({"results": False,
-                                "prepid": prepid,
-                                "message": "%s it is not none-new" % (prepid)})
-                continue
-
-            request = Request(request_json)
             request.reset_options()
-            results.append({"results": True,
-                            "prepid": prepid})
 
-        if len(results) == 1:
-            return results[0]
-
-        return results
+        return self.do_multiple_items(data['prepid'], Request, reset_options)
 
 
 class RequestNextStatus(RESTResource):
@@ -359,39 +336,40 @@ class RequestNextStatus(RESTResource):
     @RESTResource.request_with_json
     def post(self, data):
         """
-        Move request to the next
+        Move request to the next status
         """
-        prepids = data['prepid']
-        if not isinstance(prepids, list):
-            prepids = [prepids]
+        def next_status(request):
+            request.approve()
 
-        results = []
-        for prepid in prepids:
-            request = Request.fetch(prepid)
-            if not request:
-                results.append({"results": False,
-                                "prepid": prepid,
-                                'message': 'Request "%s" does not exist' % (prepid)})
-                continue
+        return self.do_multiple_items(data['prepid'], Request, next_status)
 
-            try:
-                request.approve()
-                if not request.save():
-                    results.append({'results': False,
-                                    'prepid': prepid,
-                                    'message': 'Could not save to DB'})
-                    continue
 
-                results.append({'results': True, 'prepid': prepid})
-            except Exception as ex:
-                results.append({'results': False,
-                                'prepid': prepid,
-                                'message': str(ex)})
+class RequestReset(RESTResource):
 
-        if len(results) == 1:
-            return results[0]
+    @RESTResource.ensure_role(Role.MC_CONTACT)
+    @RESTResource.request_with_json
+    def post(self, data):
+        """
+        Reset request to it's initial state
+        """
+        def reset_request(request):
+            request.reset(soft=False)
 
-        return results
+        return self.do_multiple_items(data['prepid'], Request, reset_request)
+
+
+class RequestSoftReset(RESTResource):
+
+    @RESTResource.ensure_role(Role.MC_CONTACT)
+    @RESTResource.request_with_json
+    def post(self, data):
+        """
+        Reset request to previous state
+        """
+        def reset_request(request):
+            request.reset(soft=True)
+
+        return self.do_multiple_items(data['prepid'], Request, reset_request)
 
 
 class GetCmsDriverForRequest(RESTResource):
@@ -519,17 +497,6 @@ class GetRequestOutput(RESTResource):
                     res[prepid].append(mcm_r['reqmgr_name'][-1]['content']['pdmv_dataset_name'])
 
         return res
-
-
-class ResetRequestApproval(RESTResource):
-
-    @RESTResource.ensure_role(Role.MC_CONTACT)
-    def get(self, request_id):
-        """
-        Reste both approval and status to their initial state.
-        """
-        self.hard = 'soft_reset' not in flask.request.path
-        return self.multiple_approve(request_id, 0, self.hard)
 
 
 class GetStatus(RESTResource):

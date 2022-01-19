@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from couchdb_layer.mcm_database import database
-from json_layer.batch import batch
+from json_layer.batch import Batch
 from tools.locker import locker, semaphore_events
 import tools.settings as settings
 

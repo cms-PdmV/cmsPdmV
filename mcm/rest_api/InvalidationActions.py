@@ -1,281 +1,134 @@
-#!/usr/bin/env python
-
-import itertools
-
-from json import loads
-from flask import request
-
-from RestAPIMethod import RESTResource
-from couchdb_layer.mcm_database import database
-from tools.communicator import communicator
-from tools.locator import locator
-from json_layer.invalidation import invalidation
-import tools.settings as settings
-from tools.user_management import access_rights
-
-
-class Announcer():
-
-    def __init__(self):
-        self.db_name = "invalidations"
-        self.com = communicator()
-        self.l_type = locator()
-
-    def print_invalidations(self, invalids):
-        a_text = ''
-        for invalid in invalids:
-            a_text += ' %s\n' % (invalid.get_attribute('object'))
-        return a_text
-
-    def announce(self, ds_to_be_invalidated, r_to_be_rejected):
-        if (len(ds_to_be_invalidated) != 0 or len(r_to_be_rejected) != 0):
-            text = 'Dear Data Operation Team,\n\n'
-            if len(r_to_be_rejected) != 0:
-                text += 'please reject or abort the following requests:\n'
-                text += self.print_invalidations(r_to_be_rejected)
-            if len(ds_to_be_invalidated) != 0:
-                text += '\nPlease invalidate the following datasets:\n'
-                text += self.print_invalidations(ds_to_be_invalidated)
-            text += '\nas a consequence of requests being reset.\n'
-
-            to_who = [settings.get_value('service_account')]
-            if self.l_type.isDev():
-                to_who.append(settings.get_value('hypernews_test'))
-            else:
-                to_who.append(settings.get_value('dataops_announce'))
-
-            try:
-                elem = (r_to_be_rejected + ds_to_be_invalidated)[0]
-                sender = elem.current_user_email
-            except IndexError:
-                sender = None
-
-            self.com.sendMail(to_who, 'Request and Datasets to be Invalidated', text, sender)
-
-            for to_announce in itertools.chain(r_to_be_rejected, ds_to_be_invalidated):
-                to_announce.set_announced()
-                idb = database(self.db_name)
-                idb.update(to_announce.json())
-
-
-class Clearer():
-    def __init__(self):
-        self.db_name = "invalidations"
-
-    def clear(self, ds_to_be_invalidated, r_to_be_rejected):
-        if (len(ds_to_be_invalidated) != 0 or len(r_to_be_rejected) != 0):
-            for to_announce in itertools.chain(r_to_be_rejected, ds_to_be_invalidated):
-                to_announce.set_announced()
-                idb = database(self.db_name)
-                idb.update(to_announce.json())
+from rest_api.RestAPIMethod import RESTResource
+from couchdb_layer.mcm_database import database as Database
+from json_layer.user import Role, User
+from json_layer.invalidation import Invalidation
+from tools.settings import Settings
 
 
 class GetInvalidation(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
     def get(self, invalidation_id):
         """
-        Retrieve the content of a given invalidation object
+        Retrieve the invalidation for given id
         """
-        return self.get_request(invalidation_id)
-
-    def get_request(self, object_name):
-        db = database('invalidations')
-        return {"results": db.get(object_name)}
+        invalidation_db = Database('invalidations')
+        return {'results': invalidation_db.get(invalidation_id)}
 
 
 class DeleteInvalidation(RESTResource):
 
-    access_limit = access_rights.administrator
-
-    def __init__(self):
-        self.before_request()
-        self.count_call()
-
+    @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
     def delete(self, invalidation_id):
         """
-        Delete selected invalidation from DB.
+        Delete an invalidation
         """
-        db = database("invalidations")
-        self.logger.info('Deleting invalidation: %s' % (invalidation_id))
-        return {"results": db.delete(invalidation_id)}
+        invalidation_db = Database('invalidations')
+        if not invalidation_db.document_exists(invalidation_id):
+            self.logger.error('%s could not be found', invalidation_id)
+            return {'results': False,
+                    'prepid': invalidation_id,
+                    'message': '%s could not be found' % (invalidation_id)}
+
+        if not invalidation_db.delete(invalidation_id):
+            self.logger.error('Could not delete %s from database', invalidation_id)
+            return {'results': False,
+                    'prepid': invalidation_id,
+                    'message': 'Could not delete %s from database' % (invalidation_id)}
+
+        return {'results': True, 'prepid': invalidation_id}
 
 
-class AnnounceInvalidations(RESTResource):
+class AnnounceInvalidation(RESTResource):
 
-    access_limit = access_rights.production_manager
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
+    @RESTResource.request_with_json
+    def post(self, data):
+        def announce(invalidation):
+            if invalidation.get('status') != 'new':
+                raise Exception('Only new invalidations can be announced')
 
-    def __init__(self):
-        self.db_name = 'invalidations'
-        self.before_request()
-        self.count_call()
+            invalidation.set_announced()
 
-    def put(self):
-        """
-        Announce selected invalidations to Data OPS
-        """
-        input_data = loads(request.data)
-        self.logger.info("invaldations input: %s" % (input_data))
-        if len(input_data) > 0:
-            return self.announce(input_data)
-        else:
-            return {"results": False, "message": "No elements selected"}
-
-    def announce(self, data):
-        db = database(self.db_name)
-        __ds_list = []
-        __r_list = []
-        for doc_id in data:  # for each _id we get object from db
-            tmp = db.get(doc_id)
-            if tmp["type"] == "dataset" and tmp["status"] == "new":
-                __ds_list.append(tmp)
-            elif tmp["type"] == "request" and tmp["status"] == "new":
-                __r_list.append(tmp)
-            else:
-                self.logger.info("Tried to ANNOUNCE non new invaldation: %s" % (tmp["object"]))
-
-        announcer = Announcer()
-        announcer.announce(map(invalidation, __ds_list), map(invalidation, __r_list))
-        return {"results": True, "ds_to_invalidate": __ds_list, "requests_to_invalidate": __r_list}
-
-
-class ClearInvalidations(RESTResource):
-
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.db_name = "invalidations"
-        self.before_request()
-        self.count_call()
-
-    def put(self):
-        """
-        Clear selected invalidations without announcing
-        """
-        input_data = loads(request.data)
-        if len(input_data) > 0:
-            return self.clear(input_data)
-        else:
-            return {"results": False, "message": "No elements selected"}
-
-    def clear(self, data):
-        db = database(self.db_name)
-        __ds_list = []
-        __r_list = []
-        for doc_id in data:
-            tmp = db.get(doc_id)  # we don't want to set clear announced objects
-            if tmp["type"] == "dataset" and tmp["status"] == "new":
-                __ds_list.append(tmp)
-            elif tmp["type"] == "request" and tmp["status"] == "new":
-                __r_list.append(tmp)
-            else:
-                self.logger.error("Tried to CLEAN non new invaldation: %s" % (tmp["object"]))
-
-        __clearer = Clearer()
-        __clearer.clear(map(invalidation, __ds_list), map(invalidation, __r_list))
-        return {"results": True, "ds_to_invalidate": __ds_list,
-                "requests_to_invalidate": __r_list}
+        return self.do_multiple_items(data['prepid'], Invalidation, announce)
 
 
 class AcknowledgeInvalidation(RESTResource):
 
-    access_limit = access_rights.administrator
+    def allowed_to_acknowledge(self):
+        """
+        Return whether current user is allowed to acknowledge the invalidation
+        """
+        user = User()
+        if user.get_role() >= Role.ADMINISTRATOR:
+            return True
 
-    def __init__(self):
-        self.access_user = settings.get_value('allowed_to_acknowledge')
-        self.before_request()
-        self.count_call()
+        allowed_users = Settings.get('allowed_to_acknowledge')
+        return user.get_username() in allowed_users
 
+    @RESTResource.ensure_role(Role.USER)
     def get(self, invalidation_id):
         """
-        Acknowledge the invalidation. By just changeing its status
+        Acknowledge the invalidation and change it's status
+        Legacy API, new API is POST
         """
-        idb = database('invalidations')
-        doc = idb.get(invalidation_id)
-        if not doc:
-            return {"results": False, "message": 'Error: %s is not a doc id' % (invalidation_id)}
+        if not self.allowed_to_acknowledge():
+            return {'results': False,
+                    'prepid': invalidation_id,
+                    'message': 'User not allowed to acknowledge'}
 
-        doc["status"] = "acknowledged"
-        saved = idb.save(doc)
-        if saved:
-            return {"results": True, "message": "Invalidation doc %s is acknowledged" % (invalidation_id)}
+        invalidation = Invalidation.fetch(invalidation_id)
+        if not invalidation:
+            return {'results': False,
+                    'prepid': invalidation_id,
+                    'message': '%s could not be found' % (invalidation_id)}
 
-        else:
-            return {"results": False, "message" : "Could not save the change in %s" % (invalidation_id)}
+        invalidation.set_acknowledged()
+        if not invalidation.save():
+            return {'results': False,
+                    'prepid': invalidation_id,
+                    'message': 'Could not save %s to database' % (invalidation_id)}
 
+        return {'results': False,
+                'prepid': invalidation_id}
 
-class PutOnHoldInvalidation(RESTResource):
+    @RESTResource.ensure_role(Role.USER)
+    @RESTResource.request_with_json
+    def post(self, data):
+        def acknowledge(invalidation):
+            if not self.allowed_to_acknowledge():
+                raise Exception('User not allowed to acknowledge')
 
-    access_limit = access_rights.production_manager
+            if invalidation.get('status') != 'announced':
+                raise Exception('Only announced invalidations can be acknowledged')
 
-    def __init__(self):
-        self.db_name = "invalidations"
-        self.before_request()
-        self.count_call()
+            invalidation.set_acknowledged()
 
-    def put(self):
-        """
-        Put single invalidation on hold so DS would not be invalidated
-        """
-        input_data = loads(request.data)
-        if not len(input_data):
-            return {"results": False, "message": 'Error: No arguments were given.'}
-        self.logger.info("Putting invalidation on HOLD. input: %s" % (input_data))
-        db = database(self.db_name)
-        res = []
-        for el in input_data:
-            if db.document_exists(el):
-                doc = db.get(el)
-                __invl = invalidation(doc)
-                if __invl.get_attribute("status") == "new":
-                    ret = __invl.set_attribute('status', 'hold')
-                    out = db.update(ret)
-                    res.append({"object": el, "results": True, "message": out})
-                else:
-                    res.append({"object": el, "results": False, "message": "status not new"})
-            else:
-                __msg = "%s dosn't exists in DB" % (el)
-                res.append({"object": el, "results": False, "message": __msg})
-
-        return {"results": res}
+        return self.do_multiple_items(data['prepid'], Invalidation, acknowledge)
 
 
-class PutHoldtoNewInvalidations(RESTResource):
+class HoldInvalidation(RESTResource):
 
-    access_limit = access_rights.production_manager
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
+    @RESTResource.request_with_json
+    def post(self, data):
+        def hold(invalidation):
+            if invalidation.get('status') != 'new':
+                raise Exception('Only new invalidations can be put on hold')
 
-    def __init__(self):
-        self.db_name = "invalidations"
-        self.before_request()
-        self.count_call()
+            invalidation.set_hold()
 
-    def put(self):
-        """
-        Move HOLD invalidations back to status new
-        """
-        input_data = loads(request.data)
-        if not len(input_data):
-            return {"results": False, "message": 'Error: No arguments were given.'}
+        return self.do_multiple_items(data['prepid'], Invalidation, hold)
 
-        self.logger.info("Putting invalidation from HOLD back to new. input: %s" % (input_data))
-        db = database(self.db_name)
-        res = []
-        for el in input_data:
-            if db.document_exists(el):
-                doc = db.get(el)
-                __invl = invalidation(doc)
-                if __invl.get_attribute("status") == "hold":
-                    ret = __invl.set_attribute("status", "new")
-                    out = db.update(ret)
-                    res.append(out)
-                else:
-                    res.append({"object": el, "results": False, "message": "status not HOLD"})
-            else:
-                __msg = __msg = "%s dosn't exists in DB" % (el)
-                res.append({"object": el, "results": False, "message": __msg})
-        return {"results": res}
+
+class ResetInvalidation(RESTResource):
+
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
+    @RESTResource.request_with_json
+    def post(self, data):
+        def reset(invalidation):
+            if invalidation.get('status') not in ('hold', 'announced'):
+                raise Exception('Only announced or invalidations on hold can be reset')
+
+            invalidation.set_new()
+
+        return self.do_multiple_items(data['prepid'], Invalidation, reset)

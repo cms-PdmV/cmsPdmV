@@ -95,10 +95,10 @@
                 <a ng-click="openCloneRequestModal(data)" title="Clone request" ng-hide="role(1);" ng-href="#">
                   <i class="icon-share-alt"></i>
                 </a>
-                <a ng-click="actionPrompt('reset', data.prepid)" rel="tooltip" title="Reset" ng-hide="data.status == 'new' || role(1);" ng-href="#">
+                <a ng-click="reset([data.prepid])" title="Reset" ng-show="user.is_user" ng-href="#">
                   <i class="icon-repeat"></i>
                 </a>
-                <a ng-click="optionReset([data.prepid])" title="Option Reset" ng-show="data.status == 'new' && user.is_user" ng-href="#">
+                <a ng-click="optionReset([data.prepid])" title="Option Reset" ng-show="user.is_user" ng-href="#">
                   <i class="icon-share"></i>
                 </a>
                 <a ng-click="nextStatus([data.prepid])" title="Next step" ng-show="data.status != 'done' && user.is_user" ng-href="#">
@@ -125,7 +125,7 @@
                 <a ng-click="openNotifyModal(data.prepid)" rel="tooltip" title="Notify" ng-href="#">
                   <i class="icon-envelope"></i>
                 </a>
-                <a ng-click="actionPrompt('soft_reset', data.prepid)" rel="tooltip" title="Soft Reset" ng-hide="role(3);" ng-href="#">
+                <a ng-click="softReset([data.prepid])" title="Soft Reset" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-step-backward"></i>
                 </a>
                 <a ng-href='chained_requests?contains={{data.prepid}}' rel="tooltip" title="View chains containing {{data.prepid}}" target="_self">

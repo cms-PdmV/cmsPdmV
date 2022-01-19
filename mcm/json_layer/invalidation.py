@@ -1,11 +1,8 @@
-#!/usr/bin/env python
-from json_base import json_base
-from tools.user_management import user_pack
+from couchdb_layer.mcm_database import database as Database
+from json_layer.json_base import json_base
 
 
-class invalidation(json_base):
-
-    _json_base__status = ['new', "hold", 'announced', 'acknowledged']
+class Invalidation(json_base):
 
     _json_base__schema = {
         '_id': '',
@@ -15,16 +12,30 @@ class invalidation(json_base):
         'type': ''
     }
 
-    def __init__(self, json_input=None):
-        json_input = json_input if json_input else {}
-        # set invalidation status
-        self._json_base__schema['status'] = self._json_base__status[0]
+    # Status: 'new', "hold", 'announced', 'acknowledged'
 
-        # update self according to json_input
-        self.update(json_input)
-        self.validate()
-        user_p = user_pack()
-        self.current_user_email = user_p.get_email()
+    def set_new(self):
+        self.set_attribute('status', 'new')
+        self.update_history('status', self.get('status'))
+
+    def set_hold(self):
+        self.set_attribute('status', 'hold')
+        self.update_history('status', self.get('status'))
 
     def set_announced(self):
         self.set_attribute('status', 'announced')
+        self.update_history('status', self.get('status'))
+
+    def set_acknowledged(self):
+        self.set_attribute('status', 'acknowledged')
+        self.update_history('status', self.get('status'))
+
+    @classmethod
+    def get_database(cls):
+        """
+        Return shared database instance
+        """
+        if not hasattr(cls, 'database'):
+            cls.database = Database('invalidations')
+
+        return cls.database

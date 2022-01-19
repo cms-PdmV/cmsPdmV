@@ -159,6 +159,43 @@ class RESTResource(Resource):
     def fullmatch(self, pattern, string):
         return re.match("(?:" + pattern + r")\Z", string)
 
+    def do_multiple_items(self, prepids, object_class, func):
+        """
+        """
+        prepids_list = True
+        if not isinstance(prepids, list):
+            prepids_list = False
+            prepids = [prepids]
+
+        results = []
+        for prepid in prepids:
+            object_instance = object_class.fetch(prepid)
+            if not object_instance:
+                results.append({"results": False,
+                                "prepid": prepid,
+                                'message': 'Object "%s" does not exist' % (prepid)})
+                continue
+
+            try:
+                func(object_instance)
+                if not object_instance.save():
+                    results.append({'results': False,
+                                    'prepid': prepid,
+                                    'message': 'Could not save to DB'})
+                else:
+                    results.append({'results': True, 'prepid': prepid})
+            except Exception as ex:
+                import traceback
+                self.logger.error(traceback.format_exc())
+                results.append({'results': False,
+                                'prepid': prepid,
+                                'message': str(ex)})
+
+        if not prepids_list and results:
+            return results[0]
+
+        return results
+
 
 class RESTResourceIndex(RESTResource):
     def __init__(self, data=None):

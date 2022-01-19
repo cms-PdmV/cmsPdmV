@@ -24,6 +24,10 @@ class json_base:
     dataset_regex = make_regex_matcher(__dataset_pattern)
     __flow_prepid_pattern = 'flow[a-zA-Z0-9]{2,60}'
     flow_prepid_regex = make_regex_matcher(__flow_prepid_pattern)
+    __primary_dataset_pattern = '^[A-Za-z][A-Za-z0-9\-_]{5,99}$'
+    primary_dataset_regex = make_regex_matcher(__primary_dataset_pattern)
+    __processing_string_pattern = '[a-zA-Z0-9_]{3,100}'
+    processing_string_regex = make_regex_matcher(__processing_string_pattern)
 
 
     def __init__(self, data=None, validate=False):

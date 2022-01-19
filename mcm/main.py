@@ -8,11 +8,12 @@ from rest_api.RequestActions import (RequestImport,
                                      RequestGetEditable,
                                      RequestOptionReset,
                                      RequestNextStatus,
+                                     RequestReset,
+                                     RequestSoftReset,
                                      #GetCmsDriverForRequest,
                                      #GetFragmentForRequest,
                                      #GetSetupForRequest,
                                      #ApproveRequest,
-                                     #ResetRequestApproval,
                                      #SetStatus,
                                      #GetStatus,
                                      GetStatusAndApproval,
@@ -27,7 +28,6 @@ from rest_api.RequestActions import (RequestImport,
                                      #RequestsReminder,
                                      #SearchableRequest,
                                      #UpdateMany,
-                                     #,
                                      #GetRequestOutput,
                                      #GetInjectCommand,
                                      #GetUploadCommand,
@@ -64,7 +64,12 @@ from rest_api.ChainedRequestActions import (ChainedRequestFlow,
 from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow
 from rest_api.UserActions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser
 # from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
-# from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
+from rest_api.InvalidationActions import (GetInvalidation,
+                                          DeleteInvalidation,
+                                          AnnounceInvalidation,
+                                          AcknowledgeInvalidation,
+                                          HoldInvalidation,
+                                          ResetInvalidation)
 from rest_api.DashboardActions import GetLocksInfo, GetValidationInfo, GetStartTime, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenConveners, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved, NotifyMccm
 from rest_api.SettingsActions import GetSetting, SetSetting
@@ -252,6 +257,8 @@ api.add_resource(RequestGet,
 api.add_resource(RequestGetEditable, '/restapi/requests/editable/<string:prepid>')
 api.add_resource(RequestOptionReset, '/restapi/requests/option_reset')
 api.add_resource(RequestNextStatus, '/restapi/requests/next_status')
+api.add_resource(RequestReset, '/restapi/requests/reset')
+api.add_resource(RequestSoftReset, '/restapi/requests/soft_reset')
 # api.add_resource(GetCmsDriverForRequest, '/restapi/requests/get_cmsDrivers/<string:request_id>')
 # api.add_resource(
 #     ResetRequestApproval,
@@ -360,14 +367,17 @@ api.add_resource(CloneFlow, '/restapi/flows/clone')
 # api.add_resource(ResetBatch, '/restapi/batches/reset/<string:batch_ids>')
 # api.add_resource(HoldBatch, '/restapi/batches/hold/<string:batch_ids>')
 # api.add_resource(NotifyBatch, '/restapi/batches/notify')
+
 # REST invalidation Actions
-# api.add_resource(GetInvalidation, '/restapi/invalidations/get/<string:invalidation_id>')
-# api.add_resource(DeleteInvalidation, '/restapi/invalidations/delete/<string:invalidation_id>')
-# api.add_resource(AnnounceInvalidations, '/restapi/invalidations/announce')
-# api.add_resource(ClearInvalidations, '/restapi/invalidations/clear')
-# api.add_resource(AcknowledgeInvalidation, '/restapi/invalidations/acknowledge/<string:invalidation_id>')
-# api.add_resource(PutOnHoldInvalidation, '/restapi/invalidations/new_to_hold')
-# api.add_resource(PutHoldtoNewInvalidations, '/restapi/invalidations/hold_to_new')
+api.add_resource(GetInvalidation, '/restapi/invalidations/get/<string:invalidation_id>')
+api.add_resource(DeleteInvalidation, '/restapi/invalidations/delete/<string:invalidation_id>')
+api.add_resource(AnnounceInvalidation, '/restapi/invalidations/announce')
+api.add_resource(AcknowledgeInvalidation,
+                 '/restapi/invalidations/acknowledge/<string:invalidation_id>',
+                 '/restapi/invalidations/acknowledge')
+api.add_resource(HoldInvalidation, '/restapi/invalidations/hold')
+api.add_resource(ResetInvalidation, '/restapi/invalidations/reset')
+
 # REST dashboard Actions
 api.add_resource(GetValidationInfo, '/restapi/dashboard/get_validation_info')
 api.add_resource(GetStartTime, '/restapi/dashboard/get_start_time')
