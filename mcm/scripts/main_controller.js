@@ -1,40 +1,78 @@
 angular.module('testApp').controller('mainCtrl',
   ['$scope', '$http', '$location', '$window', '$modal',
     function mainCtrl($scope, $http, $location, $window, $modal) {
-      $scope.stats_cache = {};
-      $scope.full_details = {};
-      $scope.mcm_revision = "";
       $scope.user = { name: "guest", role: "user", roleIndex: 0 };
-      $scope.start_time = "";
-      $scope.turn_on_button_clicked = false;
       $scope.math = Math;
-      $scope.update = {};
       $scope.dbName = undefined;
       $scope.columns = undefined;
+      $scope.actionMessage = {};
 
       $scope.setDatabaseInfo = function(database, columns) {
         $scope.dbName = database;
         $scope.columns = columns;
       }
 
-      var promise;
-      var get_rev = true;
-      _.each(["campaigns", "chained_campaigns", "flows", "actions", "requests", "chained_requests", "batch", "invalidations", "mccms", "dashboard", "users", "edit", "news", "settings"], function (elem) {
-        if ($location.path().indexOf(elem) != -1) {
-          get_rev = false;
+      $scope.objectAction = function (message, prepids, httpDict) {
+        const action = function(prepids, httpDict) {
+          $scope.setLoading(prepids, true);
+          $http(httpDict).success(function (results, status) {
+            let shouldGetData = false;
+            if (!Array.isArray(results)) {
+              results = [results];
+            }
+            for (let result of results) {
+              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
+              shouldGetData = shouldGetData || !!result.results;
+            }
+            if (shouldGetData) {
+              $scope.getData();
+            }
+          }).error(function (data, status) {
+            $scope.openErrorModal(undefined, data['message']);
+            $scope.setLoading(prepids, false);
+          });
         }
-      });
-      if (get_rev && $window.document.title != "McM maintenance") {
-        promise = $http.get("restapi/dashboard/get_revision");
-        promise.then(function (data) {
-          $scope.mcm_revision = data.data;
+        if (message != undefined) {
+          $scope.questionModal(message, function() {
+            action(prepids, httpDict);
+          });
+        } else {
+          action(prepids, httpDict);
+        }
+      };
+
+      $scope.questionModal = function (question, callback) {
+        const modal = $modal.open({
+          templateUrl: 'questionModal.html',
+          controller: function ($scope, $modalInstance, question) {
+            $scope.question = question;
+            $scope.yes = function () { $modalInstance.close(); };
+            $scope.no = function () { $modalInstance.dismiss(); };
+          },
+          resolve: {
+            question: function () { return question; }
+          }
         });
+        modal.result.then(function () { callback(); });
+      };
+
+      $scope.deleteObject = function (prepid) {
+        let message = 'Are you sure you want to delete ' + prepid + '?';
+        $scope.objectAction(message,
+                            [prepid],
+                            {method: 'DELETE',
+                             url: 'restapi/' + $scope.dbName + '/delete/' + prepid})
+      };
+
+      $scope.promptPrepid = function(prepids) {
+        let name = $scope.dbName.replaceAll('_', ' ');
+        return prepids.length == 1 ? prepids[0] : (prepids.length + ' ' + name);
       }
-      if ($scope.start_time == "" && $window.document.title != "McM maintenance") {
-        promise = $http.get("restapi/dashboard/get_start_time");
-        promise.then(function (data) {
-          $scope.start_time = data.data.results;
-        });
+
+      $scope.setLoading = function(prepids, loading) {
+        for (let prepid of prepids) {
+          $scope.actionMessage[prepid] = loading ? 'loading' : '';
+        }
       }
 
       // GET username and role
@@ -59,21 +97,6 @@ angular.module('testApp').controller('mainCtrl',
       });
       // Endo of user info request
 
-      $scope.turnOnServer = function () {
-        if ($window.document.title == "McM maintenance") {
-          $scope.turn_on_button_clicked = true;
-          var promise = $http.get("restapi/control/turn_on");
-          promise.then(function () {
-            alert("Server turned on");
-            setTimeout(function () { $window.location.reload() }, 5000);
-          }, function () {
-            alert("Server failed to turn on");
-            $scope.turn_on_button_clicked = false;
-            setTimeout(function () { $window.location.reload() }, 1000);
-          });
-        }
-      };
-
       $scope.isDevMachine = function () {
         is_dev = $location.host().indexOf("dev") != -1;
         if (is_dev) {
@@ -96,9 +119,6 @@ angular.module('testApp').controller('mainCtrl',
         return __location.substring(1); //remove 1st character which is / to make a relative link
       };
 
-      $scope.role = function (priority) {
-        return priority > $scope.user.roleIndex; //if user.priority < button priority then hide=true
-      };
       //watch length of pending HTTP requests -> if there are display loading;
       $scope.$watch(function () { return $http.pendingRequests.length; }, function (v) {
         $scope.pendingHTTPLenght = v;
@@ -107,6 +127,7 @@ angular.module('testApp').controller('mainCtrl',
         } else
           $scope.pendingHTTP = true;
       });
+
       $scope.numberWithCommas = function (x) {
         if (x) {
           var parts = x.toString().split(".");
@@ -130,74 +151,6 @@ angular.module('testApp').controller('mainCtrl',
         });
       };
 
-      $scope.openIsSureModal = function (database, prepid, action, callback) {
-        const modal = $modal.open({
-          templateUrl: 'isSureModal.html',
-          controller: function ($scope, $modalInstance, database, prepid, action) {
-            $scope.database = database;
-            $scope.prepid = prepid;
-            $scope.action = action;
-            var stringToColor = function (str) {
-              //converts any string to hexadecimal color format
-              let hash = 0;
-              for (var i = 0; i < str.length; i++) {
-                hash = str.charCodeAt(i) + ((hash << 5) - hash);
-              }
-              let color = '#';
-              for (i = 0; i < 3; i++) {
-                let value = (hash >> (i * 8)) & 0xFF;
-                color += ('00' + value.toString(16)).substr(-2);
-              }
-              return color;
-            };
-            $scope.color = stringToColor(action);
-            $scope.yes = function (database, prepid, action) {
-              $modalInstance.close(database, prepid, action);
-            };
-            $scope.no = function () {
-              $modalInstance.dismiss();
-            };
-          },
-          resolve: {
-            database: function () {
-              return database;
-            },
-            prepid: function () {
-              return prepid;
-            },
-            action: function () {
-              return action;
-            }
-          }
-        });
-        modal.result.then(function () {
-          callback(database, prepid, action)
-        });
-      };
-
-      $scope.questionModal = function (question, callback) {
-        const modal = $modal.open({
-          templateUrl: 'questionModal.html',
-          controller: function ($scope, $modalInstance, question) {
-            $scope.question = question;
-            $scope.yes = function () {
-              $modalInstance.close();
-            };
-            $scope.no = function () {
-              $modalInstance.dismiss();
-            };
-          },
-          resolve: {
-            question: function () {
-              return question;
-            }
-          }
-        });
-        modal.result.then(function () {
-          callback()
-        });
-      };
-
       $scope.openErrorModal = function (prepid, message) {
         const modal = $modal.open({
           templateUrl: 'errorModal.html',
@@ -216,12 +169,6 @@ angular.module('testApp').controller('mainCtrl',
               return message;
             }
           }
-        });
-      };
-
-      $scope.deletePrompt = function (prepid) {
-        $scope.openIsSureModal($scope.dbName, prepid, 'delete', function (database, prepid, action) {
-          $scope.deleteObject(database, prepid);
         });
       };
 
@@ -301,25 +248,6 @@ angular.module('testApp').controller('mainCtrl',
           $scope.getData($scope.dbName);
         }
       );
-
-      $scope.setSuccess = function (success, code) {
-        $scope.update['success'] = !!success;
-        $scope.update['status_code'] = code;
-      }
-
-      $scope.deleteObject = function (db, prepid) {
-        $http({ method: 'DELETE', url: 'restapi/' + db + '/delete/' + prepid }).success(function (data, status) {
-          $scope.setSuccess(data["results"]);
-          if (data["results"]) {
-            $scope.getData();
-          } else {
-            $scope.openErrorModal(prepid, data['message']);
-          }
-        }).error(function (data, status) {
-          $scope.openErrorModal(prepid, data['message']);
-          $scope.setSuccess(false, status);
-        });
-      };
 
       $scope.openCloneItemModal = function (database, prepid) {
         const modal = $modal.open({

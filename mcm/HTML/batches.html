@@ -1,137 +1,88 @@
 <!DOCTYPE html>
 <html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
-  <head>
-        <base href="/mcm/">
-        <title>Batches page McM</title>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
 
-        <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
-        <!--[IF IE]>
-          <script type="text/javascript">
-            var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
-          </script>
-        <![endif]-->
-        <![if !IE]>
-          <script type="text/javascript">
-            var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
-          </script>
-        <![endif]>
-        <script src="scripts/main_controller.js"></script>
-        <script src="scripts/batches_controller.js"></script>
-        <script src="scripts/snow.js"></script>
-  </head>
-  <body ng-controller="mainCtrl">
-    <span ng-controller="resultsCtrl">
-    <div ng-include src="'HTML/navbar_template.html'"></div>
+<head>
+  <title>McM - Batches</title>
+  <base href="/mcm/">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
+  <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+  <script type="text/javascript">
+    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
+  </script>
+  <script src="scripts/main_controller.js"></script>
+  <script src="scripts/batches_controller.js"></script>
+  <script src="scripts/snow.js"></script>
+</head>
+
+<body ng-controller="mainCtrl">
+  <div ng-include="'HTML/navbar_template.html'"></div>
+  <span ng-controller="resultsCtrl">
     <div style='margin-bottom: 5px' class="container">
-        <select-well ng-if="selectionReady" database="{{dbName}}" selection="batches_defaults"></select-well>
+      <select-well ng-if="selectionReady" database="{{dbName}}" selection="columns"></select-well>
     </div>
-    <table class="table table-bordered table-stripped">
+    <table class="table table-bordered table-striped table-hover">
       <thead>
         <tr>
-          <th ng-repeat="column in batches_defaults" ng-if="column.select" style="white-space: nowrap;" ng-switch on="column.text" style="white-space: nowrap;">
-            <div ng-switch-when="Actions" > <!-- ng-hide="role(1);"> -->
-              {{column.text}}
-              <!-- SORTING lines -->
-              <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                  <i class="icon-resize-vertical"></i>
-              </a>
-              <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
-                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
-              </span>
-              <!-- END OF: SORTING lines -->
-            </div>
-            <div ng-switch-default>
-              {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#batches_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
-              <!-- SORTING lines -->
-              <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-resize-vertical"></i>
-              </a>
-              <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
-                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
-              </span>
-              <!-- END OF: SORTING lines -->
-            </div>
+          <th ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap; text-align: center;">
+            {{column.text}}
           </th>
         </tr>
       </thead>
       <tbody>
-        <tr ng-repeat="data in result  | orderBy:sort.column: sort.descending">
-          <td ng-repeat="value in batches_defaults" ng-if="value.select" style="white-space: nowrap;" style="white-space: nowrap;">
-            <div ng-switch on="value.text">
-              <div ng-switch-when="Actions" > <!--ng-hide="role(1);">-->
-                <div ng-controller="ModalDemoCtrl">
-                  <a ng-click='isSureModal("delete", data.prepid)' rel="tooltip" title="Delete a batch" ng-hide="role(4);" ng-href="#">
-                    <i class="icon-minus-sign"></i>
-                  </a>
-                  <a ng-click='announceModal(data.prepid)' rel="tooltip" title="Announce the batch to data Ops" ng-hide="role(3) || data.status!='new';" ng-href="#">
-                    <i class="icon-envelope"></i>
-                  </a>
-                  <a ng-click='openNotifyModal(data.prepid)' rel="tooltip" title="Notify batch" ng-hide="!data.message_id || data.status != 'announced'" ng-href="#">
-                    <i class="icon-volume-up"></i>
-                  </a>
-                  <script type="text/ng-template" id="announceModal.html"> <!--hidden modal template-->
-                    <div class="modal-header">
-                      <h4>{{type}} batch: {{prepid}}</h4>
-                    </div>  <!--end of modal header-->
-                    <div class="modal-body">
-                      Additional notes:
-                      <textarea ng-model="mail.mailContent"></textarea>
-                    </div> <!--end of modal body-->
-                    <div class="modal-footer">
-                      <button class="btn btn-success" ng-click="send()">{{type}}</button>
-                      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-                    </div> <!--end of modal footer-->
-                  </script>
-                  <!--     END OF MODAL                 -->
-                  <a ng-click="isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);" ng-href="#"><i class="icon-repeat"></i></a>
-                  <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status" ng-href="#"><i class="icon-eye-open"></i></a>
-                  <a ng-click="broadcast_inspect(data.prepid, data.requests);" rel="tooltip" title="Load detailed view of all requests" ng-href="#">
-                    <i class="icon-barcode"></i>
-                  </a>
-                  <a ng-click="inspect(data.prepid);" rel="tooltip" title="Inspect batch {{data.prepid}}" ng-hide="role(3);" ng-href="#"><i class="icon-screenshot"></i></a>
-                  <a ng-click="hold(data.prepid);" rel="tooltip" title="Hold/unhold batch {{data.prepid}}"  ng-href="#"><i class="icon-pause" ng-hide="role(3) || data.status!='new';"></i><i class="icon-play" ng-hide="role(3) || data.status!='hold';"></i></a>
-                  <a rel="tooltip" title="View all requests" ng-href="requests?range={{generateAllRequests(data.requests);}}" target="_self"><i class="icon-folder-open"></i></a>
-                  <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" style="margin-top: 0px;margin-bottom: 6px;">
+        <tr ng-repeat="data in result">
+          <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
+            <div ng-switch on="column.db_name">
+              <div ng-switch-when="prepid">
+                <a ng-href='{{dbName}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                  title="Database entry of {{data.prepid}}" ng-show="user.is_administrator && !isDevMachine();"
+                  target="_blank"><i class="icon-star"></i></a>
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                  title="Database entry of {{data.prepid}}" ng-show="user.is_administrator && isDevMachine();"
+                  target="_blank"><i class="icon-star"></i></a>
+              </div>
+              <div ng-switch-when="">
+                <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_production_expert" ng-href="#">
+                  <i class="icon-minus-sign"></i>
+                </a>
+                <a ng-click='announce(data.prepid)' title="Announce the batch" ng-show="data.status == 'new' && user.is_production_manager;" ng-href="#">
+                  <i class="icon-envelope"></i>
+                </a>
+                <a rel="tooltip" title="View all requests" ng-href="requests?range={{generateAllRequests(data.requests);}}" target="_self">
+                  <i class="icon-folder-open"></i>
+                </a>
+              </div>
+              <div ng-switch-when="notes">
+                <div style="width:400px">
+                  <pre class="notes">{{data[column.db_name]}}</pre>
                 </div>
               </div>
-              <div ng-switch-when="PrepId">
-                <a ng-href='{{getLocation()}}&prepid={{data[value.db_name]}}' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/batches/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-show="user.is_administrator && !isDevMachine();"><i class="icon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/batches/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-show="user.is_administrator && isDevMachine();"><i class="icon-star"></i></a>
+              <div ng-switch-when="history">
+                <div custom-history ng-model="data[column.db_name]"></div>
               </div>
-              <div ng-switch-when="Notes">
-                <div style="width:500px"><pre class="notes">{{data[value.db_name]}}</pre></div>
-              </div>
-              <div ng-switch-when="History">
-                <div custom-history ng-model="data[value.db_name]"></div>
-              </div>
-              <div ng-switch-when="Status">
-                <a ng-href='batches?status={{data[value.db_name]}}' target="_self" rel="tooltip" title="View batches in status {{data[value.db_name]}}">{{data[value.db_name]}}</a>
-              </div>
-              <div ng-switch-when="Requests">
+              <div ng-switch-when="requests">
                 <ul>
-                  <li ng-repeat="elem in data[value.db_name]">
-                    <span ng-show="isDevMachine();">
-                      <a ng-href='https://cmsweb-testbed.cern.ch/reqmgr2/fetch?rid={{elem.name}}' rel="tooltip" title="Open {{elem.name}} in ReqMgr2" target="_self">{{elem.name}}</a>,
-                    </span>
-                    <span ng-hide="isDevMachine();">
-                      <a ng-href='https://cmsweb.cern.ch/reqmgr2/fetch?rid={{elem.name}}' rel="tooltip" title="Open {{elem.name}} in ReqMgr2" target="_self">{{elem.name}}</a>,
-                    </span>
-                    <a ng-href='requests?prepid={{elem.content.pdmv_prep_id}}' rel="tooltip" title="view request {{elem.content.pdmv_prep_id}}" target="_self">{{elem.content.pdmv_prep_id}}</a>
-                    <img ng-show="puce[elem.content.pdmv_prep_id]" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{puce[elem.content.pdmv_prep_id]}}" rel="tooltip" title="{{r_status[elem.content.pdmv_prep_id]}}" />
-                    <span ng-show="r_status[elem.content.pdmv_prep_id] == 'submitted' || r_status[elem.content.pdmv_prep_id] == 'done'">
-                      <a ng-click="preloadRequest(data.prepid, elem.content.pdmv_prep_id);" ng-hide="underscore.has(local_requests,elem.content.pdmv_prep_id)" ng-href="#"><i class="icon-eye-open"></i></a>
-                      <span ng-show="underscore.has(local_requests, elem.content.pdmv_prep_id)">
-                        <reqmgr-Name ng-model="local_requests[elem.content.pdmv_prep_id]" prepid="data.prepid"></reqmgr-Name>
-                      </span>
+                  <li ng-repeat="workflowRequest in data[column.db_name]">
+                    <a ng-show="isDevMachine()" ng-href='https://cmsweb-testbed.cern.ch/reqmgr2/fetch?rid={{workflowRequest[1]}}' title="Open {{workflowRequest[1]}} in ReqMgr2">
+                      {{workflowRequest[1]}}
+                    </a>
+                    <a ng-show="!isDevMachine()" ng-href='https://cmsweb.cern.ch/reqmgr2/fetch?rid={{workflowRequest[1]}}' title="Open {{workflowRequest[1]}} in ReqMgr2">
+                      {{workflowRequest[1]}}
+                    </a>
+                    <br>
+                    <a ng-href='requests?prepid={{workflowRequest[0]}}' title="Open {{workflowRequest[0]}}">
+                      {{workflowRequest[0]}}
+                    </a>
                   </li>
                 </ul>
               </div>
-              <div ng-switch-default>{{data[value.db_name]}}</div>
+              <div ng-switch-default>
+                <a ng-href='batches?{{column.db_name}}={{data[column.db_name]}}'
+                   title="Show all batches where {{column.text}} is {{data[column.db_name]}}">
+                   {{data[column.db_name]}}
+                </a>
+              </div>
             </div>
           </td>
         </tr>
@@ -139,17 +90,9 @@
     </table>
     <div class="row-fluid custom-footer">
       <div class="span4">
-        <span>
-          <div ng-controller="ModalDemoCtrl">
-            Multiple selection buttons
-            <a rel="tooltip" title="Announce selected batches" ng-hide="role(3);" ng-href="#" ng-click="announceModal('all');">
-              <i class="icon-envelope"></i>
-            </a>
-            <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
-          </div>
-        </span>
       </div>
     </div>
   </span>
-  </body>
+</body>
+
 </html>

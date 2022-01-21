@@ -1,18 +1,13 @@
 """
 Module that contains ConnectionWrapper class
 """
-try:
-    # Python 3
-    import http.client as client
-except ImportError:
-    # Python 2
-    import httplib as client
-
+import http.client as client
 import logging
 import os
 import json
 import time
 import ssl
+from contextlib import contextmanager
 
 
 class ConnectionWrapper():
@@ -47,6 +42,14 @@ class ConnectionWrapper():
         self.keep_open = keep_open
         self.connection_attempts = 3
         self.timeout = 120
+
+    def __enter__(self):
+        self.logger.debug('Entering context, host: %s', self.host_url)
+        self.keep_open = True
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.logger.debug('Exiting context, host: %s', self.host_url)
+        self.close()
 
     def init_connection(self):
         """

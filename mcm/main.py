@@ -63,7 +63,7 @@ from rest_api.ChainedRequestActions import (ChainedRequestFlow,
                                             GetChainedRequest)
 from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow
 from rest_api.UserActions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser
-# from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
+from rest_api.BatchActions import GetBatch, AnnounceBatch, DeleteBatch
 from rest_api.InvalidationActions import (GetInvalidation,
                                           DeleteInvalidation,
                                           AnnounceInvalidation,
@@ -303,6 +303,7 @@ api.add_resource(RequestSoftReset, '/restapi/requests/soft_reset')
 # api.add_resource(Reserve_and_ApproveChain, '/restapi/requests/reserveandapprove/<string:chain_id>')
 # api.add_resource(RequestsPriorityChange, '/restapi/requests/priority_change')
 api.add_resource(GENLogOutput, '/restapi/requests/gen_log/<string:request_id>')
+
 # REST Campaign Actions
 api.add_resource(CreateCampaign, '/restapi/campaigns/save')
 api.add_resource(UpdateCampaign, '/restapi/campaigns/update')
@@ -311,6 +312,7 @@ api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:campaign_id>')
 api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status/<string:campaign_id>')
 api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<string:campaign_id>')
 api.add_resource(InspectCampaigns, '/restapi/campaigns/inspect/<string:campaign_id>')
+
 # REST Chained Campaign Actions
 api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
 api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:chained_campaign_id>')
@@ -356,24 +358,18 @@ api.add_resource(UpdateFlow, '/restapi/flows/update')
 api.add_resource(DeleteFlow, '/restapi/flows/delete/<string:flow_id>')
 api.add_resource(ApproveFlow, '/restapi/flows/approve/<string:flow_id>')
 api.add_resource(CloneFlow, '/restapi/flows/clone')
+
 # REST Batches Actions
-# api.add_resource(GetBatch, '/restapi/batches/get/<string:prepid>')
-# api.add_resource(AnnounceBatch, '/restapi/batches/announce')
-# api.add_resource(
-#     InspectBatches,
-#     '/restapi/batches/inspect',
-#     '/restapi/batches/inspect/<string:batch_id>/<int:n_to_go>',
-#     '/restapi/batches/inspect/<string:batch_id>')
-# api.add_resource(ResetBatch, '/restapi/batches/reset/<string:batch_ids>')
-# api.add_resource(HoldBatch, '/restapi/batches/hold/<string:batch_ids>')
-# api.add_resource(NotifyBatch, '/restapi/batches/notify')
+api.add_resource(GetBatch, '/restapi/batches/get/<string:prepid>')
+api.add_resource(AnnounceBatch, '/restapi/batches/announce')
+api.add_resource(DeleteBatch, '/restapi/batches/delete/<string:prepid>')
 
 # REST invalidation Actions
-api.add_resource(GetInvalidation, '/restapi/invalidations/get/<string:invalidation_id>')
-api.add_resource(DeleteInvalidation, '/restapi/invalidations/delete/<string:invalidation_id>')
+api.add_resource(GetInvalidation, '/restapi/invalidations/get/<string:prepid>')
+api.add_resource(DeleteInvalidation, '/restapi/invalidations/delete/<string:prepid>')
 api.add_resource(AnnounceInvalidation, '/restapi/invalidations/announce')
 api.add_resource(AcknowledgeInvalidation,
-                 '/restapi/invalidations/acknowledge/<string:invalidation_id>',
+                 '/restapi/invalidations/acknowledge/<string:prepid>',
                  '/restapi/invalidations/acknowledge')
 api.add_resource(HoldInvalidation, '/restapi/invalidations/hold')
 api.add_resource(ResetInvalidation, '/restapi/invalidations/reset')

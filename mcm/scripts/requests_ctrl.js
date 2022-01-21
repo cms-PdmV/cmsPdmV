@@ -13,8 +13,6 @@ angular.module('testApp').controller('resultsCtrl',
 
       $scope.dbName = "requests";
       $scope.setDatabaseInfo($scope.dbName, $scope.columns);
-
-      $scope.actionMessage = {};
       $scope.underscore = _;
       $scope.file_was_uploaded = false;
       $scope.tabsettings = {
@@ -35,93 +33,54 @@ angular.module('testApp').controller('resultsCtrl',
         }
       };
 
-      $scope.actionPrompt = function(action, prepid) {
-        $scope.openIsSureModal($scope.dbName, prepid, action, function (database, prepid, action) {
-          $scope.objectAction(action, prepid);
-        });
+      $scope.reset = function(prepid) {
+        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid;
+        let message = 'Are you sure you want to reset ' + $scope.promptPrepid(prepids) + '?';
+        $scope.objectAction(message,
+                            prepids,
+                            {method: 'POST',
+                             url: 'restapi/requests/reset',
+                             data: {'prepid': prepids}})
       }
 
-      $scope.objectAction = function (action, prepid) {
-        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid = [prepid];
-        for (let prepid of prepids) {
-          // Reset messages
-          $scope.actionMessage[prepid] = 'loading';
-        }
-        $http({ method: 'GET', url: 'restapi/requests/' + action + '/' + prepids.join(',') }).success(function (data, status) {
-          let results = prepids.length == 1 ? [data] : data;
-          let shouldGetData = false;
-          for (let result of results) {
-            $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
-            shouldGetData = shouldGetData || !!result.results;
-          }
-          if (shouldGetData) {
-            $scope.getData();
-          }
-        }).error(function (data, status) {
-          delete $scope.actionMessage[prepid];
-          $scope.openErrorModal(undefined, data['message'])
-        });
-      };
-
-      $scope.forcecompletePrompt = function(prepid) {
-        $scope.openIsSureModal($scope.dbName, prepid, 'forcecomplete', function (database, prepid, action) {
-          $scope.actionMessage[prepid] = 'loading';
-          $http({ method: 'PUT', url: 'restapi/requests/add_forcecomplete', data: {'prepid': prepid} }).success(function (data, status) {
-            $scope.actionMessage[prepid] = data.results ? 'OK' : data.message;
-            if (data.results) {
-              $scope.getData();
-            }
-          }).error(function (data, status) {
-            delete $scope.actionMessage[prepid];
-            $scope.openErrorModal(undefined, data['message'])
-          });
-        })
-      };
-
-      $scope.setLoading = function(prepids, loading) {
-        for (let prepid of prepids) {
-          $scope.actionMessage[prepid] = loading ? 'loading' : '';
-        }
+      $scope.softReset = function(prepid) {
+        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid;
+        let message = 'Are you sure you want to soft reset ' + $scope.promptPrepid(prepids) + '?';
+        $scope.objectAction(message,
+                            prepids,
+                            {method: 'POST',
+                             url: 'restapi/requests/soft_reset',
+                             data: {'prepid': prepids}})
       }
 
-      $scope.optionReset = function(prepids) {
-        $scope.questionModal('Are you sure you want to option reset?', function() {
-          $scope.setLoading(prepids, true);
-          $http({ method: 'POST', url: 'restapi/requests/option_reset', data: {'prepid': prepids}}).success(function (data, status) {
-            let results = prepids.length == 1 ? [data] : data;
-            let shouldGetData = false;
-            for (let result of results) {
-              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
-              shouldGetData = shouldGetData || !!result.results;
-            }
-            if (shouldGetData) {
-              $scope.getData();
-            }
-          }).error(function (data, status) {
-            $scope.openErrorModal(undefined, data['message']);
-            $scope.setLoading(prepids, false);
-          });
-        });
+      $scope.optionReset = function(prepid) {
+        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid;
+        let message = 'Are you sure you want to option reset ' + $scope.promptPrepid(prepids) + '?';
+        $scope.objectAction(message,
+                            prepids,
+                            {method: 'POST',
+                             url: 'restapi/requests/option_reset',
+                             data: {'prepid': prepids}})
+      }
+
+      $scope.nextStatus = function(prepid) {
+        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid;
+        let message = 'Are you sure you want to move ' + $scope.promptPrepid(prepids) + ' to next status?';
+        $scope.objectAction(message,
+                            prepids,
+                            {method: 'POST',
+                             url: 'restapi/requests/next_status',
+                             data: {'prepid': prepids}})
       };
 
-      $scope.nextStatus = function(prepids) {
-        $scope.questionModal('Are you sure you want to move to next status?', function() {
-          $scope.setLoading(prepids, true);
-          $http({ method: 'POST', url: 'restapi/requests/next_status', data: {'prepid': prepids}}).success(function (data, status) {
-            let results = prepids.length == 1 ? [data] : data;
-            let shouldGetData = false;
-            for (let result of results) {
-              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
-              shouldGetData = shouldGetData || !!result.results;
-            }
-            if (shouldGetData) {
-              $scope.getData();
-            }
-          }).error(function (data, status) {
-            $scope.openErrorModal(undefined, data['message']);
-            $scope.setLoading(prepids, false);
-          });
-        });
+      $scope.forcecomplete = function(prepid) {
+        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid;
+        let message = 'Are you sure you want to add ' + $scope.promptPrepid(prepids) + ' to force complete list?';
+        $scope.objectAction(message,
+                            prepids,
+                            {method: 'POST',
+                             url: 'restapi/requests/add_forcecomplete',
+                             data: {'prepid': prepids}})
       };
 
       $scope.selected_prepids = [];
@@ -266,26 +225,6 @@ angular.module('testApp').controller('resultsCtrl',
           $scope.upload({ "contents": $scope.selected_prepids.join("\n") });
           $scope.file_was_uploaded = false;
         }
-      };
-      $scope.add_to_focecomplete = function (prepid) {
-        // PUT a request to force complete list
-        $http({ method: 'PUT', url: 'restapi/' + $scope.dbName + '/add_forcecomplete', data: { 'prepid': prepid } }).success(function (data, status) {
-          $scope.update["success"] = data["results"];
-          $scope.update["fail"] = !data["results"];
-          $scope.update["status_code"] = status;
-          if (data["message"]) {
-            // if we have an actual message returned display it instead of status code
-            $scope.update["status_code"] = data["message"];
-          }
-          if ($scope.update["success"]) {
-            // reload the data to display history changes
-            $scope.getData();
-          }
-        }).error(function (status) {
-          $scope.update["success"] = false;
-          $scope.update["fail"] = true;
-          $scope.update["status_code"] = status;
-        });
       };
 
       $scope.getLinktoDmytro = function (wf_data, prepid, text) {

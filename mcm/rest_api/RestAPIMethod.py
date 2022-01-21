@@ -161,6 +161,8 @@ class RESTResource(Resource):
 
     def do_multiple_items(self, prepids, object_class, func):
         """
+        Call the func function with an objects of object_class for each prepid
+        "prepids" can be either a single prepid or a list of prepids
         """
         prepids_list = True
         if not isinstance(prepids, list):
@@ -181,7 +183,7 @@ class RESTResource(Resource):
                 if not object_instance.save():
                     results.append({'results': False,
                                     'prepid': prepid,
-                                    'message': 'Could not save to DB'})
+                                    'message': 'Could not save %s to database' % (prepid)})
                 else:
                     results.append({'results': True, 'prepid': prepid})
             except Exception as ex:
@@ -195,6 +197,40 @@ class RESTResource(Resource):
             return results[0]
 
         return results
+
+
+class DeleteRESTResource(RESTResource):
+
+    def delete_check(self, obj):
+        pass
+
+    def delete_object(self, prepid, object_class):
+        """
+        Delete an object
+        """
+        database = object_class.get_database()
+        if not database.document_exists(prepid):
+            self.logger.error('%s could not be found', prepid)
+            return {'results': False,
+                    'prepid': prepid,
+                    'message': '%s could not be found' % (prepid)}
+
+        try:
+            self.delete_check(object_class.fetch(prepid))
+        except Exception as ex:
+            import traceback
+            self.logger.error(traceback.format_exc())
+            return {'results': False,
+                    'prepid': prepid,
+                    'message': str(ex)}
+
+        if not database.delete(prepid):
+            self.logger.error('Could not delete %s from database', prepid)
+            return {'results': False,
+                    'prepid': prepid,
+                    'message': 'Could not delete %s from database' % (prepid)}
+
+        return {'results': True, 'prepid': prepid}
 
 
 class RESTResourceIndex(RESTResource):

@@ -1,8 +1,5 @@
-from hashlib import new
-import flask
 import time
 import traceback
-import json
 
 from couchdb_layer.mcm_database import database as Database
 from rest_api.RestAPIMethod import RESTResource
@@ -186,12 +183,11 @@ class DeleteCampaign(RESTResource):
 
 class GetCampaign(RESTResource):
 
-    def get(self, campaign_id):
+    def get(self, prepid):
         """
         Retrieve the campaign for given id
         """
-        campaign_db = Database('campaigns')
-        return {'results': campaign_db.get(prepid=campaign_id)}
+        return {'results': Campaign.get_database().get(prepid)}
 
 
 class ToggleCampaignStatus(RESTResource):
@@ -248,6 +244,7 @@ class InspectCampaigns(RESTResource):
         campaign_ids = list(set(campaign_id.split(',')))
         from random import shuffle
         shuffle(campaign_ids)
+        import flask
         return flask.Response(flask.stream_with_context(self.inspect(campaign_ids)))
 
     def inspect(self, campaign_ids):

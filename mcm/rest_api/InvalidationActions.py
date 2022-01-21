@@ -1,5 +1,4 @@
-from rest_api.RestAPIMethod import RESTResource
-from couchdb_layer.mcm_database import database as Database
+from rest_api.RestAPIMethod import RESTResource, DeleteRESTResource
 from json_layer.user import Role, User
 from json_layer.invalidation import Invalidation
 from tools.settings import Settings
@@ -7,35 +6,21 @@ from tools.settings import Settings
 
 class GetInvalidation(RESTResource):
 
-    def get(self, invalidation_id):
+    def get(self, prepid):
         """
         Retrieve the invalidation for given id
         """
-        invalidation_db = Database('invalidations')
-        return {'results': invalidation_db.get(invalidation_id)}
+        return {'results': Invalidation.get_database().get(prepid)}
 
 
-class DeleteInvalidation(RESTResource):
+class DeleteInvalidation(DeleteRESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
-    def delete(self, invalidation_id):
+    def delete(self, prepid):
         """
         Delete an invalidation
         """
-        invalidation_db = Database('invalidations')
-        if not invalidation_db.document_exists(invalidation_id):
-            self.logger.error('%s could not be found', invalidation_id)
-            return {'results': False,
-                    'prepid': invalidation_id,
-                    'message': '%s could not be found' % (invalidation_id)}
-
-        if not invalidation_db.delete(invalidation_id):
-            self.logger.error('Could not delete %s from database', invalidation_id)
-            return {'results': False,
-                    'prepid': invalidation_id,
-                    'message': 'Could not delete %s from database' % (invalidation_id)}
-
-        return {'results': True, 'prepid': invalidation_id}
+        return self.delete_object(prepid, Invalidation)
 
 
 class AnnounceInvalidation(RESTResource):
@@ -66,30 +51,30 @@ class AcknowledgeInvalidation(RESTResource):
         return user.get_username() in allowed_users
 
     @RESTResource.ensure_role(Role.USER)
-    def get(self, invalidation_id):
+    def get(self, prepid):
         """
         Acknowledge the invalidation and change it's status
         Legacy API, new API is POST
         """
         if not self.allowed_to_acknowledge():
             return {'results': False,
-                    'prepid': invalidation_id,
+                    'prepid': prepid,
                     'message': 'User not allowed to acknowledge'}
 
-        invalidation = Invalidation.fetch(invalidation_id)
+        invalidation = Invalidation.fetch(prepid)
         if not invalidation:
             return {'results': False,
-                    'prepid': invalidation_id,
-                    'message': '%s could not be found' % (invalidation_id)}
+                    'prepid': prepid,
+                    'message': '%s could not be found' % (prepid)}
 
         invalidation.set_acknowledged()
         if not invalidation.save():
             return {'results': False,
-                    'prepid': invalidation_id,
-                    'message': 'Could not save %s to database' % (invalidation_id)}
+                    'prepid': prepid,
+                    'message': 'Could not save %s to database' % (prepid)}
 
-        return {'results': False,
-                'prepid': invalidation_id}
+        return {'results': True,
+                'prepid': prepid}
 
     @RESTResource.ensure_role(Role.USER)
     @RESTResource.request_with_json
