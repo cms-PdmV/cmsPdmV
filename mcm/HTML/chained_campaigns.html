@@ -51,12 +51,15 @@
                 <a ng-href='edit?db_name=chained_campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-show="user.is_production_manager" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete chained campaign" ng-show="user.is_production_manager" ng-href="#">
+                <a ng-click='deleteObject(data.prepid)' rel="tooltip" title="Delete chained campaign" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-href='chained_requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self">
                   <i class="icon-indent-left"></i>
                 </a>
+                <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
+                <img ng-show="actionMessage[data.prepid] == 'loading'" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+                <span ng-show="actionMessage[data.prepid] != 'OK' && actionMessage[data.prepid] != 'loading'" style="color: red">{{actionMessage[data.prepid]}}</span>
               </div>
               <div ng-switch-when="notes">
                 <div style="width:400px">

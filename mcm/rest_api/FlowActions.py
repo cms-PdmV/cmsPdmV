@@ -1,6 +1,6 @@
 from copy import deepcopy
 from couchdb_layer.mcm_database import database as Database
-from rest_api.RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
 from json_layer.campaign import Campaign
 from json_layer.flow import Flow
 from json_layer.user import Role
@@ -278,86 +278,63 @@ class UpdateFlow(FlowRESTResource):
         return {'results': True}
 
 
-class DeleteFlow(FlowRESTResource):
+class DeleteFlow(FlowRESTResource, DeleteRESTResource):
 
-    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def delete(self, flow_id):
-        """
-        Delete a flow
-        """
-        flow_db = Database('flows')
-        if not flow_db.document_exists(flow_id):
-            self.logger.error('Cannot delete, %s does not exist', flow_id)
-            return {'results': False,
-                    'message': 'Cannot delete, %s does not exist' % (flow_id)}
-
+    def delete_check(self, obj):
+        flow_id = obj.get('prepid')
         # Check chained campaigns...
         chained_campaign_db = Database('chained_campaigns')
         chained_campaigns = chained_campaign_db.query_view('contains', flow_id, limit=3)
         if chained_campaigns:
             chained_campaign_ids = ', '.join(x['_id'] for x in chained_campaigns)
-            message = 'Chained campaign(s) %s have %s, delete them first' % (chained_campaign_ids,
-                                                                             flow_id)
-            self.logger.error(message)
-            return {'results': False,
-                    'message': message}
+            raise Exception('Chained campaign(s) %s have %s, delete them first' % (chained_campaign_ids,
+                                                                                   flow_id))
 
         # Check requests...
         request_db = Database('requests')
         requests = request_db.query_view('flown_with', flow_id, limit=3)
         if requests:
             request_ids = ', '.join(x['_id'] for x in requests)
-            message = 'Request(s) %s are flown with %s, delete them first' % (request_ids,
-                                                                              flow_id)
-            self.logger.error(message)
-            return {'results': False,
-                    'message': message}
+            raise Exception('Request(s) %s are flown with %s, delete them first' % (request_ids,
+                                                                                    flow_id))
+        self.flow = obj
+        return super().delete_check(obj)
 
-        # Delete to DB
-        flow = Flow(flow_db.get(flow_id))
-        if not flow_db.delete(flow_id):
-            self.logger.error('Could not delete flow %s from database', flow_id)
-            return {'results': False,
-                    'message': 'Could not delete flow %s from database' % (flow_id)}
-
-        # Update relevant campaigns' "Next" parameter
-        self.update_derived_objects(flow, None)
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
+    def delete(self, prepid):
+        """
+        Delete a flow
+        """
+        self.flow = None
+        results = self.delete_object(prepid, Flow)
+        if results.get('results'):
+            # Update relevant campaigns' "Next" parameter
+            self.update_derived_objects(self.flow, None)
 
         return {'results': True}
 
 
 class GetFlow(RESTResource):
 
-    def get(self, flow_id):
+    def get(self, prepid):
         """
         Retrieve the flow for given id
         """
-        flow_db = Database('flows')
-        return {'results': flow_db.get(prepid=flow_id)}
+        return {'results': Flow.get_database().get(prepid)}
 
 
 class ApproveFlow(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def post(self, flow_id):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
         Move the given flow(s) id to the next approval
         """
-        flow = Flow.fetch(flow_id)
-        if not flow:
-            return {'prepid': flow_id,
-                    'results': False,
-                    'message': 'The flow "%s" does not exist' % (flow_id)}
-
-        try:
+        def toggle(flow):
             flow.toggle_approval()
-            saved = flow.save()
-            return {'prepid': flow_id,
-                    'results': saved}
-        except Exception as ex:
-            self.logger.error('Error approving flow "%s": %s', flow_id, ex)
-            return {'prepid': flow_id,
-                    'results': False}
+
+        return self.do_multiple_items(data['prepid'], Flow, toggle)
 
 
 class CloneFlow(RESTResource):

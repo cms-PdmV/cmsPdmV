@@ -1,4 +1,4 @@
-from rest_api.RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
 from couchdb_layer.mcm_database import database as Database
 from json_layer.chained_campaign import ChainedCampaign
 from json_layer.user import Role
@@ -89,45 +89,32 @@ class UpdateChainedCampaign(RESTResource):
         return {'results': True}
 
 
-class DeleteChainedCampaign(RESTResource):
+class DeleteChainedCampaign(DeleteRESTResource):
 
-    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def delete(self, chained_campaign_id):
-        """
-        Delete a chained campaign
-        """
-        prepid = chained_campaign_id # For shorter lines....
-        ch_campaign_db = Database('chained_campaigns')
-        if not ch_campaign_db.document_exists(prepid):
-            self.logger.error('Cannot delete, %s does not exist', prepid)
-            return {'results': False,
-                    'message': 'Cannot delete, %s does not exist' % (prepid)}
-
+    def delete_check(self, obj):
+        prepid = obj.get('prepid')
         # Check chained requests...
         ch_request_db = Database('chained_requests')
         ch_requests = ch_request_db.query_view('member_of_campaign', prepid, limit=3)
         if ch_requests:
             ch_request_ids = ', '.join(x['_id'] for x in ch_requests)
-            message = 'Chained request(s) %s are member of %s, delete them first' % (ch_request_ids,
-                                                                                     prepid)
-            self.logger.error(message)
-            return {'results': False,
-                    'message': message}
+            raise Exception('Chained request(s) %s are member of %s, delete them first' % (ch_request_ids,
+                                                                                           prepid))
 
-        # Delete to DB
-        if not ch_campaign_db.delete(prepid):
-            self.logger.error('Could not delete chained campaign %s from database', prepid)
-            return {'results': False,
-                    'message': 'Could not delete chained campaign %s from database' % (prepid)}
+        return super().delete_check(obj)
 
-        return {'results': True}
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
+    def delete(self, prepid):
+        """
+        Delete a chained campaign
+        """
+        return self.delete_object(prepid, ChainedCampaign)
 
 
 class GetChainedCampaign(RESTResource):
 
-    def get(self, chained_campaign_id):
+    def get(self, prepid):
         """
         Retrieve the chained campaign for given id
         """
-        chained_campaign_db = Database('chained_campaigns')
-        return {'results': chained_campaign_db.get(prepid=chained_campaign_id)}
+        return {'results': ChainedCampaign.get_database().get(prepid)}

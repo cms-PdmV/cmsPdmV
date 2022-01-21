@@ -5,31 +5,21 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
         { text: 'Actions', select: true, db_name: '' },
+        { text: 'Status', select: true, db_name: 'status' },
         { text: 'CMSSW Release', select: true, db_name: 'cmssw_release' },
         { text: 'Energy', select: true, db_name: 'energy' },
         { text: 'Next', select: true, db_name: 'next' },
         { text: 'Notes', select: true, db_name: 'notes' },
       ];
       $scope.dbName = "campaigns";
-      $scope.actionMessage = {};
       $scope.setDatabaseInfo($scope.dbName, $scope.columns);
-      $scope.setLoading = function(prepids, loading) {
-        for (let prepid of prepids) {
-          $scope.actionMessage[prepid] = loading ? 'loading' : '';
-        }
-      }
 
       $scope.nextStatus = function (prepid) {
-        $scope.setLoading([prepid], true);
-        $http({ method: 'POST', url: 'restapi/' + $scope.dbName + '/status/' + prepid }).success(function (data, status) {
-          $scope.actionMessage[prepid] = data.results ? 'OK' : data.message;
-          if (data.results) {
-            $scope.getData();
-          }
-        }).error(function (data, status) {
-          $scope.openErrorModal(prepid, data['message']);
-          $scope.setLoading([prepid], false);
-        });
+        $scope.objectAction(undefined,
+                            [prepid],
+                            {method: 'POST',
+                             url: 'restapi/' + $scope.dbName + '/status',
+                             data: {'prepid': prepid}});
       };
 
       $scope.openRequestCreator = function (campaignPrepid) {
@@ -61,7 +51,6 @@ angular.module('testApp').controller('resultsCtrl',
             errorModal: function () { return $scope.openErrorModal; },
           }
         })
-
       };
     }
   ]

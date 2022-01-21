@@ -2,7 +2,7 @@ import time
 import traceback
 
 from couchdb_layer.mcm_database import database as Database
-from rest_api.RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
 from json_layer.campaign import Campaign
 from json_layer.request import Request
 from json_layer.sequence import Sequence
@@ -48,7 +48,7 @@ class CreateCampaign(RESTResource):
                                                 'campaigns': [[prepid, None]]})
             chained_campaign_db.save(chained_campaign.json())
 
-        return {'results': True}
+        return {'results': True, 'prepid': prepid}
 
 
 class UpdateCampaign(RESTResource):
@@ -107,78 +107,59 @@ class UpdateCampaign(RESTResource):
                                                     'campaigns': [[prepid, None]]})
                 chained_campaign_db.save(chained_campaign.json())
 
-        return {'results': True}
+        return {'results': True, 'prepid': prepid}
 
 
-class DeleteCampaign(RESTResource):
+class DeleteCampaign(DeleteRESTResource):
 
-    @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
-    def delete(self, campaign_id):
-        """
-        Delete a campaign
-        """
-        campaign_db = Database('campaigns')
-        if not campaign_db.document_exists(campaign_id):
-            self.logger.error('Cannot delete, %s does not exist', campaign_id)
-            return {'results': False,
-                    'message': 'Cannot delete, %s does not exist' % (campaign_id)}
-
+    def delete_check(self, obj):
+        campaign_id = obj.get('prepid')
         # Check flows...
         flow_db = Database('flows')
         flow_allowed_campaigns = flow_db.query_view('allowed_campaigns', campaign_id, limit=3)
         if flow_allowed_campaigns:
             flow_ids = ', '.join(x['_id'] for x in flow_allowed_campaigns)
-            message = 'Flow(s) %s have %s as allowed campaign, edit them first' % (flow_ids,
-                                                                                   campaign_id)
-            self.logger.error(message)
-            return {'results': False,
-                    'message': message}
+            raise Exception('Flow(s) %s have %s as allowed campaign, edit them first' % (flow_ids,
+                                                                                         campaign_id))
 
         flow_next_campaign = flow_db.query_view('next_campaign', campaign_id, limit=3)
         if flow_next_campaign:
             flow_ids = ', '.join(x['_id'] for x in flow_next_campaign)
-            message = 'Flow(s) %s have %s as next campaign, edit them first' % (flow_ids,
-                                                                                campaign_id)
-            self.logger.error(message)
-            return {'results': False,
-                    'message': message}
+            raise Exception('Flow(s) %s have %s as next campaign, edit them first' % (flow_ids,
+                                                                                      campaign_id))
 
         # Check chained campaigns...
         chained_campaign_db = Database('chained_campaigns')
         chained_campaigns = chained_campaign_db.query_view('campaign', campaign_id, limit=3)
         if chained_campaigns:
             chained_campaign_ids = ', '.join(x['_id'] for x in chained_campaigns)
-            message = 'Chained campaign(s) %s have %s, delete them first' % (chained_campaign_ids,
-                                                                             campaign_id)
-            self.logger.error(message)
-            return {'results': False,
-                    'message': message}
+            raise Exception('Chained campaign(s) %s have %s, delete them first' % (chained_campaign_ids,
+                                                                                   campaign_id))
 
         # Check requests...
         request_db = Database('requests')
         requests = request_db.query_view('member_of_campaign', campaign_id, limit=3)
         if requests:
             request_ids = ', '.join(x['_id'] for x in requests)
-            message = 'Request(s) %s are member of %s, delete them first' % (request_ids,
-                                                                             campaign_id)
-            self.logger.error(message)
-            return {'results': False,
-                    'message': message}
+            raise Exception('Request(s) %s are member of %s, delete them first' % (request_ids,
+                                                                                   campaign_id))
 
         # Get all campaigns that contain this campaign as "next"
+        campaign_db = Campaign.get_database()
         campaigns_with_next = campaign_db.query_view('next', campaign_id,  page_num=-1)
         for campaign_next in campaigns_with_next:
             if campaign_id in campaign_next['next']:
                 campaign_next['next'].remove(campaign_id)
                 campaign_db.update(campaign_next)
 
-        # Delete to DB
-        if not campaign_db.delete(campaign_id):
-            self.logger.error('Could not delete campaign %s from database', campaign_id)
-            return {'results': False,
-                    'message': 'Could not delete campaign %s from database' % (campaign_id)}
+        return super().delete_check(obj)
 
-        return {'results': True}
+    @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
+    def delete(self, prepid):
+        """
+        Delete a campaign
+        """
+        return self.delete_object(prepid, Campaign)
 
 
 class GetCampaign(RESTResource):
@@ -193,26 +174,15 @@ class GetCampaign(RESTResource):
 class ToggleCampaignStatus(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
-    def post(self, campaign_id):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
         Toggle campaign status
         """
-        campaign = Campaign.fetch(campaign_id)
-        if not campaign:
-            return {'results': False,
-                    'message': 'Campaign "%s" does not exist' % (campaign_id)}
-
-        try:
+        def toggle(campaign):
             campaign.toggle_status()
-        except Exception as ex:
-            return {'results': False,
-                    'message': str(ex)}
 
-        if not campaign.save():
-            return {'results': False,
-                    'message': 'Could not save campaign "%s" to database' % (campaign_id)}
-
-        return {'results': True}
+        return self.do_multiple_items(data['prepid'], Campaign, toggle)
 
 
 class GetCmsDriverForCampaign(RESTResource):

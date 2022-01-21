@@ -98,14 +98,14 @@ angular.module('testApp').controller('mainCtrl',
       // Endo of user info request
 
       $scope.isDevMachine = function () {
-        is_dev = $location.host().indexOf("dev") != -1;
-        if (is_dev) {
-          body = document.getElementsByTagName("body");
+        const isDev = $location.host().indexOf("dev") != -1;
+        if (isDev) {
+          const body = document.getElementsByTagName("body");
           _.each(body, function (v) {
             // v.style.backgroundImage = "url(HTML/draft.png)"
           });
         }
-        return is_dev;
+        return isDev;
       };
 
       //return everyting thats after main url

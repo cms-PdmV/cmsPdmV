@@ -309,14 +309,14 @@ api.add_resource(CreateCampaign, '/restapi/campaigns/save')
 api.add_resource(UpdateCampaign, '/restapi/campaigns/update')
 api.add_resource(DeleteCampaign, '/restapi/campaigns/delete/<string:campaign_id>')
 api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:campaign_id>')
-api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status/<string:campaign_id>')
+api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status')
 api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<string:campaign_id>')
 api.add_resource(InspectCampaigns, '/restapi/campaigns/inspect/<string:campaign_id>')
 
 # REST Chained Campaign Actions
 api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
-api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:chained_campaign_id>')
-api.add_resource(GetChainedCampaign, '/restapi/chained_campaigns/get/<string:chained_campaign_id>')
+api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:prepid>')
+api.add_resource(GetChainedCampaign, '/restapi/chained_campaigns/get/<string:prepid>')
 api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
 
 # REST Chained Request Actions
@@ -352,11 +352,11 @@ api.add_resource(ChainedRequestRewindToRoot, '/restapi/chained_requests/rewind_t
 # api.add_resource(ChainsFromTicket, '/restapi/chained_requests/from_ticket')
 # api.add_resource(GetUniqueChainedRequestValues, '/restapi/chained_requests/unique_values/<string:field_name>')
 # REST Flow Actions
-api.add_resource(GetFlow, '/restapi/flows/get/<string:flow_id>')
+api.add_resource(GetFlow, '/restapi/flows/get/<string:prepid>')
 api.add_resource(CreateFlow, '/restapi/flows/save')
 api.add_resource(UpdateFlow, '/restapi/flows/update')
-api.add_resource(DeleteFlow, '/restapi/flows/delete/<string:flow_id>')
-api.add_resource(ApproveFlow, '/restapi/flows/approve/<string:flow_id>')
+api.add_resource(DeleteFlow, '/restapi/flows/delete/<string:prepid>')
+api.add_resource(ApproveFlow, '/restapi/flows/approve')
 api.add_resource(CloneFlow, '/restapi/flows/clone')
 
 # REST Batches Actions
