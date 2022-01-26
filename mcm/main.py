@@ -1,5 +1,5 @@
 from rest_api.ControlActions import Search, CacheClear
-from rest_api.RestAPIMethod import RESTResourceIndex, RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from rest_api.RequestActions import (RequestImport,
                                      RequestClone,
                                      RequestDelete,
@@ -81,7 +81,9 @@ from json_layer.sequence import Sequence  # to get campaign sequences
 from tools.logger import UserFilter
 from tools.config_manager import Config
 from flask_restful import Api
-from flask import Flask, send_from_directory, request, g
+from flask import Flask, send_from_directory, request, g, render_template_string
+from jinja2.exceptions import TemplateNotFound
+from tools.utils import get_api_documentation
 
 import json
 import signal
@@ -185,29 +187,25 @@ def send_HTML(path):
 
 api.add_resource(Search, '/search')
 
-# REST API - RESTResourceIndex is the directory of available commands
-api.add_resource(
-    RESTResourceIndex,
-    '/restapi',
-    '/restapi/requests',
-    '/restapi/campaigns',
-    '/restapi/chained_requests',
-    '/restapi/chained_campaigns',
-    '/restapi/flows',
-    '/restapi/users',
-    '/restapi/batches',
-    '/restapi/invalidations',
-    '/restapi/dashboard',
-    '/restapi/mccms',
-    '/restapi/settings',
-    '/restapi/tags',
-    '/restapi/control',
-    '/restapi/lists',
-    '/public',
-    '/public/restapi',
-    '/public/restapi/requests',
-    '/public/restapi/chained_requests'
-)
+def setup_api_docs(flask_app):
+    """
+    Setup an enpoint for getting API documentation
+    """
+    with open('HTML/api.html') as template_file:
+        api_template = template_file.read()
+
+    def _api_documentation(api_path=None):
+        """
+        Endpoint for API documentation HTML
+        """
+        docs = get_api_documentation(flask_app, api_path)
+        try:
+            return render_template_string(api_template, docs=docs)
+        except TemplateNotFound:
+            return json.dumps(docs, indent=2, sort_keys=True)
+
+    flask_app.add_url_rule('/restapi', None, _api_documentation)
+    flask_app.add_url_rule('/restapi/<path:api_path>', None, _api_documentation)
 #
 # create a restriction-free urls, with limited capabilities
 # api.add_resource(
@@ -308,11 +306,11 @@ api.add_resource(GENLogOutput, '/restapi/requests/gen_log/<string:request_id>')
 # REST Campaign Actions
 api.add_resource(CreateCampaign, '/restapi/campaigns/save')
 api.add_resource(UpdateCampaign, '/restapi/campaigns/update')
-api.add_resource(DeleteCampaign, '/restapi/campaigns/delete/<string:campaign_id>')
-api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:campaign_id>')
+api.add_resource(DeleteCampaign, '/restapi/campaigns/delete/<string:prepid>')
+api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:prepid>')
 api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status')
-api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<string:campaign_id>')
-api.add_resource(InspectCampaigns, '/restapi/campaigns/inspect/<string:campaign_id>')
+api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<string:prepid>')
+api.add_resource(InspectCampaigns, '/restapi/campaigns/inspect/<string:prepid>')
 
 # REST Chained Campaign Actions
 api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
@@ -383,19 +381,19 @@ api.add_resource(GetQueueInfo, '/restapi/dashboard/get_submission_info')
 # REST mccms Actions
 api.add_resource(
     GetMccm,
-    '/restapi/mccms/get/<string:mccm_id>',
-    '/public/restapi/mccms/get/<string:mccm_id>')
+    '/restapi/mccms/get/<string:prepid>',
+    '/public/restapi/mccms/get/<string:prepid>')
 api.add_resource(UpdateMccm, '/restapi/mccms/update')
 api.add_resource(CreateMccm, '/restapi/mccms/save')
-api.add_resource(DeleteMccm, '/restapi/mccms/delete/<string:mccm_id>')
-api.add_resource(CancelMccm, '/restapi/mccms/cancel/<string:mccm_id>')
-api.add_resource(GetEditableMccmFields, '/restapi/mccms/editable/<string:mccm_id>')
-api.add_resource(GenerateChains, '/restapi/mccms/generate/<string:mccm_id>')
+api.add_resource(DeleteMccm, '/restapi/mccms/delete/<string:prepid>')
+api.add_resource(CancelMccm, '/restapi/mccms/cancel/<string:prepid>')
+api.add_resource(GetEditableMccmFields, '/restapi/mccms/editable/<string:prepid>')
+api.add_resource(GenerateChains, '/restapi/mccms/generate/<string:prepid>')
 api.add_resource(MccMReminderProdManagers, '/restapi/mccms/reminder_prod_managers')
 api.add_resource(MccMReminderGenConveners, '/restapi/mccms/reminder_gen_conveners')
 api.add_resource(MccMReminderGenContacts, '/restapi/mccms/reminder_gen_contacts')
-api.add_resource(CalculateTotalEvts, '/restapi/mccms/update_total_events/<string:mccm_id>')
-api.add_resource(CheckIfAllApproved, '/restapi/mccms/check_all_approved/<string:mccm_id>')
+api.add_resource(CalculateTotalEvts, '/restapi/mccms/update_total_events/<string:prepid>')
+api.add_resource(CheckIfAllApproved, '/restapi/mccms/check_all_approved/<string:prepid>')
 api.add_resource(NotifyMccm, '/restapi/mccms/notify')
 # REST settings Actions
 api.add_resource(GetSetting, '/restapi/settings/get/<string:key>')
@@ -560,6 +558,7 @@ def main():
     # Run flask
     port = args.get('port') or Config.getint('port')
     host = args.get('host') or Config.get('host')
+    setup_api_docs(app)
     error_logger.info('Starting McM, host=%s, port=%s, debug=%s, prod=%s', host, port, debug, prod)
     app.run(host=host, port=port, threaded=True, debug=debug)
 

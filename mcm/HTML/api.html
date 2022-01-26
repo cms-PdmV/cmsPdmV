@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>API Reference</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900">
+    <link rel="icon" href="static/favicon.png" type="image/png" >
+    <style>
+      body {
+        font-family: "Roboto", sans-serif;
+        color: rgba(0, 0, 0, 0.87);
+        font-size: 14px;
+      }
+      a {
+        color: rgb(25, 118, 210);
+      }
+      pre {
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>API Reference</h1>
+    {% for (category_name, category) in docs | dictsort %}
+      <h3>{{category_name}}</h1>
+      <ul>
+        {% for (endpoint_name, endpoint) in category | dictsort %}
+          <li style="margin: 12px;">{{endpoint.doc}}
+            {% for url in endpoint.urls %}
+              <b><pre>{{url}}</pre></b>
+            {% endfor %}
+            <ul style="margin: 6px;">
+              {% for (method_name, method_doc) in endpoint.methods | dictsort %}
+                <li>
+                  <b>{{method_name}}</b>
+                  {% if method_doc.role %}
+                    (Requires "{{method_doc.role}}" role)
+                  {% endif %}
+                  <br>
+                  <small><i>{{method_doc.source}}</i></small>
+                  <pre>{{method_doc.doc}}</pre>
+                </li>
+              {% endfor %}
+            </ul>
+          </li>
+        {% endfor %}
+      </ul>
+      <hr>
+    {% endfor %}
+  </body>
+</html>

@@ -50,7 +50,7 @@
                 <a ng-href='edit?db_name={{dbName}}&prepid={{data.prepid}}' title="Edit {{data.prepid}}" ng-show="user.is_production_manager" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-click='deletePrompt(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_production_expert" ng-href="#">
+                <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_production_expert" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-click="openRequestCreator(data.prepid)" title="Create new request" ng-show="user.is_production_manager && data.root != 1 && data.status == 'started';" ng-href="#">

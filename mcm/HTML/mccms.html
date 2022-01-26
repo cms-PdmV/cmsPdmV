@@ -51,7 +51,7 @@
                 <a ng-href='edit?db_name=mccms&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(1);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete ticket" ng-hide="role(1);" ng-href="#">
+                <a ng-click='deleteObject(data.prepid)' rel="tooltip" title="Delete ticket" ng-hide="role(1);" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a rel="tooltip" title="Cancel ticket" ng-click="actionPrompt('cancel', data.prepid)" ng-href="#" ng-hide="role(1);">

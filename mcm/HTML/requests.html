@@ -89,7 +89,7 @@
                 <a ng-href='edit?db_name=requests&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(1);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete request" ng-hide="data.status != 'new' || role(1);" ng-href="#">
+                <a ng-click='deleteObject(data.prepid)' rel="tooltip" title="Delete request" ng-hide="data.status != 'new' || role(1);" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-click="openCloneRequestModal(data)" title="Clone request" ng-hide="role(1);" ng-href="#">

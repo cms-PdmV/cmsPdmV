@@ -65,6 +65,12 @@ class RESTResource(Resource):
 
                 user = User()
                 user_role = user.get_role()
+                logger = logging.getLogger('mcm_error')
+                logger.debug('Ensuring user %s (%s) is allowed to acces API %s limited to %s',
+                             user.get_username(),
+                             user_role,
+                             request.path,
+                             role)
                 if user_role >= role:
                     return func(*args, **kwargs)
 
@@ -78,6 +84,7 @@ class RESTResource(Resource):
             ensure_role_wrapper_wrapper.__name__ = func.__name__
             ensure_role_wrapper_wrapper.__doc__ = func.__doc__
             ensure_role_wrapper_wrapper.__role__ = role
+            ensure_role_wrapper_wrapper.__func__ = func
             return ensure_role_wrapper_wrapper
 
         return ensure_role_wrapper
@@ -93,7 +100,7 @@ class RESTResource(Resource):
             Wrapper around actual function
             """
             data = request.data
-            logger = logging.getLogger("mcm_error")
+            logger = logging.getLogger('mcm_error')
             logger.debug('Ensuring request data for %s', request.path)
             if not data:
                 logger.error('No data was found in request %s', request.path)
@@ -116,6 +123,9 @@ class RESTResource(Resource):
         ensure_request_data_wrapper.__doc__ = func.__doc__
         if hasattr(func, '__role__'):
             ensure_request_data_wrapper.__role__ = func.__role__
+
+        if hasattr(func, '__func__'):
+            ensure_request_data_wrapper.__func__ = func.__func__
 
         return ensure_request_data_wrapper
 
@@ -231,96 +241,3 @@ class DeleteRESTResource(RESTResource):
                     'message': 'Could not delete %s from database' % (prepid)}
 
         return {'results': True, 'prepid': prepid}
-
-
-class RESTResourceIndex(RESTResource):
-    def __init__(self, data=None):
-
-        # this is the restriction for
-        # the role of the user that can
-        # access this method.
-        self.access_role = access_rights.user
-
-        self.res = ""
-        if not data:
-            self.data = {'PUT': [('import_request', 'Request JSON', 'Import a request to the database')],
-                         'GET': [('get_request', 'prepid', 'Retrieve a request from the database'), (
-                             'request_prepid', 'Pwg, Campaign Name',
-                             'Generates the next available PREP_ID from the database'),
-                                 ('get_cmsDriver', 'prepid', 'return a list of cmsDriver commands for a request')],
-                         'DELETE': [('delete_request', 'prepid',
-                                     'Delete a request from the d<th>GET Doc string</th>atabase and that\'s it ')]}
-        else:
-            self.data = data
-        self.before_request()
-
-    def get(self):
-        """
-        Returns the documentation of the resource
-        """
-        return self.index()
-
-    def index(self):
-        methods = ['GET', 'PUT', 'POST', 'DELETE']
-        current_rule = request.url_rule.rule
-        is_index = current_rule in ['/restapi', '/public', '/public/restapi']
-        data = {}
-        data['title'] = "Index for " + current_rule
-        functions = []
-        data['functions'] = functions
-        for rule in current_app.url_map.iter_rules():
-            func = current_app.view_functions.get(rule.endpoint)
-            if not hasattr(func, 'view_class'):
-                continue
-
-            function_name = func.view_class.__name__
-            if is_index and function_name != RESTResourceIndex.__name__:
-                continue
-
-            if not rule.rule.startswith(current_rule):
-                continue
-
-            if rule.rule == current_rule:
-                # Do not include itself
-                continue
-
-            function_dict = {}
-            function_dict['path'] = (rule.rule)[1:]
-            function_dict['name'] = function_name
-            functions.append(function_dict)
-            if is_index:
-                continue
-
-            acc_limit = None
-            if hasattr(func.view_class, 'access_limit'):
-                acc_limit = getattr(func.view_class, 'access_limit')
-
-            methods_list = []
-            for m in methods:
-                if m not in rule.methods:
-                    # If rule does not have certain method - continue
-                    continue
-
-                method_dict = {}
-                method_dict['name'] = m
-                method_doc = func.view_class.__dict__.get(m.lower()).__doc__
-                if method_doc is not None:
-                    method_dict['doc'] = method_doc
-
-                if acc_limit is not None:
-                    method_dict['access_limit'] = roles[acc_limit]
-                else:
-                    method_dict['access_limit'] = roles[func.view_class.limit_per_method[m]]
-
-                try:
-                    call_count_key = function_name + m
-                    call_count = RESTResource.call_counters[call_count_key]
-                except KeyError:
-                    call_count = 0
-
-                method_dict['call_count'] = '%d' % (call_count)
-                methods_list.append(method_dict)
-
-            function_dict['methods'] = methods_list
-
-        return self.output_text(render_template('restapi.html', data=data), 200, None)
