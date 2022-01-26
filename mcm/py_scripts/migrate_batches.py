@@ -32,7 +32,7 @@ for batches in database.bulk_yield(250):
                 total,
                 batches[0]['_id'],
                 batches[-1]['_id'])
-    
+
     to_save = []
     for batch in batches:
         initial_hash = item_hash(batch)

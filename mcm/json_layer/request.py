@@ -972,7 +972,7 @@ class Request(json_base):
         sequences = []
         sequences_name = request_parameters.get('sequences_name', 'default')
         campaign_sequences = campaign.get('sequences')[sequences_name]
-        flow_sequences = request_parameters.get('sequences', {}).get(sequences_name, [])
+        flow_sequences = request_parameters.get('sequences', [])
         # Add empty sequences to flow
         flow_sequences += (len(campaign_sequences) - len(flow_sequences)) * [{}]
         assert len(campaign_sequences) == len(flow_sequences)
@@ -1715,7 +1715,7 @@ class Request(json_base):
         self.reload()
 
     def get_stats(self, forced=False):
-        return 
+        return
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
         prepid = self.get_attribute('prepid')
         stats_workflows = stats_db.raw_query_view('_designDoc',
@@ -2427,7 +2427,7 @@ class Request(json_base):
             raise Exception('%s is not a member of %s' % (prepid, chained_request['prepid']))
 
         request_db = Database('requests')
-        return request_db.bulk_get(chain[:chain.index(prepid)]) 
+        return request_db.bulk_get(chain[:chain.index(prepid)])
 
     def get_derived_requests(self, chained_requests):
         """

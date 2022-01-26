@@ -197,7 +197,7 @@ while len(submitted_requests) > 0:
                     last_transition_time_formatted,
                     int(threshold_archived_seconds / 86400.0))
                 print(note)
-                add_note_and_tags(request, note, ['Dead'])  
+                add_note_and_tags(request, note, ['Dead'])
                 if not dry_run:
                     print('Saving %s: %s' % (prepid, mcm.update('requests', request)))
 

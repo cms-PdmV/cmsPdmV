@@ -32,12 +32,13 @@ for chained_requests in database.bulk_yield(1000):
                 total,
                 chained_requests[0]['_id'],
                 chained_requests[-1]['_id'])
-    
+
     to_save = []
     for chained_request in chained_requests:
         initial_hash = item_hash(chained_request)
         chained_request.pop('analysis_id', None)
         chained_request.pop('chain_type', None)
+        chained_request.pop('approval', None)
 
         if 'action_parameters' in chained_request:
             chained_request['enabled'] = chained_request['action_parameters']['flag']

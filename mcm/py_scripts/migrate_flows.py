@@ -32,7 +32,7 @@ for flows in database.bulk_yield(50):
                 total,
                 flows[0]['_id'],
                 flows[-1]['_id'])
-    
+
     to_save = []
     for flow in flows:
         initial_hash = item_hash(flow)

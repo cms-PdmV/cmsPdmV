@@ -2,7 +2,7 @@ import flask
 import time
 
 import json
-from rest_api.RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
 from couchdb_layer.mcm_database import database as Database
 from json_layer.mccm import MccM
 from json_layer.user import Role, User
@@ -128,7 +128,7 @@ class UpdateMccm(RESTResource):
             return {'results': True}
 
         difference = ', '.join(difference)
-        mccm.update_history({'action': 'update', 'step': difference})
+        mccm.update_history('update', difference)
 
         # Save to DB
         if not mccm_db.update(mccm.json()):
@@ -139,25 +139,13 @@ class UpdateMccm(RESTResource):
         return {'results': True}
 
 
-class DeleteMccm(RESTResource):
+class DeleteMccm(DeleteRESTResource):
 
-    @RESTResource.ensure_role(Role.MC_CONTACT)
-    def delete(self, mccm_id):
-        """
-        Delete a MccM ticket
-        """
-        mccm_db = Database('mccms')
-        mccm_json = mccm_db.get(mccm_id)
-        if not mccm_json:
-            self.logger.error('Cannot delete, %s does not exist', mccm_id)
-            return {'results': False,
-                    'message': 'Cannot delete, %s does not exist' % (mccm_id)}
+    def delete_check(self, obj):
+        if obj.get_attribute('status') == 'done':
+            raise Exception('Cannot delete a ticket that is done')
 
-        mccm = MccM(mccm_json)
-        if mccm.get_attribute('status') == 'done':
-            return {"results": False,
-                    "message": "Cannot delete a ticket that is done"}
-
+        mccm_id = obj.get('prepid')
         # User info
         user = User()
         user_role = user.get_role()
@@ -167,7 +155,7 @@ class DeleteMccm(RESTResource):
                          mccm_id)
         if user_role < Role.PRODUCTION_MANAGER:
             username = user.get_username()
-            history = mccm.get_attribute('history')
+            history = obj.get_attribute('history')
             owner = None
             owner_name = None
             if history:
@@ -177,30 +165,28 @@ class DeleteMccm(RESTResource):
                         owner_name = history_entry['updater']['author_name']
 
             if not owner:
-                return {'results': False,
-                        'message': 'Could not get owner of the ticket'}
+                raise Exception('Could not get owner of the ticket')
 
             if owner != username:
-                return {'results': False,
-                        'message': 'Only the owner (%s) is allowed to delete the ticket' % (owner_name)}
+                raise Exception('Only the owner %s is allowed to delete the ticket' % (owner_name))
 
-        # Delete from DB
-        if not mccm_db.delete(mccm_id):
-            self.logger.error('Could not delete %s from database', mccm_id)
-            return {'results': False,
-                    'message': 'Could not delete %s from database' % (mccm_id)}
+        return super().delete_check(obj)
 
-        return {'results': True}
+    @RESTResource.ensure_role(Role.MC_CONTACT)
+    def delete(self, prepid):
+        """
+        Delete a MccM ticket
+        """
+        return self.delete_object(prepid, MccM)
 
 
 class GetMccm(RESTResource):
 
-    def get(self, mccm_id):
+    def get(self, prepid):
         """
         Retrieve the MccM for given id
         """
-        mccm_db = Database('mccms')
-        return {'results': mccm_db.get(prepid=mccm_id)}
+        return {'results': MccM.get_database().get(prepid)}
 
 
 class CancelMccm(RESTResource):
@@ -602,7 +588,6 @@ class MccMReminderGenContacts(RESTResource):
         """
         Get list of generator contact emails by PWG
         """
-
         user_db = Database('users')
         generator_contacts = user_db.query_view('role', 'generator_contact', page_num=-1)
         by_pwg = {}

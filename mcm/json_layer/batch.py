@@ -2,6 +2,8 @@ from couchdb_layer.mcm_database import database as Database
 from json_layer.json_base import json_base
 from tools.connection_wrapper import ConnectionWrapper
 from tools.config_manager import Config
+from tools.locker import locker
+
 
 class Batch(json_base):
 
@@ -51,19 +53,22 @@ class Batch(json_base):
         cert = Config.get('grid_cert')
         key = Config.get('grid_key')
         prepid = self.get('prepid')
-        if self.get('status') != 'new':
-            raise Exception('Only new batches can be announced')
+        campaign = prepid.split('-')[0]
+        with locker.lock(f'batch-{campaign}'):
+            if self.get('status') != 'new':
+                raise Exception('Only new batches can be announced')
 
-        requests = self.get('requests')
-        self.logger.info('Announcing batch %s with %s workflows', prepid, len(requests))
-        with ConnectionWrapper(host, cert_file=cert, key_file=key) as connection:
-            for workflow, prepid in requests:
-                self.logger.info('Approving %s for %s', workflow, prepid)
-                if not self.approve_workflow(workflow, connection):
-                    raise Exception('Could not approve %s' % (workflow))
+            requests = self.get('requests')
+            self.logger.info('Announcing batch %s with %s workflows', prepid, len(requests))
+            with ConnectionWrapper(host, cert_file=cert, key_file=key) as connection:
+                for workflow, prepid in requests:
+                    self.logger.info('Approving %s for %s', workflow, prepid)
+                    if not self.approve_workflow(workflow, connection):
+                        raise Exception('Could not approve %s' % (workflow))
 
-        self.update_history('status', 'announced')
-        self.set('status', 'announced')
+            self.update_history('status', 'announced')
+            self.set('status', 'announced')
+            self.reload(save=True)
 
     def approve_workflow(self, workflow_name, connection):
         """

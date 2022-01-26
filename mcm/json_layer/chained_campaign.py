@@ -1,6 +1,5 @@
 from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database as Database
-from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
 
 class ChainedCampaign(json_base):
@@ -27,38 +26,21 @@ class ChainedCampaign(json_base):
                          prepid,
                          root_request_id)
 
-        # parse request id
-        pwg = root_request.get_attribute('pwg')
-        # generate new chain id
-        chained_request_id = ChainedRequestPrepId().next_prepid(pwg, prepid)
-        if not chained_request_id:
-            raise ValueError('Prepid returned was None')
-
-        chained_request_db = Database('chained_requests')
-        from json_layer.chained_request import ChainedRequest
-        chained_request = ChainedRequest(chained_request_db.get(chained_request_id))
-
-        # set values
-        chained_request.set_attribute('pwg', pwg)
-        chained_request.set_attribute('member_of_campaign', self.get_attribute('prepid'))
-        chained_request.set_attribute('action_parameters', self.get_attribute('action_parameters'))
-        # By default flag should be true
-        chained_request.set_attribute('enabled', True)
-
-        # set the default values that will be carried over to the next step in the chain
-        chained_request.set_attribute("dataset_name", root_request.get_attribute("dataset_name"))
-        chained_request.set_attribute("pwg", pwg)
-
-        # Last status of chain
+        # Use PWG of root request
+        pwg = root_request.get('pwg')
         request_status = root_request.get_attribute('status')
-        chained_request.set_attribute('last_status', request_status)
+        chained_request_data = {'pwg': pwg,
+                                'chain': [root_request_id],
+                                'member_of_campaign': self.get('prepid'),
+                                'enabled': True,
+                                'dataset_name': root_request.get('dataset_name'),
+                                'last_status': request_status}
+        from rest_api.ChainedRequestFactory import ChainedRequestFactory
+        chained_request = ChainedRequestFactory.make(chained_request_data)
+        chained_request.validate()
         if request_status in {'submitted', 'done'}:
-            chained_request.set_attribute('status', 'processing')
+            chained_request.set('status', 'processing')
 
-        # add root request to chain
-        chained_request.set_attribute('chain', [root_request_id])
-
-        # update history
         chained_request.update_history('created')
         return chained_request
 

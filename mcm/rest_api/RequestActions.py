@@ -22,7 +22,6 @@ from tools.locker import locker
 from tools.settings import Settings
 from tools.handlers import RequestInjector, submit_pool
 from tools.utils import clean_split, expand_range
-from flask_restful import reqparse
 
 
 class RequestImport(RESTResource):

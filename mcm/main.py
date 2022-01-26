@@ -42,13 +42,14 @@ from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChained
 from rest_api.ChainedRequestActions import (ChainedRequestFlow,
                                             ChainedRequestRewind,
                                             ChainedRequestRewindToRoot,
+                                            UpdateChainedRequest,
+                                            DeleteChainedRequest,
                                             #ForceChainReqToDone,
                                             #ForceStatusDoneToProcessing,
                                             #CreateChainedRequest,
                                             #ChainsFromTicket,
                                             #ChainedRequestsPriorityChange,
                                             #UpdateChainedRequest,
-                                            #DeleteChainedRequest,
                                             #ApproveChainedRequest,
                                             #InspectChain,
                                             #SearchableChainedRequest,
@@ -321,9 +322,9 @@ api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
 
 # REST Chained Request Actions
 # api.add_resource(CreateChainedRequest, '/restapi/chained_requests/save')
-# api.add_resource(UpdateChainedRequest, '/restapi/chained_requests/update')
-# api.add_resource(DeleteChainedRequest, '/restapi/chained_requests/delete/<string:chained_request_id>')
-# api.add_resource(GetChainedRequest, '/restapi/chained_requests/get/<string:chained_request_id>')
+api.add_resource(UpdateChainedRequest, '/restapi/chained_requests/update')
+api.add_resource(DeleteChainedRequest, '/restapi/chained_requests/delete/<string:prepid>')
+api.add_resource(GetChainedRequest, '/restapi/chained_requests/get/<string:prepid>')
 api.add_resource(ChainedRequestFlow, '/restapi/chained_requests/flow')
 api.add_resource(ChainedRequestRewind, '/restapi/chained_requests/rewind')
 api.add_resource(ChainedRequestRewindToRoot, '/restapi/chained_requests/rewind_to_root')

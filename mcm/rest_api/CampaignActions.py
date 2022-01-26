@@ -89,7 +89,7 @@ class UpdateCampaign(RESTResource):
 
         difference = ', '.join(difference)
         new_campaign.set('history', old_campaign.get('history'))
-        new_campaign.update_history({'action': 'update', 'step': difference})
+        new_campaign.update_history('update', difference)
 
         # Save to DB
         if not new_campaign.save():

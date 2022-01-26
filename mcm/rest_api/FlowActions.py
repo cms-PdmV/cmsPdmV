@@ -311,7 +311,7 @@ class DeleteFlow(FlowRESTResource, DeleteRESTResource):
             # Update relevant campaigns' "Next" parameter
             self.update_derived_objects(self.flow, None)
 
-        return {'results': True}
+        return results
 
 
 class GetFlow(RESTResource):

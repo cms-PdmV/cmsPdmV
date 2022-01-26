@@ -1,5 +1,6 @@
 import time
 import json
+from urllib import request
 from json_layer.chained_campaign import ChainedCampaign
 
 from json_layer.json_base import json_base
@@ -45,6 +46,18 @@ class ChainedRequest(json_base):
         Return length of chain
         """
         return len(self.get_attribute('chain'))
+
+    def __bool__(self):
+        """
+        Return that object is truthy
+        """
+        return True
+
+    def current(self):
+        """
+        Return prepid of current step
+        """
+        return self[self.get('step')]
 
     @classmethod
     def get_database(cls):
@@ -144,7 +157,7 @@ class ChainedRequest(json_base):
 
         return setup_file
 
-    def flow(self, reserve=False, stop_at_campaign=None):
+    def flow(self, reserve=False, stop_at_campaign=None, trigger_others=True):
         """
         Flow chained request one step further
         If possible, reuse requests, if not - create new ones
@@ -155,11 +168,10 @@ class ChainedRequest(json_base):
         if not chain:
             # Empty chained requests are not valid, they must have at least a
             # root request
-            raise Exception('Chained request %s has no requests' % (prepid))
+            raise Exception('Chained request {prepid} has no requests')
 
         if not self.get('enabled'):
-            return {'results': False,
-                    'message': 'Chained request is not enabled'}
+            raise Exception('Chained request is not enabled')
 
         if not reserve:
             # Normally the chain's step is the current step
@@ -175,12 +187,10 @@ class ChainedRequest(json_base):
         chained_campaign = ChainedCampaign.fetch(chained_campaign_id)
 
         if next_step >= len(chained_campaign):
-            return {'result': False,
-                    'message': 'Chained request does not allow any futher flowing'}
+            raise Exception('Chained request does not allow any futher flowing')
 
         if not chained_campaign.get('enabled'):
-            return {'result': False,
-                    'message': 'Chained campaign is not enabled'}
+            raise Exception(f'Chained campaign {chained_campaign_id} is not enabled')
 
         next_flow_id = chained_campaign.flow(next_step)
         next_campaign_id = chained_campaign.campaign(next_step)
@@ -195,22 +205,18 @@ class ChainedRequest(json_base):
         current_request = Request.fetch(current_prepid)
         current_campaign_id = current_request.get('member_of_campaign')
         if reserve and stop_at_campaign == current_campaign_id:
-            return {'result': False,
-                    'message': 'Reached limit'}
+            raise Exception('Reached limit')
 
         current_campaign = Campaign.fetch(current_campaign_id)
         next_campaign = Campaign.fetch(next_campaign_id)
         if not next_campaign.get_attribute('status') == 'started':
-            return {'results': False,
-                    'message': 'Campaign %s is not started' % (next_campaign)}
+            raise Exception(f'Campaign {next_campaign_id} is not started')
 
         if not reserve:
             # If not reserving a chain, current step must be done
             current_request_status = current_request.get_approval_status()
             if current_request_status != 'submit-done':
-                return {'results': False,
-                        'message': 'Cannot flow, %s is %s and not submit-done' (current_prepid,
-                                                                                current_request_status)}
+                raise Exception(f'{current_prepid} is {current_request_status} and not submit-done')
 
         # Get root request
         root_request_id = chain[0]
@@ -221,13 +227,11 @@ class ChainedRequest(json_base):
 
         next_campaign = Campaign.fetch(next_campaign_id)
         if next_campaign.get('energy') != current_campaign.get('energy'):
-            return {'results': False,
-                    'message': 'Cannot flow %s, inconsistent energy in %s' % (prepid, next_campaign_id)}
+            raise Exception(f'Cannot flow {prepid}, inconsistent energy in {next_campaign_id}')
 
         next_flow = Flow.fetch(next_flow_id)
-        if not next_flow.get('approval') == 'none':
-            return {'results': False,
-                    'message': 'Flow %s does not allow flowing' % (next_flow_id)}
+        if next_flow.get('approval') == 'none':
+            raise Exception(f'Flow {next_flow_id} does not allow flowing')
 
         next_events = current_request.get('total_events')
         # Check if current request produced at least 5% of expected events
@@ -288,20 +292,18 @@ class ChainedRequest(json_base):
         next_request_id = next_request.get('prepid')
         self.request_join(next_request)
 
-        # Move current step in other chains to this request too
-        # TODO: trigger/flow other chains of current_request
+        # Trigger other chains of current request to move too
+        if trigger_others:
+            for chained_request_dict in current_request.get_chained_requests():
+                if chained_request_dict['prepid'] == prepid:
+                    continue
 
-        # for other_chained_request_prepid in next_request.get_attribute('member_of_chain'):
-        #     if other_chained_request_prepid == self.get_attribute('prepid'):
-        #         # Skipping itself
-        #         continue
-
-        #     other_chained_request = crdb.get(other_chained_request_prepid)
-        #     if other_chained_request['chain'].index(next_id) > other_chained_request['step']:
-        #         other_chained_request['step'] = other_chained_request['chain'].index(next_id)
-        #         crdb.save(other_chained_request)
+                chained_request = ChainedRequest(chained_request_dict)
+                chained_request.flow(trigger_others=False)
+                chained_request.reload()
 
         # Reset options for the next request
+        next_request.reload(save=False)
         if next_request.get('approval') != 'submit':
             next_request.reset_options()
             # Output dataset as input for the next request if available
@@ -427,6 +429,71 @@ class ChainedRequest(json_base):
 
         return None
 
+
+    def rewind(self):
+        """
+        Rewind chained request by one step
+        Also move step back in related chained requests
+        """
+        step = self.get('step')
+        if step == 0:
+            raise Exception('Already at the root')
+
+        # Most of the logic revolves around request that is current step of the
+        # given chained request
+        current_prepid = self.current()
+        current_request = Request.fetch(current_prepid)
+        # Chained requests of request that is current step of the chain
+        chained_requests = [ChainedRequest(cr) for cr in current_request.get_chained_requests()]
+        # Simple check first - if other chained requests have same current step
+        for chained_request in chained_requests:
+            if chained_request.get('prepid') == self.get('prepid'):
+                continue
+
+            step = chained_request.get('step')
+            chain = chained_request.get('chain')
+            if chain.index(current_prepid) < step:
+                raise Exception('Rewind %s first' % (chained_request.get('prepid')))
+
+        # More demanding request check - if requests "down the chain" in this
+        # and in all other chains are already reset
+        request_db = Database('requests')
+        checked_requests = set()
+        for chained_request in chained_requests:
+            prepid = chained_request.get('prepid')
+            chain = chained_request.get('chain')
+            # Only leave requests after the "current" request
+            chain = chain[chain.index(current_prepid) + 1:]
+            request_ids = [r for r in list(reversed(chain)) if r not in checked_requests]
+            requests = request_db.bulk_get(request_ids)
+            for request_id, request in zip(request_ids, requests):
+                if not request:
+                    raise Exception('%s is part of %s but does not exist' % (request_id, prepid))
+
+                request_status = '%s-%s' % (request['approval'], request['status'])
+                if request_status != 'none-new':
+                    raise Exception('%s is after %s but is not new' % (request_id, current_prepid))
+
+        # Move step back in all chained requests
+        for chained_request in chained_requests:
+            chain_prepid = chained_request.get('prepid')
+            step = chained_request.get('step')
+            chain = chained_request.get('chain')
+            chained_request.set('step', chain.index(current_prepid) - 1)
+            chained_request.set_last_status()
+            chained_request.set('status', 'processing')
+            if not chained_request.save():
+                raise Exception('Could not save %s' % (chain_prepid))
+
+        # Reload after save above
+        self.reload(save=False)
+        # Reset request that was current before reset
+        if current_request.get_approval_status() != 'none-new':
+            current_request.reset(soft=False)
+
+        current_request.set_attribute('input_dataset', '')
+        if not current_request.save():
+            raise Exception('Could not save %s' % (current_prepid))
 
     def set_last_status(self, status=None):
         """

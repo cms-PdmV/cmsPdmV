@@ -15,24 +15,6 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.setDatabaseInfo($scope.dbName, $scope.columns);
       $scope.allRequestsApproved = {};
 
-      $scope.actionPrompt = function(action, prepid) {
-        $scope.openIsSureModal($scope.dbName, prepid, action, function (database, prepid, action) {
-          $scope.objectAction(action, prepid);
-        });
-      }
-
-      $scope.objectAction = function (action, prepid) {
-        $http({ method: 'GET', url: 'restapi/mccms/' + action + '/' + prepid }).success(function (data, status) {
-          if (data.results) {
-            $scope.getData();
-          } else {
-            $scope.openErrorModal(prepid.split('?')[0], data['message'])
-          }
-        }).error(function (data, status) {
-          $scope.openErrorModal(prepid.split('?')[0], data['message'])
-        });
-      };
-
       $scope.approve_all_requests = function (mccm_prepid) {
         var requests = '';
         for (index in $scope.result) {

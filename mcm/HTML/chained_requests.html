@@ -11,7 +11,7 @@
     var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
   </script>
   <script src="scripts/main_controller.js"></script>
-  <script src="scripts/chainRequests_controller.js"></script>
+  <script src="scripts/chained_requests_controller.js"></script>
   <script src="scripts/snow.js"></script>
 </head>
 
@@ -62,13 +62,13 @@
                 <a ng-href='edit?db_name=chained_requests&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete chained request" ng-hide="role(3);" ng-href="#">
+                <a ng-click='deleteObject(data.prepid)' title="Delete chained request" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-click="loadShortView(data.prepid)" rel="tooltip" title="Load short view" ng-href="#">
                   <i class="icon-eye-open"></i>
                 </a>
-                <a ng-click='actionPrompt("validate", data.prepid)' rel="tooltip" title="Validate the chain" ng-hide="role(1);" ng-href="#">
+                <a ng-click='validate(data.prepid)' rel="tooltip" title="Validate the chain" ng-hide="role(1);" ng-href="#">
                   <i class="icon-star-empty"></i>
                 </a>
                 <a ng-href='public/restapi/chained_requests/get_setup/{{data.prepid}}' rel="tooltip"
@@ -79,22 +79,22 @@
                   title="Get test command" target="_self" ng-href="#">
                   <i class="icon-ok-circle"></i>
                 </a>
-                <a ng-click='rewindToRoot([data.prepid])' title="Rewind chained request to root" ng-show="user.is_production_manager" ng-href="#">
+                <a ng-click='rewindToRoot(data.prepid)' title="Rewind chained request to root" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-fast-backward"></i>
                 </a>
-                <a ng-click='rewind([data.prepid])' title="Rewind chained request by one step" ng-show="user.is_production_manager" ng-href="#">
+                <a ng-click='rewind(data.prepid)' title="Rewind chained request by one step" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-backward"></i>
                 </a>
-                <a ng-click='flow([data.prepid])' title="Flow" ng-show="user.is_production_manager" ng-href="#">
+                <a ng-click='flow(data.prepid)' title="Flow" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-forward"></i>
                 </a>
-                <a ng-click='openReserveChainModal(data)' rel="tooltip" title="Reserve chain" ng-hide="role(3);" ng-href="#">
+                <a ng-click='openReserveChainModal(data)' title="Reserve chain" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-indent-right"></i>
                 </a>
-                <a ng-click="objectAction('inspect', data.prepid)" rel="tooltip" title="Inspect status of this chained request" ng-hide="role(3);" ng-href="#">
+                <a ng-click="inspect(data.prepid)" title="Inspect status of this chained request" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-screenshot"></i>
                 </a>
-                <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1" ng-hide="role(1);">
+                <input type="checkbox" ng-click="toggleSelection(data.prepid)" ng-checked="selectedItems.includes(data.prepid)">
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
                 <img ng-show="actionMessage[data.prepid] == 'loading'" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
                 <span ng-show="actionMessage[data.prepid] != 'OK' && actionMessage[data.prepid] != 'loading'" style="color: red">{{actionMessage[data.prepid]}}</span>
@@ -125,10 +125,9 @@
                      title="Show chains containing {{chain}}"
                      target="_self"><i class="icon-indent-left"></i></a>
                   <a ng-show="$index == data.step" rel="tooltip" title="Currently processing"> <i class="icon-asterisk"></i></a>
-                  <img ng-show="shortView[chain]"
-                       ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{shortView[chain][1]}}"
-                       rel="tooltip"
-                       title="{{shortView[chain][0]}}" />
+                  <img ng-show="shortView[data.prepid][chain]"
+                       ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{shortView[data.prepid][chain][1]}}"
+                       title="{{shortView[data.prepid][chain][0]}}" />
                   <i ng-hide="$index == data[column.db_name].length-1" class="icon-arrow-right"></i>
                   </span>
                 </span>
@@ -183,23 +182,23 @@
         <a ng-click="loadShortView('selected')" rel="tooltip" title="Load short view for selected requests" ng-href="#">
           <i class="icon-eye-open"></i>
         </a>
-        <a ng-click="actionPrompt('rewind_to_root', 'selected')" rel="tooltip"
+        <a ng-click="rewind('selected')" rel="tooltip"
           title="Rewind chained request to root" ng-hide="role(3);" ng-href="#">
           <i class="icon-fast-backward"></i>
         </a>
-        <a ng-click="actionPrompt('rewind', 'selected')" rel="tooltip" title="Rewind selected chained requests" ng-hide="role(3);" ng-href="#">
+        <a ng-click="rewind('selected')" rel="tooltip" title="Rewind selected chained requests" ng-hide="role(3);" ng-href="#">
           <i class="icon-backward"></i>
         </a>
-        <a ng-click="actionPrompt('flow', 'selected')" rel="tooltip" ng-hide="role(3);" title="Flow selected requests" ng-href="#">
+        <a ng-click="flow('selected')" rel="tooltip" ng-hide="role(3);" title="Flow selected requests" ng-href="#">
           <i class="icon-forward"></i>
         </a>
         <a ng-click="openReserveChainModal('selected')" rel="tooltip" title="Reserve selected chains" ng-hide="role(3);" ng-href="#">
           <i class="icon-indent-right"></i>
         </a>
-        <a ng-click="objectAction('inspect', 'selected')" rel="tooltip" title="Inspect selected chained requests" ng-hide="role(3);" ng-href="#">
+        <a ng-click="inspect('selected')" rel="tooltip" title="Inspect selected chained requests" ng-hide="role(3);" ng-href="#">
           <i class="icon-screenshot"></i>
         </a>
-        <input type="checkbox" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selected_prepids.length">
+        <input type="checkbox" ng-click="toggleAll()" rel="tooltip" title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selectedItems.length">
       </div>
     </div>
     <!-- MODAL-->

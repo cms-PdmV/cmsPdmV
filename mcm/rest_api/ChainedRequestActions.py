@@ -5,284 +5,152 @@ import flask
 from json import dumps, loads
 from couchdb_layer.mcm_database import database as Database
 from json_layer.user import Role
-from rest_api.RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
 from json_layer.chained_request import ChainedRequest
 from json_layer.request import Request
 from json_layer.mccm import MccM
 from tools.locker import locker
-from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 from tools.priority import block_to_priority
-
-
-class CreateChainedRequest(RESTResource):
-
-    @RESTResource.ensure_role(Role.ADMINISTRATOR)
-    def put(self):
-        """
-        Create a chained request from the provided json content
-        """
-        return self.import_request(flask.request.data.strip())
-
-    def import_request(self, data):
-        db = database(self.db_name)
-        json_input = loads(data)
-        if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
-            self.logger.error('Now pwg or member of campaign attribute for new chained request')
-            return {"results": False}
-
-        if 'prepid' in json_input:
-            req = chained_request(json_input)
-            cr_id = req.get_attribute('prepid')
-        else:
-            cr_id = ChainedRequestPrepId().next_prepid(json_input['pwg'], json_input['member_of_campaign'])
-            if not cr_id:
-                return {"results": False}
-
-            req = chained_request(db.get(cr_id))
-        for key in json_input:
-            if key not in ['prepid', '_id', '_rev', 'history']:
-                req.set_attribute(key, json_input[key])
-        if not req.get_attribute('prepid'):
-            self.logger.error('prepid returned was None')
-            raise ValueError('Prepid returned was None')
-
-        if 'chain_type' in json_input:
-            chain_type = json_input['chain_type']
-        else:
-            ccdb = database('chained_campaigns')
-            chain_type = ccdb.get(json_input['member_of_campaign']).get('chain_type', 'TaskChain')
-
-        req.set_attribute('chain_type', chain_type)
-        self.logger.info('Created new chained_request %s' % cr_id)
-        # update history with the submission details
-        req.update_history({'action': 'created'})
-        return self.save_request(db, req)
-
-    def save_request(self, db, req):
-        if not db.document_exists(req.get_attribute('_id')):
-            if db.save(req.json()):
-                self.logger.info('new chained_request successfully saved.')
-                return {"results": True, "prepid": req.get_attribute('prepid')}
-            else:
-                self.logger.error('Could not save new chained_request to database')
-                return {"results": False}
-        else:
-            if db.update(req.json()):
-                self.logger.info('new chained_request successfully saved.')
-                return {"results": True, "prepid": req.get_attribute('prepid')}
-            else:
-                self.logger.error('Could not save new chained_request to database')
-                return {"results": False}
 
 
 class UpdateChainedRequest(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def put(self):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
-        Update a chained request from the provided json content
+        Update a chained request with the provided json content
         """
-        return self.update_request(flask.request.data)
+        prepid = data.get('prepid', data.get('_id'))
+        if not prepid:
+            return {'results': False,
+                    'message': 'Missing prepid in submitted data'}
 
-    def update_request(self, data):
-        if '_rev' not in data:
-            return {"results": False, 'message': 'There is no previous revision provided'}
+        old_chained_request = ChainedRequest.fetch(prepid)
+        if old_chained_request is None:
+            return {"results": False,
+                    'message': 'Object "%s" does not exist' % (prepid)}
 
-        try:
-            chained_req = chained_request(json_input=loads(data))
-        except chained_request.IllegalAttributeName:
-            return {"results": False}
+        new_chained_request = ChainedRequest(data)
+        if new_chained_request.get('_rev') != old_chained_request.get('_rev'):
+            return {'results': False,
+                    'message': 'Provided revision does not match revision in database'}
 
-        prepid = chained_req.get_attribute('prepid')
-        if not prepid and not chained_req.get_attribute('_id'):
-            raise ValueError('Prepid returned was None')
-
-        db = database(self.db_name)
-        previous_version = chained_request(json_input=db.get(prepid))
-        self.logger.info('Updating chained_request %s', prepid)
-        block = chained_req.get_attribute('action_parameters')['block_number']
-        priority = block_to_priority(block)
-        chained_req.set_priority(priority)
-        # update history
-        difference = self.get_obj_diff(previous_version.json(),
-                                       chained_req.json(),
+        # Validate
+        new_chained_request.validate()
+        # Difference
+        difference = self.get_obj_diff(old_chained_request.json(),
+                                       new_chained_request.json(),
                                        ('history', '_rev'))
         if not difference:
             return {'results': True}
 
         difference = ', '.join(difference)
-        chained_req.update_history({'action': 'update', 'step': difference})
-        return {"results": db.update(chained_req.json())}
+        new_chained_request.set('history', old_chained_request.get('history'))
+        new_chained_request.update_history('update', difference)
+
+        # Save to DB
+        if not new_chained_request.save():
+            return {'results': False,
+                    'message': 'Could not save %s to the database' % (prepid)}
+
+        return {'results': True, 'prepid': prepid}
 
 
-class DeleteChainedRequest(RESTResource):
+class DeleteChainedRequest(DeleteRESTResource):
+
+    def delete_check(self, obj):
+        prepid = obj.get('prepid')
+        if obj.get('enabled'):
+            raise Exception('Chained request is not disabled')
+
+        requests = []
+        chain = obj.get('chain')
+        for i, request_prepid in reversed(list(enumerate(chain))):
+            request = Request.fetch(request_prepid)
+            request_chains = request.get('member_of_chain')
+            if prepid not in request_chains:
+                raise Exception('Request %s is not member of chained request' % (request_prepid))
+
+            request_chains.remove(prepid)
+            request.set('member_of_chain', request_chains)
+            if not request_chains:
+                # Last chain that had that request
+                if i == 0:
+                    approval = request.get('approval')
+                    if approval == 'submit':
+                        # Root request that is submitted or done, must be reset first
+                        raise Exception('Root request %s, will not be chained anymore' % (request_prepid))
+                else:
+                    # Not root request can't exist without a chain
+                    raise Exception('Non-root request %s will not be chained anymore' % (request_prepid))
+
+            request.update_history('leave', prepid)
+            requests.append(request)
+
+        # Save all requests
+        for request in requests:
+            if not request.save():
+                raise Exception('Could not update request %s' % (request.get('prepid')))
+
+        return super().delete_check(obj)
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def delete(self, chained_request_id):
+    def delete(self, prepid):
         """
-        Simply delete a chained requests
+        Delete a chained request
         """
-        return self.delete_request(chained_request_id)
-
-    def delete_request(self, crid):
-
-        crdb = database('chained_requests')
-        rdb = database('requests')
-        mcm_cr = chained_request(crdb.get(crid))
-        # get all objects
-        mcm_r_s = []
-        for (i, rid) in enumerate(mcm_cr.get_attribute('chain')):
-            mcm_r = request(rdb.get(rid))
-            # this is not a valid check as it is allowed to remove a chain around already running requests
-            #    if mcm_r.get_attribute('status') != 'new':
-            #        return {"results":False,"message" : "the request %s part of the chain %s for action %s is not in new status"%( mcm_r.get_attribute('prepid'),
-            #                                                                                                                             crid,
-            #                                                                                                                             mcm_a.get_attribute('prepid'))}
-            in_chains = mcm_r.get_attribute('member_of_chain')
-            if crid in in_chains:
-                in_chains.remove(crid)
-                self.logger.debug("Removing ChainAction member_of_chain: %s to request: %s" % (
-                        mcm_cr.get_attribute("prepid"), mcm_r.get_attribute('prepid')))
-
-                mcm_r.set_attribute('member_of_chain', in_chains)
-
-            if i == 0:
-                if len(in_chains) == 0 and mcm_r.get_attribute('status') != 'new':
-                    return {"results": False, "message": "the request %s, not in status new, at the root of the chain will not be chained anymore" % rid}
-            else:
-                if len(in_chains) == 0:
-                    return {"results": False, "message": "the request %s, not at the root of the chain will not be chained anymore" % rid}
-
-            mcm_r.update_history({'action': 'leave', 'step': crid})
-            mcm_r_s.append(mcm_r)
-        if mcm_cr.get_attribute('action_parameters')['flag']:
-            return {
-                "results": False,
-                "message": "the action for %s is not disabled" % (crid)
-            }
-        # then save all changes
-        for mcm_r in mcm_r_s:
-            if not rdb.update(mcm_r.json()):
-                return {"results": False, "message": "Could not save request " + mcm_r.get_attribute('prepid')}
-
-        return {"results": crdb.delete(crid)}
+        return self.delete_object(prepid, ChainedRequest)
 
 
 class GetChainedRequest(RESTResource):
 
-    def get(self, chained_request_id):
+    def get(self, prepid):
         """
-        Retrieve the content of a chained request id
+        Retrieve the chained request for given id
         """
-        return self.get_request(chained_request_id)
-
-    def get_request(self, data):
-        db = database(self.db_name)
-        if ',' in data:
-            rlist = data.rsplit(',')
-            res = []
-            for rid in rlist:
-                tmp_data = db.get(prepid=rid)
-                if len(tmp_data) > 0:
-                    res.append(tmp_data)
-            return {"results": res}
-        else:
-            return {"results": db.get(prepid=data)}
+        return {'results': ChainedRequest.get_database().get(prepid)}
 
 
-# REST method that makes the chained request flow to the next
-# step of the chain
-class ChainedRequestFlow(RESTResource):
+class UniqueChainsRESTResource(RESTResource):
+
+    def get_unique_chained_requests(self, prepid):
+        """
+        If there are multiple chained requests that have the same request as
+        current step, then only one needs to be flown or rewinded, others will
+        be rewinded automatically
+        """
+        if isinstance(prepid, list):
+            return prepid
+
+        chained_requests = ChainedRequest.get_database().bulk_get(prepid)
+        prepids = []
+        current_requests = set()
+        for chained_request in chained_requests:
+            current_request = chained_request['chain'][chained_request['step']]
+            if current_request not in current_requests:
+                current_requests.add(current_request)
+                prepids.append(chained_request['prepid'])
+
+        return prepids
+
+
+class ChainedRequestFlow(UniqueChainsRESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def put(self):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
-        Allows to flow a chained request with the dataset and blocks provided in the json
+        Flow chained requests
         """
-        return self.flow2(loads(flask.request.data))
+        def rewind(chained_request):
+            chained_request.flow()
 
-    def get(self, chained_request_id, action='', reserve_campaign=''):
-        """
-        Allow to flow a chained request with internal information
-        """
-        check_stats = True
-        reserve = False
-        if action != '':
-            check_stats = (action != 'force')
-            reserve = (action == 'reserve')
-            if reserve_campaign != '':
-                reserve = reserve_campaign
-
-        return self.multiple_flow(chained_request_id, check_stats, reserve)
-
-    def multiple_flow(self, rid, check_stats=True, reserve=False):
-        if ',' in rid:
-            chain_id_list = rid.rsplit(',')
-        else:
-            chain_id_list = [rid]
-        res = []
-        chains_requests_dict = {}
-        for chain_id in chain_id_list:
-            flow_results = self.flow(chain_id, check_stats=check_stats, reserve=reserve)
-            if flow_results['results'] and 'generated_requests' in flow_results:
-                chains_requests_dict[chain_id] = flow_results['generated_requests']
-                flow_results.pop('generated_requests')
-            res.append(flow_results)
-        if len(chains_requests_dict):
-            chain_id = chains_requests_dict.iterkeys().next()
-            mccm_ticket = mccm.get_mccm_by_generated_chain(chain_id)
-            if mccm_ticket is not None:
-                mccm_ticket.update_mccm_generated_chains(chains_requests_dict)
-        if len(res) == 1:
-            return res[0]
-        return res
-
-    def flow2(self, data):
-        db = database('chained_requests')
-        chain_id = data['prepid']
-        try:
-            creq = ChainedRequest(data=db.get(chain_id))
-        except Exception as ex:
-            self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
-            return {"results": str(ex)}
-
-        self.logger.info('Attempting to flow to next step for chained_request %s' % (
-                creq.get_attribute('_id')))
-
-        # if the chained_request can flow, do it
-        inputds = ''
-        inblack = []
-        inwhite = []
-        if 'input_dataset' in data:
-            inputds = data['input_dataset']
-        if 'force' in data:
-            check_stats = data['force'] != 'force'
-        if 'reserve' in data and data["reserve"]:
-            reserve = data["reserve"]
-            return creq.reserve(limit=reserve)
-        return creq.flow_trial(inputds, inblack, inwhite, check_stats)
-
-    def flow(self, chainid, check_stats=True, reserve=False):
-        try:
-            db = database('chained_requests')
-            creq = ChainedRequest(data=db.get(chainid))
-        except Exception as ex:
-            self.logger.error('Could not initialize chained_request object. Reason: %s' % (ex))
-            return {"results": str(ex)}
-
-        # TO-DO check if chained_request is in settings forceflow_list and remove it!
-        # if the chained_request can flow, do it
-        if reserve:
-            self.logger.info('Attempting to reserve to next step for chained_request %s' % (
-                    creq.get_attribute('_id')))
-            return creq.reserve( limit = reserve, save_requests=False)
-
-        self.logger.info('Attempting to flow to next step for chained_request %s' % (
-                creq.get_attribute('_id')))
-        return creq.flow_trial(check_stats=check_stats)
+        prepid = self.get_unique_chained_requests(data['prepid'])
+        return self.do_multiple_items(prepid, ChainedRequest, rewind)
 
 
-class ChainedRequestRewind(RESTResource):
+class ChainedRequestRewind(UniqueChainsRESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     @RESTResource.request_with_json
@@ -290,92 +158,11 @@ class ChainedRequestRewind(RESTResource):
         """
         Rewind chained requests
         """
-        prepid = data['prepid']
-        if isinstance(prepid, list):
-            return [self.rewind(p) for p in prepid]
+        def rewind(chained_request):
+            chained_request.rewind()
 
-        return self.rewind(prepid)
-
-    def rewind(self, prepid):
-        """
-        Rewind chained request back by one step
-        """
-        chained_request = ChainedRequest.fetch(prepid)
-        if not chained_request:
-            return {'results': False,
-                    'message': '%s does not exist' % (prepid),
-                    'prepid': prepid}
-
-        step = chained_request.get('step')
-        if step == 0:
-            return {'results': False,
-                    'message': '%s is already at the root' % (prepid),
-                    'prepid': prepid}
-
-        # Most of the logic revolves around request that is current step of the
-        # given chained request
-        current_prepid = chained_request[step]
-        current_request = Request.fetch(current_prepid)
-        chained_requests = [ChainedRequest(cr) for cr in current_request.get_chained_requests()]
-        # Simple check first - if other chained requests have same current step
-        for chained_request in chained_requests:
-            if chained_request.get('prepid') == prepid:
-                continue
-
-            step = chained_request.get_attribute('step')
-            chain = chained_request.get_attribute('chain')
-            if chain.index(current_prepid) < step:
-                other_prepid = chained_request.get_attribute('prepid')
-                return {'results': False,
-                        'message': 'Rewind %s first' % (other_prepid),
-                        'prepid': prepid}
-
-        # More demanding request check - if requests "down the chain" in this
-        # and in all other chains are already reset
-        request_db = Database('requests')
-        for chained_request in chained_requests:
-            chain_prepid = chained_request.get_attribute('prepid')
-            step = chained_request.get_attribute('step')
-            chain = chained_request.get_attribute('chain')
-            # Only leave requests after the "current" request
-            chain = chain[chain.index(current_prepid) + 1:]
-            request_ids = list(reversed(chain))
-            requests = request_db.bulk_get(request_ids)
-            for request_id, request in zip(request_ids, requests):
-                if not request:
-                    raise Exception('%s is part of %s but does not exist' % (request_id,
-                                                                             chain_prepid))
-
-                request_approval = request['approval']
-                request_status = request['status']
-                if request_approval != 'none' or request_status != 'new':
-                    return {'results': False,
-                            'message': '%s is after %s but is not "new" ("%s")' % (chain_prepid,
-                                                                                   current_prepid,
-                                                                                   request_status),
-                            'prepid': prepid}
-
-        # Move step back in all chained requests
-        for chained_request in chained_requests:
-            chain_prepid = chained_request.get_attribute('prepid')
-            step = chained_request.get_attribute('step')
-            chain = chained_request.get_attribute('chain')
-            chained_request.set_attribute('step', chain.index(current_prepid) - 1)
-            chained_request.set_last_status()
-            chained_request.set_attribute('status', 'processing')
-            if not chained_request.save():
-                return {'results': False,
-                        'message': 'Could not save %s' % (chain_prepid),
-                        'prepid': prepid}
-
-        current_request.reset()
-        current_request.set_attribute('input_dataset', '')
-        if not current_request.save():
-            return {'results': False,
-                    'message': 'Could not save %s' % (current_prepid),
-                    'prepid': prepid}
-
-        return {'results': True, 'prepid': prepid}
+        prepid = self.get_unique_chained_requests(data['prepid'])
+        return self.do_multiple_items(prepid, ChainedRequest, rewind)
 
 
 class ChainedRequestRewindToRoot(ChainedRequestRewind):

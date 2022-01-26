@@ -10,10 +10,9 @@ angular.module('testApp').controller('resultsCtrl',
 
       $scope.dbName = "chained_requests";
       $scope.setDatabaseInfo($scope.dbName, $scope.columns);
-
-      $scope.actionMessage = {};
       $scope.underscore = _;
       $scope.shortView = {};
+      $scope.selectedItems = [];
 
       $scope.tabsettings = {
         "view": {
@@ -30,107 +29,61 @@ angular.module('testApp').controller('resultsCtrl',
         }
       };
 
-      $scope.actionPrompt = function (action, prepid) {
-        $scope.openIsSureModal($scope.dbName, prepid, action, function (database, prepid, action) {
-          $scope.objectAction(action, prepid);
-        });
-      }
-
-      $scope.objectAction = function (action, prepid) {
-        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid = [prepid];
-        for (let prepid of prepids) {
-          // Reset messages
-          $scope.actionMessage[prepid] = 'loading';
-        }
-        $http({ method: 'GET', url: 'restapi/chained_requests/' + action + '/' + prepids.join(',') }).success(function (data, status) {
-          let results = prepids.length == 1 ? [data] : data;
-          let shouldGetData = false;
-          for (let result of results) {
-            $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
-            shouldGetData = shouldGetData || !!result.results;
-          }
-          if (shouldGetData) {
-            $scope.getData();
-          }
-        }).error(function (data, status) {
-          $scope.openErrorModal(undefined, data['message'])
-        });
+      $scope.validate = function (prepid) {
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
+        $scope.objectAction(undefined,
+          prepids,
+          {method: 'POST',
+           url: 'restapi/' + $scope.dbName + '/validate',
+           data: {'prepid': prepids}});
       };
 
-      $scope.setLoading = function(prepids, loading) {
-        for (let prepid of prepids) {
-          $scope.actionMessage[prepid] = loading ? 'loading' : '';
-        }
-      }
-
-      $scope.rewindToRoot = function(prepids) {
-        $scope.questionModal('Are you sure you want to rewind to root?', function() {
-          $scope.setLoading(prepids, true);
-          $http({ method: 'POST', url: 'restapi/chained_requests/rewind_to_root', data: {'prepid': prepids}}).success(function (data, status) {
-            let results = prepids.length == 1 ? [data] : data;
-            let shouldGetData = false;
-            for (let result of results) {
-              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
-              shouldGetData = shouldGetData || !!result.results;
-            }
-            if (shouldGetData) {
-              $scope.getData();
-            }
-          }).error(function (data, status) {
-            $scope.openErrorModal(undefined, data['message']);
-            $scope.setLoading(prepids, false);
-          });
-        });
+      $scope.rewindToRoot = function (prepid) {
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
+        let message = 'Are you sure you want to rewind ' + $scope.promptPrepid(prepids) + ' to root?';
+        $scope.objectAction(message,
+          prepids,
+          {method: 'POST',
+           url: 'restapi/' + $scope.dbName + '/rewind_to_root',
+           data: {'prepid': prepids}});
       };
 
-      $scope.rewind = function(prepids) {
-        $scope.questionModal('Are you sure you want to rewind?', function() {
-          $scope.setLoading(prepids, true);
-          $http({ method: 'POST', url: 'restapi/chained_requests/rewind', data: {'prepid': prepids}}).success(function (data, status) {
-            let results = prepids.length == 1 ? [data] : data;
-            let shouldGetData = false;
-            for (let result of results) {
-              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
-              shouldGetData = shouldGetData || !!result.results;
-            }
-            if (shouldGetData) {
-              $scope.getData();
-            }
-          }).error(function (data, status) {
-            $scope.openErrorModal(undefined, data['message']);
-            $scope.setLoading(prepids, false);
-          });
-        });
+      $scope.rewind = function (prepid) {
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
+        let message = 'Are you sure you want to rewind ' + $scope.promptPrepid(prepids) + '?';
+        $scope.objectAction(message,
+          prepids,
+          {method: 'POST',
+           url: 'restapi/' + $scope.dbName + '/rewind',
+           data: {'prepid': prepids}});
       };
 
-      $scope.flow = function(prepids) {
-        $scope.questionModal('Are you sure you want to flow?', function() {
-          $scope.setLoading(prepids, true);
-          $http({ method: 'POST', url: 'restapi/chained_requests/flow', data: {'prepid': prepids}}).success(function (data, status) {
-            let results = prepids.length == 1 ? [data] : data;
-            let shouldGetData = false;
-            for (let result of results) {
-              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
-              shouldGetData = shouldGetData || !!result.results;
-            }
-            if (shouldGetData) {
-              $scope.getData();
-            }
-          }).error(function (data, status) {
-            $scope.openErrorModal(undefined, data['message']);
-            $scope.setLoading(prepids, false);
-          });
-        });
+      $scope.flow = function (prepid) {
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
+        let message = 'Are you sure you want to flow ' + $scope.promptPrepid(prepids) + '?';
+        $scope.objectAction(message,
+          prepids,
+          {method: 'POST',
+           url: 'restapi/' + $scope.dbName + '/flow',
+           data: {'prepid': prepids}});
       };
 
       $scope.loadShortView = function (prepid) {
-        let prepids = new Set(prepid == 'selected' ? $scope.selected_prepids : prepid = [prepid]);
-        let chains = $scope.result.filter(x => prepids.has(x.prepid));
-        let cached = new Set(Object.keys($scope.shortView));
-        let requests = [...new Set(chains.map(x => x.chain).flat().filter(x => !cached.has(x)))];
-        if (!requests.length) {
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
+        let prepidsToFetch = [];
+        for (let prepid of prepids) {
+          if (!$scope.shortView[prepid]) {
+            prepidsToFetch.push(prepid);
+          }
+        }
+        if (!prepidsToFetch.length) {
+          for (let prepid of prepids) {
+            delete $scope.shortView[prepid];
+          }
           return;
         }
+        let chains = $scope.result.filter(x => prepidsToFetch.includes(x.prepid));
+        let requests = [...new Set(chains.map(x => x.chain).flat())];
         const status_map = {
           'submit-done': 'led-green.gif',
           'submit-submitted': 'led-blue.gif',
@@ -141,40 +94,48 @@ angular.module('testApp').controller('resultsCtrl',
           'validation-new': 'led-aqua.gif',
           'none-new': 'led-gray.gif'
         }
-        for (let prepid of requests) {
-          $scope.shortView[prepid] = ['Loading...', 'processing-bg.gif'];
-        }
         const chunkify = function (items, chuckSize, callback) {
           for (i = 0, j = items.length; i < j; i += chuckSize) {
             callback(items.slice(i, i + chuckSize));
           }
         };
-        chunkify(requests, 50, function (chunk) {
-          $http({ method: 'GET', url: 'public/restapi/requests/get_status_and_approval/' + chunk.join(',') }).success(function (data, status) {
-            for (let prepid in data) {
-              let requestStatus = data[prepid];
-              if (status_map[requestStatus]) {
-                $scope.shortView[prepid] = [requestStatus, status_map[requestStatus]];
-              } else {
-                $scope.shortView[prepid] = [requestStatus, 'icon-question-sign'];
+        chunkify(requests, 50, function (requestsChunk) {
+          for (let chain of chains) {
+            for (let request of requestsChunk) {
+              if (chain.chain.includes(request)) {
+                if (!$scope.shortView[chain.prepid]) {
+                  $scope.shortView[chain.prepid] = {};
+                }
+                $scope.shortView[chain.prepid][request] = ['Loading...', 'processing-bg.gif']
+              }
+            }
+          }
+          $http({ method: 'GET', url: 'public/restapi/requests/get_status_and_approval/' + requestsChunk.join(',') }).success(function (data, status) {
+            for (let chain of chains) {
+              for (let request of requestsChunk) {
+                if ($scope.shortView[chain.prepid][request]) {
+                  let requestStatus = data[request];
+                  if (status_map[requestStatus]) {
+                    $scope.shortView[chain.prepid][request] = [requestStatus, status_map[requestStatus]];
+                  } else {
+                    $scope.shortView[chain.prepid][request] = ['Error status', 'led-cup-red-close.gif'];
+                  }
+                }
               }
             }
           }).error(function (status) {
-            for (let prepid in chunk) {
-              delete $scope.shortView[prepid];
-            }
+            console.error(status);
           });
         });
       };
 
       $scope.statusIcon = function (value) {
-        icons = {
+        const icons = {
           'new': 'icon-edit',
           'validation': 'icon-eye-open',
           'defined': 'icon-check',
           'approved': 'icon-share',
           'submitted': 'icon-inbox',
-          'injected': 'icon-envelope',
           'done': 'icon-ok'
         }
         if (icons[value]) {
@@ -184,29 +145,8 @@ angular.module('testApp').controller('resultsCtrl',
         }
       };
 
-      $scope.approvalIcon = function (value) {
-        icons = {
-          'none': 'icon-off',
-          'flow': 'icon-share',
-          'submit': 'icon-ok'
-        }
-        if (icons[value]) {
-          return icons[value];
-        } else {
-          return "icon-question-sign";
-        }
-      };
-
-      $scope.$watch(function () {
-        var loc_dict = $location.search();
-        return "page" + loc_dict["page"] + "limit" + loc_dict["limit"];
-      }, function () {
-        $scope.getData();
-        $scope.selected_prepids = [];
-      });
-
       $scope.openReserveChainModal = function (chainedRequest) {
-        let chainedRequests = chainedRequest == 'selected' ? $scope.result.filter(x => $scope.selected_prepids.includes(x.prepid)): [chainedRequest];
+        let chainedRequests = chainedRequest == 'selected' ? $scope.result.filter(x => $scope.selectedItems.includes(x.prepid)): [chainedRequest];
         $modal.open({
           templateUrl: 'reserveChainModal.html',
           controller: function ($scope, $modalInstance, $http, chainedRequests, objectAction) {
@@ -247,21 +187,19 @@ angular.module('testApp').controller('resultsCtrl',
         });
       };
 
-      $scope.add_to_selected_list = function (prepid) {
-        if (_.contains($scope.selected_prepids, prepid)) {
-          $scope.selected_prepids = _.without($scope.selected_prepids, prepid)
-        } else
-          $scope.selected_prepids.push(prepid);
+      $scope.toggleSelection = function (prepid) {
+        if ($scope.selectedItems.includes(prepid)) {
+          $scope.selectedItems = $scope.selectedItems.filter(x => x != prepid);
+        } else {
+          $scope.selectedItems.push(prepid);
+        }
       };
 
       $scope.toggleAll = function () {
-        if ($scope.selected_prepids.length != $scope.result.length) {
-          _.each($scope.result, function (v) {
-            $scope.selected_prepids.push(v.prepid);
-          });
-          $scope.selected_prepids = _.uniq($scope.selected_prepids);
+        if ($scope.selectedItems.length != $scope.result.length) {
+          $scope.selectedItems = $scope.result.map(x => x.prepid);
         } else {
-          $scope.selected_prepids = [];
+          $scope.selectedItems = [];
         }
       };
 

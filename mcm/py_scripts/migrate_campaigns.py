@@ -32,7 +32,7 @@ for campaigns in database.bulk_yield(50):
                 total,
                 campaigns[0]['_id'],
                 campaigns[-1]['_id'])
-    
+
     to_save = []
     for campaign in campaigns:
         initial_hash = item_hash(campaign)

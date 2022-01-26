@@ -25,7 +25,7 @@ class RequestFactory():
             data['_id'] = prepid
             data['prepid'] = prepid
             request = Request(data)
-            request_db.save(request.json())
+            request.save()
             cls.logger.info('New request created: %s ', prepid)
 
         return request

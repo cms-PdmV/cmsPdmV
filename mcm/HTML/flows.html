@@ -50,7 +50,7 @@
                 <a ng-href='edit?db_name=flows&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(3);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-click='deletePrompt(data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(3);" ng-href="#">
+                <a ng-click='deleteObject(data.prepid)' rel="tooltip" title="Delete flow" ng-hide="role(3);" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
                 <a ng-click="openCloneItemModal('flows', data.prepid)" title="Clone flow" ng-hide="role(1);" ng-href="#">
