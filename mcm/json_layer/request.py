@@ -1834,7 +1834,7 @@ class request(json_base):
         stats_workflows = stats_db.raw_query_view('_designDoc',
                                                   'requests',
                                                   page=0,
-                                                  limit=1,
+                                                  limit=-1,
                                                   options={'key': prepid})
         mcm_reqmgr_list = self.get_attribute('reqmgr_name')
         mcm_reqmgr_name_list = [x['name'] for x in mcm_reqmgr_list]
