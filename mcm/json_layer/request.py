@@ -29,6 +29,7 @@ import tools.settings as settings
 from tools.locker import locker
 from tools.user_management import access_rights
 from tools.logger import InjectionLogAdapter
+from tools.connection_wrapper import ConnectionWrapper
 
 
 class AFSPermissionError(Exception):
@@ -1713,57 +1714,23 @@ class request(json_base):
             return True
         with locker.lock(self.get_attribute('prepid')):
             loc = locator()
-            self.logger.info('trying to change priority to %s at %s' % (self.get_attribute('prepid'), new_priority))
             reqmgr_names = [reqmgr['name'] for reqmgr in self.get_attribute('reqmgr_name') if '_ACDC' not in reqmgr['name']]
-            self.logger.info('Will change priority to %s for %s' % (new_priority, reqmgr_names))
+            self.logger.info('Will change %s priority to %s' % (reqmgr_names, new_priority))
             if len(reqmgr_names):
-                proxy_file_name = '/tmp/%s_%032x_voms_proxy.txt' % (self.get_attribute('prepid'), random.getrandbits(128))
-                cmd = '#!/bin/bash\n'
-                cmd += 'voms-proxy-init --voms cms --out %s --hours 1\n' % (proxy_file_name)
-                cmd += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
-                cmd += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-                test = ""
                 if loc.isDev():
-                    test = '-u cmsweb-testbed.cern.ch'
-                for req_name in reqmgr_names:
-                    cmd += 'wmpriority.py {0} {1} {2}\n'.format(req_name, new_priority, test)
+                    cmsweb_url = 'https://cmsweb-testbed.cern.ch'
+                else:
+                    cmsweb_url = 'https://cmsweb.cern.ch'
 
-                cmd += 'rm -f %s\n' % (proxy_file_name)
-                self.logger.info('Command: %s\n' % (cmd))
-                with ssh_executor(server='vocms0481.cern.ch') as ssh_exec:
-                    _, stdout, stderr = ssh_exec.execute(cmd)
-                    output_error = stderr.read()
-                    output_text = stdout.read()
-                    self.logger.info('wmpriority.py output:\n%s' % (output_text))
-                    self.logger.error('wmpriority.py error:\n%s' % (output_error))
+                connection = ConnectionWrapper(host=cmsweb_url, keep_open=True)
+                for reqmgr_name in reqmgr_names:
+                    self.logger.info('Changing "%s" priority to %s', reqmgr_name, priority)
+                    response = connection.api('PUT',
+                                              '/reqmgr2/data/request/%s' % (reqmgr_name),
+                                              {'RequestPriority': priority})
+                    self.logger.debug(response)
 
-                if not output_text and not output_error:
-                    self.logger.error('SSH error while changing priority of {0}'.format(
-                        self.get_attribute('prepid')))
-                    return False
-
-                try:
-                    output_lines = [l.strip() for l in output_text.split('\n') if l.strip()]
-                    for line in output_lines:
-                        split_line = line.split(':')
-                        if len(split_line) != 2:
-                           continue
-
-                        workflow_name = split_line[0]
-                        change_successful = split_line[1]
-                        # check if it is the workflow we wanted to change
-                        if workflow_name in reqmgr_names:
-                            # strangely reqmgr2 changes it's ouput structure alot
-                            # let's pray that the key is always reqmgr_name
-                            if change_successful.lower().strip() == 'true':
-                                self.logger.debug('Change of priority %s succeeded', workflow_name)
-                            else:
-                                self.logger.error('Change of priority %s failed', workflow_name)
-                                return False
-
-                except Exception as ex:
-                    self.logger.error("Failed parsing wmpriotiry output: %s" % (str(ex)))
-                    return False
+                connection.close()
 
             return self.modify_priority(new_priority)
 
