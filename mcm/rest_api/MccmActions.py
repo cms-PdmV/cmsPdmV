@@ -2,6 +2,7 @@ import flask
 import time
 
 import json
+from json_layer.chained_request import ChainedRequest
 from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
 from couchdb_layer.mcm_database import database as Database
 from json_layer.mccm import MccM
@@ -66,7 +67,7 @@ class CreateMccm(RESTResource):
 class UpdateMccm(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
-    def put(self):
+    def post(self):
         """
         Updating a MccM with an updated dictionary
         """
@@ -192,39 +193,32 @@ class GetMccm(RESTResource):
 class CancelMccm(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
-    def get(self, mccm_id):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
-        Cancel the MccM ticket provided in argument
+        Cancel the MccM tickets
         Does not delete it but put the status as cancelled.
         """
-        mccm_db = Database('mccms')
-        mccm = MccM(mccm_db.get(mccm_id))
-        status = mccm.get_attribute('status')
-        if status == 'done':
-            return {"results": False,
-                    "message": "Cannot cancel done tickets"}
-
         user = User()
-        if user.get_role() < Role.PRODUCTION_MANAGER:
-            user_pwgs = user.get_user_pwgs()
-            ticket_pwg = mccm.get_attribute("pwg")
-            if ticket_pwg not in user_pwgs:
-                self.logger.error('User\'s PWGs: %s, ticket: %s', user_pwgs, ticket_pwg)
-                return {"results": False,
-                        "message": "You cannot cancel ticket with different PWG than yours"}
+        def cancel_ticket(mccm):
+            status = mccm.get_attribute('status')
+            if status == 'done':
+                raise Exception("Ticket is done, cannot be cancelled")
 
-        if status == 'new':
-            mccm.set_attribute('status', 'cancelled')
-            mccm.update_history('cancelled')
-        elif status == 'cancelled':
-            mccm.set_attribute('status', 'new')
-            mccm.update_history('uncancelled')
+            if user.get_role() < Role.PRODUCTION_MANAGER:
+                user_pwgs = user.get_user_pwgs()
+                ticket_pwg = mccm.get_attribute("pwg")
+                if ticket_pwg not in user_pwgs:
+                    raise Exception("You cannot cancel ticket with different PWG than yours")
 
-        if not mccm_db.update(mccm.json()):
-            return {"results": False,
-                    "message": "Could not save to the database"}
+            if status == 'new':
+                mccm.set_attribute('status', 'cancelled')
+                mccm.update_history('cancel')
+            elif status == 'cancelled':
+                mccm.set_attribute('status', 'new')
+                mccm.update_history('uncancel')
 
-        return {"results": True}
+        return self.do_multiple_items(data['prepid'], MccM, cancel_ticket)
 
 
 class NotifyMccm(RESTResource):
@@ -259,261 +253,165 @@ class NotifyMccm(RESTResource):
 
 class GetEditableMccmFields(RESTResource):
 
-    def get(self, mccm_id):
+    def get(self, prepid):
         """
         Retrieve the fields that are currently editable for a given mccm
         """
-        mccm_db = Database('mccms')
-        mccm = MccM(mccm_db.get(mccm_id))
-        return {"results": mccm.get_editable()}
+        return {"results": MccM.fetch(prepid).get_editable()}
 
 
 class GenerateChains(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
-    def get(self, mccm_id):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
         Operate the chaining for a given MccM document id
         """
-        args = flask.request.args
-        # Reserve chains?
-        reserve = args.get('reserve', 'false').lower() == 'true'
-        # Limit reservation to campaign?
-        limit_campaign = []
-        if reserve:
-            limit_campaign = args.get('limit', '').split(',')
-
         # Skip existing ones?
         skip_existing = flask.request.args.get('skip_existing', 'False').lower() == 'true'
         # Allow duplicated chained requests?
         allow_duplicates = flask.request.args.get('allow_duplicates', 'False').lower() == 'true'
 
-        lock = locker.lock(mccm_id)
+        prepid = data['prepid']
+        lock = locker.lock(prepid)
         if lock.acquire(blocking=False):
             try:
-                res = self.generate(mccm_id, reserve, limit_campaign, skip_existing, allow_duplicates)
+                res = self.generate(prepid, skip_existing, allow_duplicates)
+            except Exception as ex:
+                import traceback
+                self.logger.error(traceback.format_exc())
+                res = {'results': False,
+                       'prepid': prepid,
+                       'message': str(ex)}
             finally:
                 lock.release()
             return res
         else:
-            return {"results": False,
-                    "message": "%s is already being operated on" % (mccm_id)}
+            return {'results': False,
+                    'prepid': prepid,
+                    'message': 'Ticket is already being operated on'}
 
-    def generate(self, mccm_id, reserve, limit_campaign, skip_existing, generate_all):
-        mccm_db = Database('mccms')
-        mccm_json = mccm_db.get(mccm_id)
-        if not mccm_json:
-            return {"results": False,
-                    'message': '%s does not exist' % (mccm_id)}
-
-        mccm = MccM(mccm_json)
+    def generate(self, prepid, skip_existing, generate_all):
+        mccm = MccM.fetch(prepid)
         status = mccm.get_attribute('status')
         if status != 'new' and not skip_existing:
-            return {"prepid": mccm_id,
-                    "results": False,
-                    "message": 'Status is "%s", expecting "new"' % (status)}
+            raise Exception('Status is "%s", expecting "new"' % (status))
 
         block = mccm.get_attribute('block')
         if not block:
-            return {"prepid": mccm_id,
-                    "results": False,
-                    "message": "No block selected"}
+            raise Exception('Priority block not selected')
 
         chained_campaign_prepids = mccm.get_attribute('chains')
         if not chained_campaign_prepids:
-            return {"prepid": mccm_id,
-                    "results": False,
-                    "message": "No chains selected"}
-
-        if not mccm.get_attribute('requests'):
-            return {"prepid": mccm_id,
-                    "results": False,
-                    "message": "No requests selected"}
-
-        repetitions = mccm.get_attribute('repetitions')
-        if not repetitions:
-            return {"prepid": mccm_id,
-                    "results": False,
-                    "message": 'The number of repetitions "%s" is invalid' % (repetitions)}
-
-        # Prepare limits dictionary
-        if len(limit_campaign) == 1:
-            # If there is one limit, set it to all
-            limit_campaign = {c: limit_campaign[0] for c in chained_campaign_prepids}
-        elif len(limit_campaign) == len(chained_campaign_prepids):
-            # If there is same number of limits as chained campaigns, set 1 to 1
-            limit_campaign = {cc: c for cc, c in zip(chained_campaign_prepids, limit_campaign)}
-        elif len(limit_campaign):
-            # If there is more than one, but not same number as chains
-            return {"prepid": mccm_id,
-                    "results": False,
-                    "message": 'Number of limit campaigns must be the same as number of chains'}
-        else:
-            # No limit at all
-            limit_campaign = {c: None for c in chained_campaign_prepids}
+            raise Exception('No chained campaigns selected')
 
         # Make a set just to be sure they are unique
         request_prepids = sorted(list(set(mccm.get_request_list())))
+        if not request_prepids:
+            raise Exception('No requests selected')
+
+        repetitions = mccm.get_attribute('repetitions')
+        if not repetitions:
+            raise Exception('Number of repetitions "%s" is invalid' % (repetitions))
 
         # Chained campaigns of ticket
-        chained_campaign_db = Database('chained_campaigns')
-        chained_campaigns = chained_campaign_db.bulk_get(chained_campaign_prepids)
-        not_found_chained_campaigns = [c for c in chained_campaigns if not c]
-        if not_found_chained_campaigns:
-            not_found_ids = ', '.join(list(not_found_chained_campaigns))
-            return {'prepid': mccm_id,
-                    'results': False,
-                    'message': 'Could not find %s chained campaigns' % (not_found_ids)}
+        chained_campaigns = ChainedCampaign.get_database().bulk_get(chained_campaign_prepids)
+        not_found = [p for c, p in zip(chained_campaigns, chained_campaign_prepids) if not c]
+        if not_found:
+            raise Exception('Could not find %s' % (not_found[0]))
 
         chained_campaigns = [ChainedCampaign(c) for c in chained_campaigns]
         # Requests of ticket
-        request_db = Database('requests')
-        requests = request_db.bulk_get(request_prepids)
-        not_found_requests = [r for r in requests if not r]
-        if not_found_requests:
-            not_found_ids = ', '.join(list(not_found_requests))
-            return {'prepid': mccm_id,
-                    'results': False,
-                    'message': 'Could not find %s requests' % (not_found_ids)}
+        requests = Request.get_database().bulk_get(request_prepids)
+        not_found = [p for c, p in zip(requests, request_prepids) if not c]
+        if not_found:
+            raise Exception('Could not find %s' % (not_found[0]))
 
         requests = [Request(r) for r in requests]
         # Root campaigns of chained campaigns
         root_campaigns = {}
         for chained_campaign in chained_campaigns:
-            root_campaign = chained_campaign.get_attribute('campaigns')[0][0]
+            root_campaign = chained_campaign.campaign(0)
             root_campaigns.setdefault(root_campaign, []).append(chained_campaign)
 
         # Check requests
         chained_campaigns_for_requests = {}
-        chained_request_db = Database('chained_requests')
+        chained_request_db = ChainedRequest.get_database()
         for request in requests:
-            prepid = request.get_attribute('prepid')
-            campaign = request.get_attribute('member_of_campaign')
-            pwg = request.get_attribute('pwg')
-            if campaign not in root_campaigns:
-                return {"prepid" : mccm_id,
-                        "results" : False,
-                        "message" : '"%s" campaign is not in given chains' % (prepid)}
+            request_prepid = request.get_attribute('prepid')
+            request_campaign = request.get_attribute('member_of_campaign')
+            request_pwg = request.get_attribute('pwg')
+            if request_campaign not in root_campaigns:
+                raise Exception('"%s" campaign is not in given chains' % (request_prepid))
 
             if request.get_attribute('flown_with'):
-                return {"prepid" : mccm_id,
-                        "results" : False,
-                        "message" : '"%s" is in the middle of the chain' % (prepid)}
+                raise Exception('"%s" is in the middle of the chain' % (request_prepid))
 
-            chained_campaigns_for_requests[prepid] = []
-            for chained_campaign in root_campaigns[campaign]:
-                chained_campaign_prepid = chained_campaign.get_attribute('prepid')
-                query_dict = {'member_of_campaign': chained_campaign_prepid,
-                              'contains': prepid,
-                              'pwg': pwg}
-                duplicates = chained_request_db.search(query_dict, limit=1)
-                if duplicates and not generate_all:
-                    if not skip_existing:
-                        return {'prepid': mccm_id,
-                                'results': False,
-                                'message': 'Chain(s) with request "%s" and chained campaign "%s" '
-                                           'already exist. ' % (prepid, chained_campaign_prepid)}
-                else:
-                    chained_campaigns_for_requests[prepid].append(chained_campaign)
+            chained_campaigns_for_request = [c for c in root_campaigns[request_campaign]]
+            if not generate_all:
+                query = {'member_of_campaign': [c.get('prepid') for c in chained_campaigns_for_request],
+                         'contains': request_prepid,
+                         'pwg': request_pwg}
+                duplicates = [c['member_of_campaign'] for c in chained_request_db.search(query, limit=-1)]
+                if duplicates:
+                    if skip_existing:
+                        # Remove duplicates
+                        duplicates = set(duplicates)
+                        chained_campaigns_for_request = [c for c in chained_campaigns_for_request if c['prepid'] not in duplicates]
+                    else:
+                        raise Exception('Chain with request "%s" and chained campaign "%s" '
+                                        'already exist.' % (request_prepid, duplicates[0]))
+
+            chained_campaigns_for_requests[request_prepid] = chained_campaigns_for_request
 
         results = []
         generated_chains = mccm.get_attribute('generated_chains')
         for request in requests:
             request_prepid = request.get_attribute('prepid')
-            self.logger.info("Generating chained requests for %s", request_prepid)
             chained_campaigns = chained_campaigns_for_requests[request_prepid]
+            self.logger.info('Generating chained requests for %s, chained campaigns - %s',
+                             request_prepid,
+                             len(chained_campaigns))
             for chained_campaign in chained_campaigns:
-                chained_campaign_prepid = chained_campaign.get_attribute('prepid')
-                limit = limit_campaign[chained_campaign_prepid] or None
                 for _ in range(repetitions):
-                    generated= self.generate_chained_requests(mccm,
-                                                              request,
-                                                              chained_campaign,
-                                                              reserve,
-                                                              limit)
-                    results.append(generated)
-                    # A small delay to not crash DB
-                    time.sleep(0.05)
-                    generated_prepid = generated.get('prepid', '')
-                    if not generated['results']:
-                        return {"prepid": mccm_id,
-                                "results": False,
-                                "message": generated['message'],
-                                'chained_request_prepid': generated_prepid}
-
-                    generated_chains[generated_prepid] = generated['generated_requests']
+                    chained_request_prepid = self.generate_chained_request(mccm, request, chained_campaign)
+                    generated_chains[chained_request_prepid] = []
                     mccm.set_attribute("generated_chains", generated_chains)
-                    mccm.reload(save_current=True)
+                    mccm.reload(save=True)
+                    results.append(chained_request_prepid)
                     # A small delay to not crash DB
                     time.sleep(0.05)
 
         if not results:
-            return {"prepid": mccm_id,
-                    "results": False,
-                    "message": "Everything went fine, but nothing was generated"}
+            return {"prepid": prepid,
+                    "results": True,
+                    "message": 'Everything went fine, but nothing was generated'}
 
-        mccm.set_status()
-        mccm_db.update(mccm.json())
-        return {"prepid": mccm_id,
-                "results": True,
-                "message": results}
+        mccm.set('status', 'done')
+        mccm.update_history('generate')
+        if not mccm.save():
+            return {'prepid': prepid,
+                    'results': False,
+                    'message': 'Could not save ticket to the database'}
 
-    def generate_chained_requests(self, mccm, request, chained_campaign, reserve, limit):
-        chained_request = chained_campaign.generate_request(request)
+        return {'prepid': prepid,
+                'results': results,
+                'message': ''}
+
+    def generate_chained_request(self, mccm, root_request, chained_campaign):
+        # Generate the chained request
+        chained_request = chained_campaign.generate_request(root_request)
+        root_request.reload(save=False)
         chained_request_prepid = chained_request.get_attribute('prepid')
         # Updates from the ticket
         block = mccm.get_attribute('block')
-        action_parameters = chained_request.get_attribute('action_parameters')
-        action_parameters.update({'block_number': block})
-
-        if not chained_request.reload():
-            return {'results': False,
-                    'message': 'Unable to save chained request %s' % (chained_request_prepid)}
-
-        # let the root request know that it is part of a chained request
-        root_chains = request.get_attribute('member_of_chain')
-        root_chains.append(chained_request_prepid)
-        request.set_attribute('member_of_chain', sorted(list(set(root_chains))))
-        request.update_history({'action': 'join chain', 'step': chained_request_prepid})
-        request.reload()
-        request_status = request.get_attribute('status')
-        # do the reservation of the whole chain ?
-        generated_requests = []
-        if reserve:
-            results_dict = chained_request.reserve(limit=limit, save_requests=False)
-            if results_dict['results'] and 'generated_requests' in results_dict:
-                generated_requests = results_dict['generated_requests']
-                results_dict.pop('generated_requests')
-            else:
-                return {"results": False,
-                        "prepid": chained_request_prepid,
-                        "message": results_dict['message']}
-
-        self.logger.info('Generated requests for %s are %s',
-                         chained_request_prepid,
-                         generated_requests)
         priority = block_to_priority(block)
-        if request_status in ('approved', 'done'):
-            # change priority of the whole chain
-            self.logger.info('Setting block %s (%s) for %s',
-                             block,
-                             priority,
-                             chained_request_prepid)
-            chained_request.set_priority(priority)
-        elif request_status == 'submitted':
-            # change priority only for the newly created requests
-            request_db = Database('requests')
-            for request_prepid in generated_requests:
-                generated_request = Request(request_db.get(request_prepid))
-                self.logger.info('Setting block %s (%s) for %s',
-                                 block,
-                                 priority,
-                                 request_prepid)
-                generated_request.change_priority(priority)
+        chained_request.set('priority', priority)
+        if not chained_request.reload():
+            raise Exception('Unable to save chained request %s' % (chained_request_prepid))
 
-        return {"results":True,
-                "prepid": chained_request_prepid,
-                'generated_requests': generated_requests}
+        return chained_request_prepid
 
 
 class MccMReminderGenContacts(RESTResource):
@@ -729,23 +627,15 @@ class MccMReminderGenConveners(RESTResource):
 class CalculateTotalEvts(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
-    def get(self, mccm_id):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
-        Force to recalculate total_events for ticket
+        Force to recalculate total events for ticket
         """
-        mccm_db = Database('mccms')
-        mccm_json = mccm_db.get(mccm_id)
-        if not mccm_json:
-            return {"results": False,
-                    'message': '%s does not exist' % (mccm_id)}
+        def recalculate(mccm):
+            mccm.update_total_events()
 
-        mccm = MccM(mccm_json)
-        mccm.update_total_events()
-        if not mccm_db.update(mccm.json()):
-            return {"results": False,
-                    "message": "Could not save to the database"}
-
-        return {'results': True}
+        return self.do_multiple_items(data['prepid'], MccM, recalculate)
 
 
 class CheckIfAllApproved(RESTResource):

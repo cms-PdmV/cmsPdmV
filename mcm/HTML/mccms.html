@@ -37,50 +37,42 @@
           <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
             <div ng-switch on="column.db_name">
               <div ng-switch-when="prepid">
-                <a ng-href='mccms?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/mccms/{{data[column.db_name]}}"
-                   rel="tooltip"
-                   title="Admin view of {{data[column.db_name]}}"
+                <a ng-href='{{dbName}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                   title="Admin view of {{data.prepid}}"
                    ng-show="user.is_administrator && !isDevMachine();"><i class="icon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/mccms/{{data[column.db_name]}}"
-                   rel="tooltip"
-                   title="Admin view of {{data[column.db_name]}}"
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                   title="Admin view of {{data.prepid}}"
                    ng-show="user.is_administrator && isDevMachine();"><i class="icon-star"></i></a>
               </div>
               <div ng-switch-when="">
-                <a ng-href='edit?db_name=mccms&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-hide="role(1);" target="_self">
+                <a ng-href='edit?db_name={{dbName}}&prepid={{data.prepid}}' title="Edit {{data.prepid}}" ng-show="user.is_user" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a ng-click='deleteObject(data.prepid)' rel="tooltip" title="Delete ticket" ng-hide="role(1);" ng-href="#">
+                <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_user" ng-href="#">
                   <i class="icon-minus-sign"></i>
                 </a>
-                <a rel="tooltip" title="Cancel ticket" ng-click="actionPrompt('cancel', data.prepid)" ng-href="#" ng-hide="role(1);">
+                <a ng-click="cancelTicket(data.prepid)" title="Cancel {{data.prepid}}" ng-show="user.is_user && data.status == 'new'" ng-href="#">
                   <i class="icon-thumbs-down"></i>
                 </a>
-                <a rel="tooltip" title="Generate chains for {{data.prepid}}" ng-click="actionPrompt('generate', data.prepid)" ng-href="#" ng-hide="role(3);">
+                <a ng-click="cancelTicket(data.prepid)" title="Uncancel {{data.prepid}}" ng-show="user.is_user && data.status == 'cancelled'" ng-href="#">
+                  <i class="icon-thumbs-up"></i>
+                </a>
+                <a ng-click="generate(data.prepid)" title="Generate chains for {{data.prepid}}" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-play"></i>
                 </a>
-                <a rel="tooltip" title="Generate chains and reserve for {{data.prepid}}" ng-click="openGenerateReserveModal(data)" ng-href="#" ng-hide="role(3)">
-                  <i class="icon-indent-right"></i>
-                </a>
-                <a rel="tooltip" title="Recalculate total_events for {{data.prepid}}" ng-click="objectAction('update_total_events', data.prepid)" ng-href="#" ng-hide="role(1);">
+                <a ng-click="recalculate(data.prepid)" title="Recalculate total events for {{data.prepid}}" ng-show="user.is_user" ng-href="#">
                   <i class="icon-filter"></i>
                 </a>
-                <a rel="tooltip" title="View all requests for {{data.prepid}}" ng-href="requests?range={{generateAllRequests(data.requests);}}" target="_self">
+                <a ng-href="requests?range={{requestRange(data.requests)}}" title="View all requests of {{data.prepid}}" target="_self">
                   <i class="icon-folder-open"></i>
                 </a>
-                <a ng-hide="allRequestsApproved[data.prepid] !== undefined" ng-click="checkIfAllApproved(data.prepid)" rel="tooltip" title="Check approval of requests" ng-href="#">
+                <a ng-click="checkApproved(data.prepid)" title="Check approval of requests" ng-hide="allRequestsApproved[data.prepid]" ng-href="#">
                   <i class="icon-eye-open"></i>
                 </a>
-              </div>
-              <div ng-switch-when="pwg">
-                <a ng-href='mccms?pwg={{data[column.db_name]}}' rel="tooltip" title="View mccms for {{data[column.db_name]}}" target="_self"> {{data[column.db_name]}}</a>
-              </div>
-              <div ng-switch-when="meeting">
-                <a ng-href='mccms?meeting={{data[column.db_name]}}' rel="tooltip" title="View mccms for {{data[column.db_name]}}" target="_self"> {{data[column.db_name]}}</a>
-              </div>
-              <div ng-switch-when="status">
-                <a ng-href='mccms?status={{data[column.db_name]}}' rel="tooltip" title="View mccms for {{data[column.db_name]}}" target="_self"> {{data[column.db_name]}}</a>
+                <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
+                <img ng-show="actionMessage[data.prepid] == 'loading'" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+                <span ng-show="actionMessage[data.prepid] != 'OK' && actionMessage[data.prepid] != 'loading'" style="color: red">{{actionMessage[data.prepid]}}</span>
               </div>
               <div ng-switch-when="notes">
                 <div style="width:400px">
@@ -88,21 +80,16 @@
                 </div>
               </div>
               <div ng-switch-when="requests">
-                <i ng-hide="allRequestsApproved[data.prepid] === undefined || allRequestsApproved[data.prepid] === true"
-                  style="color:red">Not all requests are approved</i>
-                <i ng-hide="allRequestsApproved[data.prepid] === undefined || allRequestsApproved[data.prepid] === false"
-                  style="color:green">All requests are approved</i>
+                <i ng-show="allRequestsApproved[data.prepid] === false" style="color:red">Not all requests are approved</i>
+                <i ng-show="allRequestsApproved[data.prepid] === true" style="color:green">All requests are approved</i>
                 <ul>
                   <div ng-repeat="elem in data[column.db_name]">
                     <li ng-hide="isArray(elem);">
-                      <a ng-href='requests?prepid={{elem}}' rel="tooltip" title="View request {{elem}}"
-                        target="_self">{{elem}}</a>
-                      <a ng-href='chained_requests?contains={{elem}}' rel="tooltip" title="View chains from {{elem}}"
-                        target="_self"><i class="icon-indent-left"></i></a>
+                      <a ng-href='requests?prepid={{elem}}' title="View request {{elem}}" target="_self">{{elem}}</a>
+                      <a ng-href='chained_requests?contains={{elem}}' title="View chains from {{elem}}" target="_self"><i class="icon-indent-left"></i></a>
                     </li>
                     <li ng-show="isArray(elem);">
-                      <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="View range of rqeuests"
-                        target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
+                      <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' title="View range of rqeuests" target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
                     </li>
                   </div>
                 </ul>
@@ -114,10 +101,9 @@
                 <div custom-history ng-model="data[column.db_name]"></div>
               </div>
               <div ng-switch-when="chains">
-                <ul ng-repeat="el in data[column.db_name]">
-                  <li ng-switch="el.indexOf('chain_') == -1">
-                    <a ng-switch-when="true" ng-href="chained_campaigns?alias={{el}}" target="_self">{{el}}</a>
-                    <a ng-switch-when="false" ng-href="chained_campaigns?prepid={{el}}" target="_self">{{el}}</a>
+                <ul ng-repeat="chain in data[column.db_name]">
+                  <li>
+                    <a ng-href="chained_campaigns?prepid={{chain}}" target="_self">{{chain}}</a>
                   </li>
                 </ul>
               </div>
@@ -141,7 +127,10 @@
                   ng-show="is_generated_chains_empty(data.generated_chains)" value="Show chains" align="left" />
               </div>
               <div ng-switch-default>
-                {{data[column.db_name]}}
+                <a ng-href='{{dbName}}?{{column.db_name}}={{data[column.db_name]}}'
+                   title="Show all {{dbName.replace('_', ' ')}} where {{column.text}} is {{data[column.db_name]}}">
+                   {{data[column.db_name]}}
+                </a>
               </div>
             </div>
           </td>
@@ -150,7 +139,7 @@
     </table>
     <div class="row-fluid custom-footer">
       <div class="span4">
-        <input type="button" class="btn" ng-click="openTicketCreator()" value="Create new MccM ticket" ng-hide="role(1);" align="left" />
+        <input type="button" class="btn" ng-click="openTicketCreator()" value="Create new MccM ticket" ng-show="user.is_user" align="left" />
         <script type="text/ng-template" id="createTicketModal.html"> <!--hidden modal template-->
         <div class="modal-header">
           <h4>Create an MccM Ticket</h4>
@@ -165,34 +154,6 @@
         </div>
         </script>
       </div>
-      <!-- MODAL-->
-      <script type="text/ng-template" id="reserveGenerateReserveModal.html"> <!--hidden modal template-->
-        <div class="modal-header">
-          <h4>Chain generation and reservation</h4>
-        </div>
-        <div class="modal-body">
-          <div ng-repeat="chain in chains">
-            <small style="word-break: break-all">{{chain.prepid}}</small>
-            <br>
-            Reserve up to:
-            <select ng-model="chain.campaign" style="width: 60%">
-              <option ng-repeat="campaign in chain.campaigns" value="{{campaign[0]}}">{{campaign[1]}}</option>
-            </select>
-          </div>
-          <span title="Silently skip already existing chained requests">
-            <input type="checkbox" ng-model="vars.skipExisting"> Ignore existing chained requests
-          </span>
-          <br>
-          <span title="Generate chained requests for all requests and chained campaings even if this leads to duplicated chained requests">
-            <input type="checkbox" ng-model="vars.allowDuplicates"> Allow duplicates
-          </span>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-warning" ng-click="confirm()">Confirm</button>
-          <button class="btn btn-success" ng-click="cancel()">Cancel</button>
-        </div>
-      </script>
-      <!-- END of MODAL-->
     </div>
   </span>
 </body>

@@ -1,16 +1,11 @@
-import time
-import json
 from urllib import request
 from json_layer.chained_campaign import ChainedCampaign
 
 from json_layer.json_base import json_base
 from json_layer.request import Request
 from json_layer.campaign import Campaign
-from json_layer.mccm import MccM
 from json_layer.flow import Flow
 from couchdb_layer.mcm_database import database as Database
-from tools.locker import locker
-from tools.locator import locator
 from tools.settings import Settings
 
 
@@ -76,15 +71,18 @@ class ChainedRequest(json_base):
         """
         chain_prepid = self.get('prepid')
         request_prepid = request.get('prepid')
+        self.logger.info('Request %s is joining %s', request_prepid, chain_prepid)
         # Update request
         chains = request.get_attribute('member_of_chain')
         if chain_prepid not in chains:
+            self.logger.info('Adding %s to %s', chain_prepid, request_prepid)
             request.set_attribute('member_of_chain', sorted(chains + [chain_prepid]))
             request.update_history('join chain', chain_prepid)
 
         # Update chained request
         chain = self.get_attribute('chain')
         if request_prepid not in chain:
+            self.logger.info('Adding %s to %s', request_prepid, chain_prepid)
             chain.append(request_prepid)
             self.set_attribute('chain', chain)
             self.update_history('add request', request_prepid)
@@ -157,181 +155,217 @@ class ChainedRequest(json_base):
 
         return setup_file
 
-    def flow(self, reserve=False, stop_at_campaign=None, trigger_others=True):
+    def flow(self, reserve=False, trigger_others=True):
         """
-        Flow chained request one step further
+        Flow chained request further
+        Flowing will go as long as flow types are "together"
         If possible, reuse requests, if not - create new ones
         """
         prepid = self.get('prepid')
-        self.logger.info('Flowing chained request %s to next step, reserve=%s', prepid, reserve)
+        self.logger.info('Flowing %s', prepid)
         chain = self.get('chain')
         if not chain:
             # Empty chained requests are not valid, they must have at least a
             # root request
-            raise Exception('Chained request {prepid} has no requests')
+            raise Exception('Chained request is missing root request')
 
         if not self.get('enabled'):
             raise Exception('Chained request is not enabled')
 
-        if not reserve:
-            # Normally the chain's step is the current step
-            current_step = self.get('step')
-        else:
-            # During reservation, step is not moved, so this needs to point to
-            # the last available request in the chain
-            current_step = len(chain) - 1
-
-        current_prepid = chain[current_step]
-        next_step = current_step + 1
+        # Fetch chained campaign and check if it is enabled
         chained_campaign_id = self.get('member_of_campaign')
         chained_campaign = ChainedCampaign.fetch(chained_campaign_id)
-
-        if next_step >= len(chained_campaign):
-            raise Exception('Chained request does not allow any futher flowing')
-
         if not chained_campaign.get('enabled'):
             raise Exception(f'Chained campaign {chained_campaign_id} is not enabled')
 
-        next_flow_id = chained_campaign.flow(next_step)
-        next_campaign_id = chained_campaign.campaign(next_step)
+        # Current step and next step indices
+        current_step = self.get('step')
+        next_step = current_step + 1
+        if next_step >= len(chained_campaign):
+            raise Exception('Chained campaign does not allow any futher flowing')
 
-        self.logger.debug('Flowing %s to step %s/%s (%s + %s)',
-                          prepid,
-                          next_step + 1,
-                          len(chained_campaign),
-                          next_flow_id,
-                          next_campaign_id)
-
-        current_request = Request.fetch(current_prepid)
-        current_campaign_id = current_request.get('member_of_campaign')
-        if reserve and stop_at_campaign == current_campaign_id:
-            raise Exception('Reached limit')
-
-        current_campaign = Campaign.fetch(current_campaign_id)
-        next_campaign = Campaign.fetch(next_campaign_id)
-        if not next_campaign.get_attribute('status') == 'started':
-            raise Exception(f'Campaign {next_campaign_id} is not started')
-
-        if not reserve:
-            # If not reserving a chain, current step must be done
-            current_request_status = current_request.get_approval_status()
-            if current_request_status != 'submit-done':
-                raise Exception(f'{current_prepid} is {current_request_status} and not submit-done')
-
-        # Get root request
+        # Fetch root request as it will be needed when searching for requests
+        # that could be reused
         root_request_id = chain[0]
-        if root_request_id == current_prepid:
-            root_request = current_request
-        else:
-            root_request = Request.fetch(root_request_id)
+        root_request = Request.fetch(root_request_id)
 
-        next_campaign = Campaign.fetch(next_campaign_id)
-        if next_campaign.get('energy') != current_campaign.get('energy'):
-            raise Exception(f'Cannot flow {prepid}, inconsistent energy in {next_campaign_id}')
+        start_flowing_at = self.current()
+        other_chains_to_flow = set()
+        next_request = None
+        while next_step < len(chained_campaign):
+            current_id = chain[current_step]
+            next_flow_id = chained_campaign.flow(next_step)
+            next_campaign_id = chained_campaign.campaign(next_step)
+            self.logger.info('Flowing %s to step %s/%s (%s + %s)',
+                             prepid,
+                             next_step + 1,
+                             len(chained_campaign),
+                             next_flow_id,
+                             next_campaign_id)
+            self.logger.info('Current step %s in chain %s', current_id, ', '.join(chain))
+            # Next campaign
+            next_campaign = Campaign.fetch(next_campaign_id)
+            if not next_campaign.is_started():
+                raise Exception(f'Campaign {next_campaign_id} is not started')
 
-        next_flow = Flow.fetch(next_flow_id)
-        if next_flow.get('approval') == 'none':
-            raise Exception(f'Flow {next_flow_id} does not allow flowing')
+            # Next flow
+            next_flow = Flow.fetch(next_flow_id)
+            next_flow_approval = next_flow.get('approval')
+            if next_flow_approval == 'none':
+                raise Exception(f'Flow {next_flow_id} is {next_flow_approval}')
 
-        next_events = current_request.get('total_events')
-        # Check if current request produced at least 5% of expected events
+            # Current request
+            if current_id == root_request_id:
+                current_request = root_request
+            else:
+                current_request = Request.fetch(current_id)
+
+            current_status = current_request.get_approval_status()
+            self.logger.info('Current request %s status %s', current_id, current_status)
+            if not reserve:
+                if current_id != start_flowing_at:
+                    # During normal flow, stop when next flow is not "together"
+                    self.logger.info('Next flow %s type is "%s"', next_flow_id, next_flow_approval)
+                    if next_flow_approval != 'together':
+                        break
+                else:
+                    # When trying to flow to after_done, current request must be
+                    # submit-done
+                    if next_flow_approval == 'after_done' and current_status != 'submit-done':
+                        raise Exception(f'Flow {next_flow_id} type is "{next_flow_approval}", '
+                                        f'but {current_id} is {current_status}')
+
+            next_request = self.get_request_for_step(next_step, root_request, current_request, next_flow, next_campaign)
+            next_request_id = next_request.get('prepid')
+            self.logger.info('Next request %s (%s)',
+                             next_request_id,
+                             next_request.get_approval_status())
+            # TODO: set next request to "approved"?
+            self.request_join(next_request)
+            if trigger_others:
+                for chain_prepid in current_request.get('member_of_chain'):
+                    other_chained_request = ChainedRequest.fetch(chain_prepid)
+                    if other_chained_request.current() == current_id:
+                        other_chains_to_flow.add(chain_prepid)
+
+            # Reset options for the next request
+            next_request.reload(save=False)
+            if next_request.get('approval') != 'submit':
+                next_request.reset_options()
+                # Output dataset as input for the next request if available
+                current_output = current_request.get('output_dataset')
+                if current_output:
+                    input_dataset = next_request.get_input_dataset(current_output)
+                    if input_dataset:
+                        self.logger.info('Will use %s from %s as input to %s',
+                                        input_dataset,
+                                        current_id,
+                                        next_request_id)
+                        next_request.set_attribute('input_dataset', input_dataset)
+
+                next_request.change_priority(self.get('priority'))
+
+            if not next_request.save():
+                raise Exception('Could not save next request %s to the database' % (next_request_id))
+
+            if not reserve:
+                self.set_attribute('step', current_step)
+
+            self.update_history('flow', next_request_id)
+            # Prepare for next iteration
+            current_step += 1
+            next_step = current_step + 1
+
         if not reserve:
-            if current_request.get_attribute('status') != 'done':
-                current_request.get_stats()
+            # Do not flow itself again
+            other_chains_to_flow -= {prepid}
+            for other_chain in sorted(list(other_chains_to_flow)):
+                chained_request = ChainedRequest.fetch(other_chain)
+                chained_request.flow(trigger_others=False)
+                chained_request.reload()
 
-            statistics_fraction = Settings.get('statistics_fraction')
-            current_completed_events = current_request.get('completed_events')
-            current_total_events = current_request.get('total_events')
-            current_keeps_output = current_request.keeps_output()
-            min_events = int(current_total_events * statistics_fraction)
-            if current_completed_events <= min_events and current_keeps_output:
-                raise Exception('%s keeps output, but has only %s completed events, at least '
-                                '%s are required. Will not flow %s' % (current_prepid,
-                                                                       current_completed_events,
-                                                                       min_events,
-                                                                       prepid))
+        if not reserve:
+            # sync last status
+            self.set_last_status()
+            # we can only be processing at this point
+            self.set_attribute('status', 'processing')
 
-            next_events = int(current_completed_events * current_request.get_efficiency())
+        return self
 
+    def get_request_for_step(self, step, root_request, current_request, next_flow, next_campaign):
+        """
+        Return existing in chain, existing elsewhere or create a new request
+        """
+        prepid = self.get('prepid')
         # Get the next request in the chain
-        if next_step < len(self):
+        if step < len(self):
             # Next request is already in the chain
-            next_request_id = chain[next_step]
-            self.logger.debug('Next request %s is in the chain - use it', next_request_id)
+            next_request_id = self[step]
+            self.logger.info('Next request %s is in the chain - use it', next_request_id)
             next_request = Request.fetch(next_request_id)
         else:
             # Next request is NOT in the chain
             # Try to reuse existing requests by looking at other chains
             # Requests should come from chained requests with same root
-            next_request = self.find_request_to_reuse(root_request, next_step)
+            next_request = self.find_request_to_reuse(root_request, step)
+            if next_request:
+                next_request_id = next_request.get('prepid')
+                self.logger.info('Found request %s to reuse in %s', next_request_id, prepid)
+            else:
+                self.logger.info('Could not find request to reuse for %s', prepid)
 
-        next_request_data = {'pwg': current_request.get('pwg'),
-                             'member_of_campaign': next_campaign_id,
-                             'process_string': current_request.get('process_string'),
-                             'extension': current_request.get('extension'),
-                             'dataset_name': current_request.get('dataset_name'),
-                             'generators': current_request.get('generators'),
-                             'total_events': next_events,
-                             'flown_with': next_flow_id,
-                             'interested_pwg': current_request.get('interested_pwg'),}
+        request_data = {'pwg': current_request.get('pwg'),
+                        'member_of_campaign': next_campaign.get('prepid'),
+                        'process_string': current_request.get('process_string'),
+                        'extension': current_request.get('extension'),
+                        'dataset_name': current_request.get('dataset_name'),
+                        'generators': current_request.get('generators'),
+                        'flown_with': next_flow.get('prepid'),
+                        'interested_pwg': current_request.get('interested_pwg'),}
+
         if next_request:
-            self.logger.info('Next request already exists - %s', next_request.get('prepid'))
             if next_request.get('approval') != 'submit':
                 # If request is not submitted, update it's info
-                for key, value in next_request_data.items():
+                for key, value in request_data.items():
                     next_request.set(key, value)
         else:
-            self.logger.info('Next request does not exist and should be created')
+            self.logger.info('Creating a request for %s (%s + %s + %s)',
+                             prepid,
+                             request_data['pwg'],
+                             request_data['flown_with'],
+                             request_data['member_of_campaign'])
             from rest_api.RequestFactory import RequestFactory
             # Create new request from the data for the next request
-            next_request = RequestFactory.make(next_request_data)
-            self.logger.info('Created new request %s for chain %s',
-                             next_request.get('prepid'),
-                             prepid)
+            next_request = RequestFactory.make(request_data)
+            next_request_id = next_request.get('prepid')
+            self.logger.info('Created new request %s for chain %s', next_request_id, prepid)
 
-        next_request_id = next_request.get('prepid')
-        self.request_join(next_request)
-
-        # Trigger other chains of current request to move too
-        if trigger_others:
-            for chained_request_dict in current_request.get_chained_requests():
-                if chained_request_dict['prepid'] == prepid:
-                    continue
-
-                chained_request = ChainedRequest(chained_request_dict)
-                chained_request.flow(trigger_others=False)
-                chained_request.reload()
-
-        # Reset options for the next request
-        next_request.reload(save=False)
-        if next_request.get('approval') != 'submit':
-            next_request.reset_options()
-            # Output dataset as input for the next request if available
-            current_output = current_request.get('output_dataset')
-            if current_output:
-                input_dataset = next_request.get_input_dataset(current_output)
-                if input_dataset:
-                    self.logger.info('Will use %s from %s as input to %s',
-                                    input_dataset,
-                                    current_prepid,
-                                    next_request_id)
-                    next_request.set_attribute('input_dataset', input_dataset)
-
-            next_request.change_priority(self.get('priority'))
-
-        if not next_request.save():
-            raise Exception('Could not save next request %s to the database' % (next_request_id))
-
-        if not reserve:
-            # sync last status
-            self.set_attribute('last_status', next_request.get_attribute('status'))
-            # we can only be processing at this point
-            self.set_attribute('status', 'processing')
-            # set to next step
-            self.set_attribute('step', next_step)
-            self.update_history('flow', next_request_id)
-
+        next_request.set('total_events', self.get_next_request_events(current_request, next_request))
         return next_request
+
+    def get_next_request_events(self, current_request, next_request):
+        """
+        Get number of total events for the next request request
+        Take number of completed/total events of current request and filter
+        efficiency of next request
+        """
+        if current_request.get_attribute('status') != 'done':
+            current_request.get_stats()
+
+        statistics_fraction = Settings.get('statistics_fraction')
+        current_completed_events = current_request.get('completed_events')
+        current_total_events = current_request.get('total_events')
+        current_keeps_output = current_request.keeps_output()
+        min_events = int(current_total_events * statistics_fraction)
+        if current_completed_events <= min_events and current_keeps_output:
+            raise Exception('%s keeps output, but has only %s completed events, at least '
+                            '%s are required' % (current_request.get('prepid'),
+                                                 current_completed_events,
+                                                 min_events,
+                                                 ))
+
+        next_events = int(current_completed_events * next_request.get_efficiency())
+        return next_events
 
     def find_request_to_reuse(self, root_request, next_step):
         """

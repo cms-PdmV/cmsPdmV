@@ -145,6 +145,12 @@ class Campaign(json_base):
         other_release = other_release[:2]
         return my_release >= other_release
 
+    def is_started(self):
+        """
+        Return whether campaign is started
+        """
+        return self.get('status') == 'started'
+
     @classmethod
     def get_database(cls):
         """

@@ -34,9 +34,9 @@ class Flow(json_base):
         return super().validate()
 
     def toggle_approval(self):
-        approval_steps = ('none', 'flow', 'submit', 'tasksubmit')
+        approval_steps = ('none', 'together', 'after_done')
         approval = self.get_attribute('approval')
-        index = approval_steps.index(approval)
+        index = approval_steps.index(approval) if approval in approval_steps else 0
         new_approval = approval_steps[(index + 1) % (len(approval_steps))]
         self.set_attribute('approval', new_approval)
         self.update_history('approve', new_approval)

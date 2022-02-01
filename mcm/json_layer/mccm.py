@@ -35,6 +35,16 @@ class MccM(json_base):
         self.get_request_list()
         return super().validate()
 
+    @classmethod
+    def get_database(cls):
+        """
+        Return shared database instance
+        """
+        if not hasattr(cls, 'database'):
+            cls.database = Database('mccms')
+
+        return cls.database
+
     @staticmethod
     def get_meeting_date():
         """

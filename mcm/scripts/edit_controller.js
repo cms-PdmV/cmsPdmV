@@ -204,7 +204,8 @@ angular.module('testApp').controller('resultCtrl',
         default:
           break;
       }
-      $http({method:'POST', url:'restapi/'+$location.search()["db_name"]+'/update',data:angular.toJson($scope.result)}).success(function(data,status){
+      let method = $scope.prepid && $scope.prepid.length ? 'POST' : 'PUT';
+      $http({'method': method, url:'restapi/'+$location.search()["db_name"]+'/update',data:angular.toJson($scope.result)}).success(function(data,status){
         $scope.update["success"] = data["results"];
         $scope.update["fail"] = false;
         $scope.update["message"] = data["message"];
@@ -459,10 +460,10 @@ testApp.directive("customRequestsEdit", function($http, $rootScope){
           let sequence = viewValue.split('-');
           viewValue = pattern[0] + '-' + pattern[1] + '-' + (sequence.length == 3 ? sequence[2] : '');
         }
-        const campaign = $rootScope.campaignsForRequests.length ? '&campaign=' + $rootScope.campaignsForRequests.join(',') : '';
-        const promise = $http.get("search?db_name=requests&prepid=" + viewValue + campaign);
+        const campaign = $rootScope.campaignsForRequests.length ? '&member_of_campaign=' + $rootScope.campaignsForRequests.join(',') : '';
+        const promise = $http.get("search?db_name=requests&prepid=" + viewValue + "*" + campaign);
         return promise.then(function(data){
-          return data.data.results.mape(x => x['prepid']).filter(x => x != firstPrepid);
+          return data.data.results.map(x => x['prepid']).filter(x => x != firstPrepid);
         }, function(data){
           alert("Error getting requests: " + data.data);
         });
@@ -536,7 +537,7 @@ testApp.directive("customMccmChains", function($http, $rootScope){
           return [];
         }
         const campaign = $rootScope.campaignsForChains.length ? '&prepid___=' + $rootScope.campaignsForChains.join(',') : '';
-        const url = "search/?db_name=chained_campaigns&include_fields=prepid&valid=true&prepid=" + viewValue + "*" + campaign;
+        const url = "search/?db_name=chained_campaigns&enabled=true&prepid=" + viewValue + "*" + campaign;
         if (scope.suggestionCache[url]) {
           const suggestions = scope.suggestionCache[url];
           scope.newestSuggestions = suggestions.filter(x => scope.chainedCampaigns.indexOf(x) < 0);

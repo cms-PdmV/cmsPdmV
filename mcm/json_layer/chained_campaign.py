@@ -30,13 +30,12 @@ class ChainedCampaign(json_base):
         pwg = root_request.get('pwg')
         request_status = root_request.get_attribute('status')
         chained_request_data = {'pwg': pwg,
-                                'chain': [root_request_id],
                                 'member_of_campaign': self.get('prepid'),
                                 'enabled': True,
                                 'dataset_name': root_request.get('dataset_name'),
                                 'last_status': request_status}
         from rest_api.ChainedRequestFactory import ChainedRequestFactory
-        chained_request = ChainedRequestFactory.make(chained_request_data)
+        chained_request = ChainedRequestFactory.make(chained_request_data, root_request)
         chained_request.validate()
         if request_status in {'submitted', 'done'}:
             chained_request.set('status', 'processing')
@@ -83,3 +82,15 @@ class ChainedCampaign(json_base):
             cls.database = Database('chained_campaigns')
 
         return cls.database
+
+    def flow(self, index):
+        """
+        Return flow name at given index
+        """
+        return self[index][1]
+
+    def campaign(self, index):
+        """
+        Return campaign name at given index
+        """
+        return self[index][0]

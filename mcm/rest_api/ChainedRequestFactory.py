@@ -9,7 +9,7 @@ class ChainedRequestFactory():
     logger = logging.getLogger('mcm_error')
 
     @classmethod
-    def make(cls, data):
+    def make(cls, data, root_request):
         """
         Create a new chained request with a unique prepid and return it
         """
@@ -25,6 +25,7 @@ class ChainedRequestFactory():
             data['_id'] = prepid
             data['prepid'] = prepid
             chained_request = ChainedRequest(data)
+            chained_request.request_join(root_request)
             chained_request.save()
             cls.logger.info('New chained request created: %s ', prepid)
 
