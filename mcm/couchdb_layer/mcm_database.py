@@ -313,9 +313,9 @@ class database:
         """
         Return limit and skip values for given page and limit
         """
-        if page_num < 0:
+        if limit is None or page_num < 0 or limit < 0:
             # Page <0 means "all", but it still has to be limited to something
-            return 9999, 0
+            return None, 0
 
         skip = limit * page_num
         return limit, skip
@@ -329,9 +329,11 @@ class database:
         if options is None:
             options = {}
 
-        if limit >= 0 and skip >= 0:
-            options['limit'] = limit
+        if skip is not None and skip >= 0:
             options['skip'] = skip
+
+        if limit is not None and limit >= 0:
+            options['limit'] = limit
 
         if options.get('include_docs', True):
             options['include_docs'] = True
@@ -463,6 +465,7 @@ class database:
             if negative:
                 query.append('(%s:(* %s))' % (attribute, ' '.join('-%s' % (v) for v in negative)))
 
+        self.logger.debug('AND'.join(query))
         return 'AND'.join(query)
 
     def search(self, query_dict, page=0, limit=20, include_fields=None, total_rows=False, sort=None, sort_asc=True):
@@ -473,11 +476,13 @@ class database:
         limit, skip = self.pagify(page, limit)
         query = self.make_query(query_dict)
         url = 'local/%s/_design/lucene/search' % (self.db_name)
-        options = {'limit': limit,
-                   'skip': skip,
+        options = {'skip': skip,
                    'include_docs': True,
                    'sort': '_id<string>' if not sort else sort,
                    'q': query}
+        if limit is not None:
+            options['limit'] = limit
+
         if include_fields:
             # couchdb-lucene bug - _id must be always included when specifying
             # which fields to fetch because couchdb-lucene has "_id" hardcoded

@@ -242,6 +242,7 @@ class ChainedRequest(json_base):
                              next_request.get_approval_status())
             # TODO: set next request to "approved"?
             self.request_join(next_request)
+            next_request.reload(save=True)
             if trigger_others:
                 for chain_prepid in current_request.get('member_of_chain'):
                     other_chained_request = ChainedRequest.fetch(chain_prepid)
@@ -269,7 +270,7 @@ class ChainedRequest(json_base):
                 raise Exception('Could not save next request %s to the database' % (next_request_id))
 
             if not reserve:
-                self.set_attribute('step', current_step)
+                self.set_attribute('step', next_step)
 
             self.update_history('flow', next_request_id)
             # Prepare for next iteration
@@ -376,7 +377,7 @@ class ChainedRequest(json_base):
         """
         prepid = self.get('prepid')
         campaign_id = self.get_attribute('member_of_campaign')
-        chained_request_ids = root_request['member_of_chain']
+        chained_request_ids = root_request.get('member_of_chain')
         self.logger.debug('Chained request %s is flowing, next step - %s', prepid, next_step)
         self.logger.debug('Root request %s is member of %s chained requests',
                           root_request.get('prepid'),
@@ -513,7 +514,9 @@ class ChainedRequest(json_base):
             chain_prepid = chained_request.get('prepid')
             step = chained_request.get('step')
             chain = chained_request.get('chain')
-            chained_request.set('step', chain.index(current_prepid) - 1)
+            new_step = chain.index(current_prepid) - 1
+            self.logger.info('Rewinding %s to step %s', chain_prepid, new_step)
+            chained_request.set('step', new_step)
             chained_request.set_last_status()
             chained_request.set('status', 'processing')
             if not chained_request.save():

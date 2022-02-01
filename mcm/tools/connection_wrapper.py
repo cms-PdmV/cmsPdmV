@@ -126,7 +126,6 @@ class ConnectionWrapper():
                                   end_time - start_time)
                 return response_to_return
             except Exception as ex:
-                raise ex
                 self.logger.error('Exception while doing a %s to %s: %s',
                                   method,
                                   url,

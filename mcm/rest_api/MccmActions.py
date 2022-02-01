@@ -353,7 +353,7 @@ class GenerateChains(RESTResource):
                 query = {'member_of_campaign': [c.get('prepid') for c in chained_campaigns_for_request],
                          'contains': request_prepid,
                          'pwg': request_pwg}
-                duplicates = [c['member_of_campaign'] for c in chained_request_db.search(query, limit=-1)]
+                duplicates = [c['member_of_campaign'] for c in chained_request_db.search(query, limit=None)]
                 if duplicates:
                     if skip_existing:
                         # Remove duplicates
@@ -641,15 +641,15 @@ class CalculateTotalEvts(RESTResource):
 class CheckIfAllApproved(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
-    def get(self, mccm_id):
+    def get(self, prepid):
         """
         Return whether all requests in MccM are approve-approved
         """
         mccm_db = Database('mccms')
-        mccm_json = mccm_db.get(mccm_id)
+        mccm_json = mccm_db.get(prepid)
         if not mccm_json:
             return {"results": False,
-                    'message': '%s does not exist' % (mccm_id)}
+                    'message': '%s does not exist' % (prepid)}
 
         mccm = MccM(mccm_json)
         requests_prepids = mccm.get_request_list()

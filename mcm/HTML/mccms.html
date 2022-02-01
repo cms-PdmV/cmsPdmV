@@ -58,16 +58,19 @@
                 <a ng-click="cancelTicket(data.prepid)" title="Uncancel {{data.prepid}}" ng-show="user.is_user && data.status == 'cancelled'" ng-href="#">
                   <i class="icon-thumbs-up"></i>
                 </a>
-                <a ng-click="generate(data.prepid)" title="Generate chains for {{data.prepid}}" ng-show="user.is_production_manager" ng-href="#">
+                <a ng-click="openTicketChainGenerator(data)" title="Generate chains for {{data.prepid}}" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-play"></i>
                 </a>
                 <a ng-click="recalculate(data.prepid)" title="Recalculate total events for {{data.prepid}}" ng-show="user.is_user" ng-href="#">
                   <i class="icon-filter"></i>
                 </a>
-                <a ng-href="requests?range={{requestRange(data.requests)}}" title="View all requests of {{data.prepid}}" target="_self">
+                <a ng-href="requests?range={{requestRange(data.requests)}}" title="Show requests of {{data.prepid}}" target="_self">
                   <i class="icon-folder-open"></i>
                 </a>
-                <a ng-click="checkApproved(data.prepid)" title="Check approval of requests" ng-hide="allRequestsApproved[data.prepid]" ng-href="#">
+                <a ng-href="chained_requests?from_ticket={{data.prepid}}" title="Show generated chained requests of {{data.prepid}}" target="_self">
+                  <i class="icon-indent-left"></i>
+                </a>
+                <a ng-click="checkApproved(data.prepid)" title="Check approval of requests" ng-show="user.is_generator_contact" ng-href="#">
                   <i class="icon-eye-open"></i>
                 </a>
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
@@ -140,21 +143,45 @@
     <div class="row-fluid custom-footer">
       <div class="span4">
         <input type="button" class="btn" ng-click="openTicketCreator()" value="Create new MccM ticket" ng-show="user.is_user" align="left" />
-        <script type="text/ng-template" id="createTicketModal.html"> <!--hidden modal template-->
-        <div class="modal-header">
-          <h4>Create an MccM Ticket</h4>
-        </div>
-        <div class="modal-body">
-          Choose a PWG:
-          <select ng-options="value for value in vars.pwgs" ng-model="vars.selectedPwg" style="width: 90px; margin-bottom: 0px;"></select>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-success" ng-click="save()">Create</button>
-          <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-        </div>
-        </script>
       </div>
     </div>
+    <script type="text/ng-template" id="createTicketModal.html">
+      <div class="modal-header">
+        <h4>Create an MccM Ticket</h4>
+      </div>
+      <div class="modal-body">
+        Choose a PWG:
+        <select ng-options="value for value in vars.pwgs" ng-model="vars.selectedPwg" style="width: 90px; margin-bottom: 0px;"></select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-success" ng-click="save()">Create</button>
+        <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+      </div>
+      </script>
+      <script type="text/ng-template" id="generateChainsModal.html">
+        <div class="modal-header">
+          <h4>Generate chained requests</h4>
+        </div>
+        <div class="modal-body">
+          Generate chained requests for {{vars.prepid}}
+          <br>
+          <span title="Immediately create or reuse requests in chained requests">
+            <input type="checkbox" ng-model="vars.reserve"> Reserve chained requests
+          </span>
+          <br>
+          <span title="Silently skip already existing chained requests">
+            <input type="checkbox" ng-model="vars.skipExisting"> Ignore existing chained requests
+          </span>
+          <br>
+          <span title="Generate chained requests for all requests and chained campaings even if this leads to duplicated chained requests">
+            <input type="checkbox" ng-model="vars.allowDuplicates"> Allow duplicates
+          </span>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-success" ng-click="confirm()">Confirm</button>
+          <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+        </div>
+      </script>
   </span>
 </body>
 

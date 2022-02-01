@@ -3,7 +3,7 @@ from rest_api.RestAPIMethod import RESTResource
 from json_layer.user import User
 from tools.settings import Settings
 from couchdb_layer.mcm_database import database as Database
-from tools.utils import clean_split
+from tools.utils import clean_split, expand_range
 
 
 class Search(RESTResource):
@@ -87,23 +87,19 @@ class Search(RESTResource):
             for part in clean_split(get_range, ';'):
                 if ',' in part:
                     parts = part.split(',')
-                    start = parts[0].split('-')
-                    end = parts[1].split('-')
-                    numbers = range(int(start[-1]), int(end[-1]) + 1)
-                    start = '-'.join(start[:-1])
-                    args['prepid_'].extend('%s-%05d' % (start, n) for n in numbers)
+                    args['prepid_'].extend(expand_range(parts[0], parts[-1]))
                 else:
                     args['prepid_'].append(part)
 
         # from_ticket - chained_requests
         from_ticket = args.pop('from_ticket', None)
-        if from_ticket and db_name in ('chained_requests', ):
+        if from_ticket and db_name in ('chained_requests',):
             # Get chained requests generated from the ticket
             mccm_db = Database('mccms')
             if len(from_ticket) == 1 and '*' not in from_ticket[0]:
                 mccms = [mccm_db.get(from_ticket[0])]
             else:
-                mccms = mccm_db.search({'prepid': from_ticket}, page=-1)
+                mccms = mccm_db.search({'prepid': from_ticket}, limit=None)
 
             args['prepid__'] = []
             for mccm in mccms:

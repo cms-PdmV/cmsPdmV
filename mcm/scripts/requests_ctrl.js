@@ -168,7 +168,7 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.openCloneRequestModal = function (request) {
         const modal = $modal.open({
           templateUrl: 'cloneRequestModal.html',
-          controller: function ($http, $scope, $modalInstance, request, pwgs, errorModal, setSuccess) {
+          controller: function ($http, $scope, $modalInstance, request, pwgs, errorModal) {
             $scope.vars = {
               pwg: '',
               campaign: ''
@@ -188,16 +188,13 @@ angular.module('testApp').controller('resultsCtrl',
               clone["member_of_campaign"] = $scope.vars["campaign"];
               clone["pwg"] = $scope.vars["pwg"];
               $http({ method: 'PUT', url: 'restapi/requests/clone/', data: clone }).success(function (data, status) {
-                setSuccess(data["results"]);
                 if (data.results) {
                   $window.location.href = 'edit?db_name=requests&query=' + data.prepid;
                 } else {
                   errorModal(data.prepid, data['message']);
-                  setSuccess(false, status);
                 }
               }).error(function (data, status) {
                 errorModal(data.prepid, data['message']);
-                setSuccess(false, status);
               });
               $modalInstance.close();
             };
@@ -209,7 +206,6 @@ angular.module('testApp').controller('resultsCtrl',
             request: function () { return request; },
             pwgs: function () { return $scope.user.pwgs },
             errorModal: function () { return $scope.openErrorModal; },
-            setSuccess: function () { return $scope.setSuccess; },
           }
         });
       };

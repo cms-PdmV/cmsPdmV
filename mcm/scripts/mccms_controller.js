@@ -41,44 +41,40 @@ angular.module('testApp').controller('resultsCtrl',
       };
 
       $scope.isArray = function (obj) {
-        return angular.isArray(obj)
+        return Array.isArray(obj)
       };
 
-      $scope.findToken = function (tok) {
-        $window.location.href = "requests?&tags=" + tok.value
-      };
-
-      $scope.generateAllRequests = function (input_data) {
-        var tmp_url = [];
-        if (input_data.length > 0) {
-          _.each(input_data, function (elem) {
-            if (_.isArray(elem)) {
-              tmp_url.push(elem[0] + "," + elem[1]);
-            } else {
-              tmp_url.push(elem);
+      $scope.requestRange = function (requests) {
+        let range = [];
+        for (let entry of requests) {
+          if ($scope.isArray(entry)) {
+            if (entry.length == 1) {
+              range.push(entry[0]);
+            } else if (entry.length == 2) {
+              range.push(entry[0] + "," + entry[1]);
             }
-          });
-          return tmp_url.join(";");
-        } else {
-          return "";
-        }
-      };
-
-      $scope.checkIfAllApproved = function (prepid) {
-        for (i = 0; i < $scope.result.length; i++) {
-          if ($scope.result[i].prepid == prepid) {
-            // if already present. remove it to redisplay properly
-            if (_.keys($scope.allRequestsApproved).indexOf(prepid) == -1 || $scope.allRequestsApproved[prepid] == undefined) {
-              $http({ method: 'GET', url: 'restapi/mccms/check_all_approved/' + prepid }).success(function (data, status) {
-                $scope.allRequestsApproved[prepid] = data.results;
-                if (data.message) {
-                  alert(data.message);
-                }
-              }).error(function (status) {
-                alert('Cannot get information for ' + prepid);
-              });
-            }
+          } else {
+            range.push(entry);
           }
+        }
+        return range.join(";");
+      };
+
+      $scope.checkApproved = function (prepid) {
+        if ($scope.allRequestsApproved[prepid]) {
+          delete $scope.allRequestsApproved[prepid];
+        } else {
+          $scope.actionMessage[prepid] = 'loading';
+          $http({ method: 'GET', url: 'restapi/mccms/check_all_approved/' + prepid }).success(function (data, status) {
+            $scope.allRequestsApproved[prepid] = data.results;
+            if (data.message) {
+              $scope.openErrorModal(prepid, data.message);
+            }
+            delete $scope.actionMessage[prepid];
+          }).error(function (data, status) {
+            delete $scope.actionMessage[prepid];
+            errorModal(data.prepid, data['message']);
+          });
         }
       };
 
@@ -110,6 +106,40 @@ angular.module('testApp').controller('resultsCtrl',
             errorModal: function () { return $scope.openErrorModal; },
           }
         })
+      };
+      $scope.openTicketChainGenerator = function (mccm) {
+        $modal.open({
+          templateUrl: 'generateChainsModal.html',
+          controller: function ($scope, $modalInstance, $http, mccm, errorModal) {
+            $scope.vars = {'prepid': mccm.prepid,
+                           'reserve': false,
+                           'skipExisting': false,
+                           'allowDuplicates': false};
+            $scope.confirm = function () {
+              const ticketData = {'prepid': mccm.prepid,
+                                  'reserve': $scope.vars.reserve,
+                                  'skip_existing': $scope.vars.skipExisting,
+                                  'allow_duplicates': $scope.vars.allowDuplicates};
+              $http({method: 'POST', url: 'restapi/mccms/generate', data: ticketData}).success(function (data) {
+                if (data.results) {
+                  console.log('Get data')
+                } else {
+                  errorModal(data.prepid, data['message']);
+                }
+              }).error(function (data, status) {
+                errorModal(data.prepid, data['message']);
+              });
+              $modalInstance.close();
+            };
+            $scope.close = function () {
+              $modalInstance.dismiss();
+            };
+          },
+          resolve: {
+            mccm: function () { return mccm; },
+            errorModal: function () { return $scope.openErrorModal; },
+          }
+        });
       };
     }
   ]);
