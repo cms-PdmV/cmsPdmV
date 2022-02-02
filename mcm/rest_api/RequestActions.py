@@ -286,7 +286,7 @@ class RequestDelete(RESTResource):
             chain = chained_request.get_attribute('chain')
             chain.remove(prepid)
             chained_request.set_attribute('chain', chain)
-            chained_request.update_history({'action': 'remove request', 'step': prepid})
+            chained_request.update_history('remove request', prepid)
             chained_request.reload()
 
         for chained_request_id in chained_requests_to_delete:

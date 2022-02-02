@@ -269,9 +269,9 @@ class GenerateChains(RESTResource):
         Operate the chaining for a given MccM document id
         """
         # Skip existing ones?
-        skip_existing = flask.request.args.get('skip_existing', 'False').lower() == 'true'
+        skip_existing = data.get('skip_existing', False) is True
         # Allow duplicated chained requests?
-        allow_duplicates = flask.request.args.get('allow_duplicates', 'False').lower() == 'true'
+        allow_duplicates = data.get('allow_duplicates', False) is True
 
         prepid = data['prepid']
         lock = locker.lock(prepid)
@@ -292,7 +292,7 @@ class GenerateChains(RESTResource):
                     'prepid': prepid,
                     'message': 'Ticket is already being operated on'}
 
-    def generate(self, prepid, skip_existing, generate_all):
+    def generate(self, prepid, skip_existing, allow_duplicates):
         mccm = MccM.fetch(prepid)
         status = mccm.get_attribute('status')
         if status != 'new' and not skip_existing:
@@ -349,7 +349,7 @@ class GenerateChains(RESTResource):
                 raise Exception('"%s" is in the middle of the chain' % (request_prepid))
 
             chained_campaigns_for_request = [c for c in root_campaigns[request_campaign]]
-            if not generate_all:
+            if not allow_duplicates:
                 query = {'member_of_campaign': [c.get('prepid') for c in chained_campaigns_for_request],
                          'contains': request_prepid,
                          'pwg': request_pwg}
@@ -375,10 +375,13 @@ class GenerateChains(RESTResource):
                              len(chained_campaigns))
             for chained_campaign in chained_campaigns:
                 for _ in range(repetitions):
-                    chained_request_prepid = self.generate_chained_request(mccm, request, chained_campaign)
+                    chained_request = self.generate_chained_request(mccm, request, chained_campaign)
+                    chained_request_prepid = chained_request.get('prepid')
                     generated_chains[chained_request_prepid] = []
-                    mccm.set_attribute("generated_chains", generated_chains)
+                    mccm.set_attribute('generated_chains', generated_chains)
                     mccm.reload(save=True)
+                    chained_request.flow(reserve=True)
+                    chained_request.reload(save=True)
                     results.append(chained_request_prepid)
                     # A small delay to not crash DB
                     time.sleep(0.05)
@@ -402,7 +405,7 @@ class GenerateChains(RESTResource):
     def generate_chained_request(self, mccm, root_request, chained_campaign):
         # Generate the chained request
         chained_request = chained_campaign.generate_request(root_request)
-        root_request.reload(save=False)
+        root_request.reload(save=True)
         chained_request_prepid = chained_request.get_attribute('prepid')
         # Updates from the ticket
         block = mccm.get_attribute('block')
@@ -411,7 +414,7 @@ class GenerateChains(RESTResource):
         if not chained_request.reload():
             raise Exception('Unable to save chained request %s' % (chained_request_prepid))
 
-        return chained_request_prepid
+        return chained_request
 
 
 class MccMReminderGenContacts(RESTResource):

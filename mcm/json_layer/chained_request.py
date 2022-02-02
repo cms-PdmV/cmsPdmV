@@ -87,57 +87,6 @@ class ChainedRequest(json_base):
             self.set_attribute('chain', chain)
             self.update_history('add request', request_prepid)
 
-    def reserve(self, limit=None, save_requests=True):
-        steps = 0
-        count_limit = 35
-        campaign_limit = None
-        if limit:
-            self.logger.info('limit: %s was passed on to reservation.' % (limit))
-            if limit.__class__ == bool:
-                campaign_limit = None
-            elif limit.isdigit():
-                count_limit = int(limit)
-            else:
-                campaign_limit = limit
-        generated_requests = []
-        while True:
-            steps += 1
-            if count_limit and steps > count_limit:
-                # stop here
-                break
-            try:
-                results_dict = self.flow_to_next_step(check_stats=False, reserve=True, stop_at_campaign=campaign_limit)
-                if not results_dict['result']:
-                    break
-                saved = self.reload()
-                if not saved:
-                    return {
-                        "prepid": self.get_attribute("prepid"),
-                        "results": False,
-                        "message": "Failed to save chained request to database"}
-                if 'generated_request' in results_dict:
-                    generated_requests.append(results_dict['generated_request'])
-            except Exception as ex:
-                return {
-                    "prepid": self.get_attribute("prepid"),
-                    "results": False,
-                    "message": str(ex)}
-        if save_requests:
-            self.save_requests(generated_requests)
-            return {
-                "prepid": self.get_attribute("prepid"),
-                "results": True}
-        return {
-            "prepid": self.get_attribute("prepid"),
-            "results": True,
-            'generated_requests': generated_requests}
-
-    def save_requests(self, generated_requests):
-        chain_id = self.get_attribute('prepid')
-        mccm_ticket = mccm.get_mccm_by_generated_chain(chain_id)
-        if mccm_ticket is not None:
-            mccm_ticket.update_mccm_generated_chains({chain_id: generated_requests})
-
     def get_setup(self, for_validation, automatic_validation, scratch=False):
         if scratch:
             req_ids = self.get_attribute('chain')
@@ -193,7 +142,7 @@ class ChainedRequest(json_base):
         other_chains_to_flow = set()
         next_request = None
         while next_step < len(chained_campaign):
-            current_id = chain[current_step]
+            current_id = self[current_step]
             next_flow_id = chained_campaign.flow(next_step)
             next_campaign_id = chained_campaign.campaign(next_step)
             self.logger.info('Flowing %s to step %s/%s (%s + %s)',
@@ -202,7 +151,7 @@ class ChainedRequest(json_base):
                              len(chained_campaign),
                              next_flow_id,
                              next_campaign_id)
-            self.logger.info('Current step %s in chain %s', current_id, ', '.join(chain))
+            self.logger.info('Current step %s in chain %s', current_id, ', '.join(self.get('chain')))
             # Next campaign
             next_campaign = Campaign.fetch(next_campaign_id)
             if not next_campaign.is_started():
@@ -222,27 +171,30 @@ class ChainedRequest(json_base):
 
             current_status = current_request.get_approval_status()
             self.logger.info('Current request %s status %s', current_id, current_status)
-            if not reserve:
-                if current_id != start_flowing_at:
-                    # During normal flow, stop when next flow is not "together"
-                    self.logger.info('Next flow %s type is "%s"', next_flow_id, next_flow_approval)
-                    if next_flow_approval != 'together':
+
+            if current_id == start_flowing_at:
+                # When trying to flow to after_done, current request must be
+                # submit-done
+                if next_flow_approval == 'after_done' and current_status != 'submit-done':
+                    if reserve and current_step == 0:
                         break
-                else:
-                    # When trying to flow to after_done, current request must be
-                    # submit-done
-                    if next_flow_approval == 'after_done' and current_status != 'submit-done':
-                        raise Exception(f'Flow {next_flow_id} type is "{next_flow_approval}", '
-                                        f'but {current_id} is {current_status}')
+
+                    raise Exception(f'Flow {next_flow_id} type is "{next_flow_approval}", '
+                                    f'but {current_id} is {current_status}')
+            else:
+                # During normal flow, stop when next flow is not "together"
+                self.logger.info('Next flow %s type is "%s"', next_flow_id, next_flow_approval)
+                if next_flow_approval != 'together':
+                    break
 
             next_request = self.get_request_for_step(next_step, root_request, current_request, next_flow, next_campaign)
             next_request_id = next_request.get('prepid')
             self.logger.info('Next request %s (%s)',
                              next_request_id,
                              next_request.get_approval_status())
-            # TODO: set next request to "approved"?
             self.request_join(next_request)
             next_request.reload(save=True)
+            # TODO: set next request to "approved"?
             if trigger_others:
                 for chain_prepid in current_request.get('member_of_chain'):
                     other_chained_request = ChainedRequest.fetch(chain_prepid)
@@ -269,7 +221,7 @@ class ChainedRequest(json_base):
             if not next_request.save():
                 raise Exception('Could not save next request %s to the database' % (next_request_id))
 
-            if not reserve:
+            if current_id == start_flowing_at and current_status == 'submit-done':
                 self.set_attribute('step', next_step)
 
             self.update_history('flow', next_request_id)
@@ -285,12 +237,10 @@ class ChainedRequest(json_base):
                 chained_request.flow(trigger_others=False)
                 chained_request.reload()
 
-        if not reserve:
-            # sync last status
-            self.set_last_status()
-            # we can only be processing at this point
-            self.set_attribute('status', 'processing')
-
+        # Set last status
+        self.set_last_status()
+        # Make chained request "processing"
+        self.set_attribute('status', 'processing')
         return self
 
     def get_request_for_step(self, step, root_request, current_request, next_flow, next_campaign):
@@ -341,7 +291,7 @@ class ChainedRequest(json_base):
             next_request_id = next_request.get('prepid')
             self.logger.info('Created new request %s for chain %s', next_request_id, prepid)
 
-        next_request.set('total_events', self.get_next_request_events(current_request, next_request))
+        # next_request.set('total_events', self.get_next_request_events(current_request, next_request))
         return next_request
 
     def get_next_request_events(self, current_request, next_request):

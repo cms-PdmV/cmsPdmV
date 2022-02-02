@@ -315,7 +315,7 @@ class database:
         """
         if limit is None or page_num < 0 or limit < 0:
             # Page <0 means "all", but it still has to be limited to something
-            return None, 0
+            return 999999, 0
 
         skip = limit * page_num
         return limit, skip
@@ -490,6 +490,7 @@ class database:
             include_fields.add('_id')
             include_fields = ','.join(sorted(list(include_fields)))
             options['include_fields'] = include_fields
+            options['include_docs'] = False
 
         if not sort_asc:
             options['sort'] = '\\%s' % (options['sort'])
@@ -510,11 +511,17 @@ class database:
             try:
                 data = self.opener.open(lucene_request)
                 data = json.loads(data.read())
-                if total_rows:
-                    return {'rows': [r['doc'] for r in data.get('rows', [])],
-                            'total_rows': data.get('total_rows', 0)}
+                if include_fields:
+                    docs = [r['fields'] for r in data.get('rows', [])]
+                else:
+                    docs = [r['doc'] for r in data.get('rows', [])]
 
-                return [r['doc'] for r in data.get('rows', [])]
+                docs_count = data.get('total_rows', 0)
+                if total_rows:
+                    return {'rows': docs,
+                            'total_rows': docs_count}
+
+                return docs
 
             except HTTPError as http_error:
                 code = http_error.code

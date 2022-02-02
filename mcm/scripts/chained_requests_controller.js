@@ -38,16 +38,6 @@ angular.module('testApp').controller('resultsCtrl',
            data: {'prepid': prepids}});
       };
 
-      $scope.rewindToRoot = function (prepid) {
-        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
-        let message = 'Are you sure you want to rewind ' + $scope.promptPrepid(prepids) + ' to root?';
-        $scope.objectAction(message,
-          prepids,
-          {method: 'POST',
-           url: 'restapi/' + $scope.dbName + '/rewind_to_root',
-           data: {'prepid': prepids}});
-      };
-
       $scope.rewind = function (prepid) {
         let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
         let message = 'Are you sure you want to rewind ' + $scope.promptPrepid(prepids) + '?';
@@ -55,6 +45,16 @@ angular.module('testApp').controller('resultsCtrl',
           prepids,
           {method: 'POST',
            url: 'restapi/' + $scope.dbName + '/rewind',
+           data: {'prepid': prepids}});
+      };
+
+      $scope.rewindToRoot = function (prepid) {
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
+        let message = 'Are you sure you want to rewind ' + $scope.promptPrepid(prepids) + ' to root?';
+        $scope.objectAction(message,
+          prepids,
+          {method: 'POST',
+           url: 'restapi/' + $scope.dbName + '/rewind_to_root',
            data: {'prepid': prepids}});
       };
 

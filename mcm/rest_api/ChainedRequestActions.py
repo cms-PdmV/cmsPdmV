@@ -167,39 +167,18 @@ class ChainedRequestRewind(UniqueChainsRESTResource):
 
 class ChainedRequestRewindToRoot(ChainedRequestRewind):
 
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     @RESTResource.request_with_json
     def post(self, data):
         """
         Rewind chained requests to root
         """
-        prepid = data['prepid']
-        if isinstance(prepid, list):
-            return [self.rewind_to_root(p) for p in prepid]
+        def rewind(chained_request):
+            for _ in range(chained_request.get('step')):
+                chained_request.rewind()
 
-        return self.rewind_to_root(prepid)
-
-    def rewind_to_root(self, prepid):
-        """
-        Rewind the provided coma separated chained requests to the root request
-        """
-        chained_request = ChainedRequest.fetch(prepid)
-        if not chained_request:
-            return {'results': False,
-                    'message': '%s does not exist' % (prepid),
-                    'prepid': prepid}
-
-        step = chained_request.get('step')
-        if step == 0:
-            return {'results': False,
-                    'message': '%s is already at the root' % (prepid),
-                    'prepid': prepid}
-
-        for _ in range(0, step):
-            result = self.rewind(prepid)
-            if not result.get('results'):
-                return result
-
-        return result
+        prepid = self.get_unique_chained_requests(data['prepid'])
+        return self.do_multiple_items(prepid, ChainedRequest, rewind)
 
 
 class ApproveChainedRequest(RESTResource):

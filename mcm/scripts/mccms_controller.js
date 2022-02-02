@@ -112,12 +112,10 @@ angular.module('testApp').controller('resultsCtrl',
           templateUrl: 'generateChainsModal.html',
           controller: function ($scope, $modalInstance, $http, mccm, errorModal) {
             $scope.vars = {'prepid': mccm.prepid,
-                           'reserve': false,
                            'skipExisting': false,
                            'allowDuplicates': false};
             $scope.confirm = function () {
               const ticketData = {'prepid': mccm.prepid,
-                                  'reserve': $scope.vars.reserve,
                                   'skip_existing': $scope.vars.skipExisting,
                                   'allow_duplicates': $scope.vars.allowDuplicates};
               $http({method: 'POST', url: 'restapi/mccms/generate', data: ticketData}).success(function (data) {
