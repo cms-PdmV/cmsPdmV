@@ -226,7 +226,9 @@ class DeleteRESTResource(RESTResource):
                     'message': '%s could not be found' % (prepid)}
 
         try:
+            self.logger.info('Performing pre-delete checks for %s', prepid)
             self.delete_check(object_class.fetch(prepid))
+            self.logger.info('%s passed pre-delete checks', prepid)
         except Exception as ex:
             import traceback
             self.logger.error(traceback.format_exc())

@@ -24,9 +24,7 @@
     <table class="table table-bordered table-striped table-hover">
       <thead>
         <tr>
-          <th ng-repeat="column in columns"
-              ng-if="column.select"
-              style="white-space: nowrap; text-align: center;">
+          <th ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap; text-align: center;">
             {{column.text}}
           </th>
         </tr>
@@ -59,25 +57,25 @@
                 <a ng-click="nextStatus(data.prepid)" title="Toggle status" ng-show="user.is_production_manager" ng-href="#">
                   <i class="icon-flag"></i>
                 </a>
-                <a ng-href='flows?uses={{data.prepid}}' rel="tooltip" title="View flows using {{data.prepid}}" target="_self">
+                <a ng-href='flows?uses={{data.prepid}}' title="View flows using {{data.prepid}}" target="_self">
                   <i class="icon-magnet"></i>
                 </a>
-                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}" target="_self">
+                <a ng-href='chained_campaigns?contains={{data.prepid}}' title="Show chained campaigns using {{data.prepid}}" target="_self">
                   <i class="icon-align-right"></i>
                 </a>
-                <a ng-href='requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show requests in {{data.prepid}}" target="_self">
+                <a ng-href='requests?member_of_campaign={{data.prepid}}' title="Show requests in {{data.prepid}}" target="_self">
                   <i class="icon-folder-open"></i>
                 </a>
-                <a ng-href="/pmp/present?m=false&r={{data.prepid}}" rel="tooltip" title="View announced statistics for {{data.prepid}}" target="_blank">
+                <a ng-href="/pmp/present?m=false&r={{data.prepid}}" title="View announced statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-picture"></i>
                 </a>
-                <a ng-href="/pmp/present?m=true&r={{data.prepid}}" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
+                <a ng-href="/pmp/present?m=true&r={{data.prepid}}" title="View growing statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-film"></i>
                 </a>
-                <a ng-href="/pmp/historical?r={{data.prepid}}" rel="tooltip" title="View historical statistics for {{data.prepid}}" target="_blank">
+                <a ng-href="/pmp/historical?r={{data.prepid}}" title="View historical statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-facetime-video"></i>
                 </a>
-                <a ng-href="/pmp/performance?m=false&r={{data.prepid}}" rel="tooltip" title="View  performance statistics for {{data.prepid}}" target="_blank">
+                <a ng-href="/pmp/performance?m=false&r={{data.prepid}}" title="View  performance statistics for {{data.prepid}}" target="_blank">
                   <i class="icon-heart"></i>
                 </a>
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
@@ -102,8 +100,8 @@
               <div ng-switch-when="next">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="campaign in data[column.db_name]">
-                    <a ng-href='campaigns?prepid={{campaign}}' rel="tooltip" title="View details of the campaign" target="_self">{{campaign}}<i class="icon-book"></i></a>
-                    <a ng-href='flows?next_campaign={{campaign}}' rel="tooltip" title="View flows going into {{campaign}}" target="_self"> <i class="icon-magnet"></i></a>
+                    <a ng-href='campaigns?prepid={{campaign}}' title="View details of the campaign" target="_self">{{campaign}}<i class="icon-book"></i></a>
+                    <a ng-href='flows?next_campaign={{campaign}}' title="View flows going into {{campaign}}" target="_self"> <i class="icon-magnet"></i></a>
                   </li>
                 </ul>
               </div>
@@ -111,17 +109,15 @@
                 <div custom-history ng-model="data[column.db_name]"></div>
               </div>
               <div ng-switch-when="pileup_dataset_name">
-                <a ng-href='https://cmsweb.cern.ch/das/request?input={{data[column.db_name]}}' rel="tooltip"
-                  title="Open in DAS" target="_blank">{{data[column.db_name]}}</a>
+                <a ng-href='https://cmsweb.cern.ch/das/request?input={{data[column.db_name]}}' title="Open in DAS" target="_blank">{{data[column.db_name]}}</a>
               </div>
               <div ng-switch-when="input_dataset">
-                <a ng-href='https://cmsweb.cern.ch/das/request?input={{data[column.db_name]}}' rel="tooltip"
-                  title="Open in DAS" target="_blank">{{data[column.db_name]}}</a>
+                <a ng-href='https://cmsweb.cern.ch/das/request?input={{data[column.db_name]}}' title="Open in DAS" target="_blank">{{data[column.db_name]}}</a>
               </div>
               <div ng-switch-when="root">
-                <i class="icon-ok" ng-if="data[column.db_name]==0" rel="tooltip" title="Yes"></i>
-                <i class="icon-ok-sign" ng-if="data[column.db_name]==-1" rel="tooltip" title="Possible"></i>
-                <i class="icon-remove" ng-if="data[column.db_name]==1" rel="tooltip" title="No"></i>
+                <i class="icon-ok" ng-if="data[column.db_name]==0" title="Yes"></i>
+                <i class="icon-ok-sign" ng-if="data[column.db_name]==-1" title="Possible"></i>
+                <i class="icon-remove" ng-if="data[column.db_name]==1" title="No"></i>
               </div>
               <div ng-switch-when="events_per_lumi">
                 <ul style="margin-bottom: 0px;">
