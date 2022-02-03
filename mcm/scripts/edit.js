@@ -1,119 +1,8 @@
 angular.module('testApp').controller('ModalDemoCtrl',
   ['$scope', '$modal',
   function ModalDemoCtrl($scope, $modal) {
-    $scope.openSequenceEdit = function (seq1, seq2, number) {
-      $scope.sequenceToShow = [];
-      $scope.sequenceHidden = [];
-      var sequences = {};
-      _.each($scope.dbName == "requests" ? $scope.result.sequences[number] : $scope.result.sequences[seq1][seq2], function(value,key){
-        if (! _.isEmpty(value) || _.isBoolean(value) || _.isNumber(value)) {
-          $scope.sequenceToShow.push(key);
-        } else {
-          $scope.sequenceHidden.push(key);
-        }
-        sequences[key]=value;
-      });
-      //sort both lists ???
-      $scope.sequenceHidden.sort();
-      var sequenceEditModal = $modal.open({
-        templateUrl: 'sequenceEditModal.html',
-        controller: SequenceEditModalInstanceCtrl,
-        resolve: {
-          sequenceHidden: function() {
-            return $scope.sequenceHidden;
-          },
-          sequenceToShow: function() {
-            return $scope.sequenceToShow;
-          },
-          selectedHidden: function() {
-            return $scope.sequenceHidden[0];
-          },
-          sequences: function() {
-            return sequences;
-          }
-        }
-      });
-
-      sequenceEditModal.result.then(function(newSequence) {
-        if( $scope.dbName == "requests") {
-          $scope.result.sequences[number] = newSequence; // we should somehow change driver shown as well
-        } else {
-          $scope.result.sequences[seq1][seq2] = newSequence;
-        }
-      });
-    };
-
-    $scope.openNewSequence = function(define_name, index) {
-      var sequenceAddModal = $modal.open({
-        templateUrl: 'sequenceAddModal.html',
-        controller: SequenceAddModalInstanceCtrl,
-        resolve: {
-          define_name: function() {
-            return define_name;
-          },
-          defaultSequence: function() {
-            return _.clone($scope.default_sequences);
-          }
-        }
-      });
-
-      sequenceAddModal.result.then(function(data) {
-        if($scope.dbName == "requests") {
-          $scope.drivers.push(data.sequence);
-          $scope.result.sequences.push(data.sequence);
-          $scope.result.time_event.push(-1);
-          $scope.result.size_event.push(-1);
-        } else {
-          if(!define_name) {
-            $scope.drivers[_.size($scope.result.sequences)] = {default: data.sequence};
-            $scope.result.sequences[_.size($scope.result.sequences)] = {default: data.sequence};
-          } else {
-            $scope.drivers[index][data.name] = data.sequence;
-            $scope.result.sequences[index][data.name] = data.sequence;
-          }
-        }
-      })
-    };
-
     $scope.isBoolean = function(value){
       return angular.isBoolean(value);
-    };
-
-    var SequenceAddModalInstanceCtrl = function($scope, $modalInstance, define_name, defaultSequence) {
-      $scope.define_name = define_name;
-      $scope.sequences = {
-        newSequenceName: "",
-        newSequence: defaultSequence
-      };
-
-      $scope.save = function() {
-        $modalInstance.close({name: $scope.sequences.newSequenceName, sequence: $scope.sequences.newSequence});
-      };
-
-      $scope.close = function() {
-        $modalInstance.dismiss();
-      }
-    };
-
-    var SequenceEditModalInstanceCtrl = function($scope, $modalInstance, sequences, selectedHidden, sequenceToShow, sequenceHidden) {
-      $scope.sequence = {
-        toShow: sequenceToShow,
-        hidden: sequenceHidden,
-        selectedHidden: selectedHidden,
-        sequences: sequences
-      };
-
-      $scope.showHiddenSequence = function() {
-          $scope.sequence.toShow.push($scope.sequence.selectedHidden);
-          $scope.sequence.hidden.splice($scope.sequence.hidden.indexOf($scope.sequence.selectedHidden), 1);
-          $scope.sequence.selectedHidden = $scope.sequence.hidden[0];
-      };
-      $scope.close = function() {
-          $modalInstance.dismiss();
-      };
-      $scope.save = function() {
-          $modalInstance.close($scope.sequence.sequences);
-      }
     };
 
     // Generator parameters stuff
@@ -256,169 +145,245 @@ angular.module('testApp').controller('ModalDemoCtrl',
   }
 ]);
 
-testApp.directive("sequenceEdit", function($http){
+testApp.directive("editCampaignSequences", function($http){
   return {
     require: 'ngModel',
     template:
-    '<div >'+
-    '  <script type="text/ng-template" id="sequenceEditModal.html">'+ // Edit sequence modal template
-    '     <div class="modal-header">'+
-    '       <h4>Edit sequence</h4>'+
-    '     </div>'+
-    '     <div class="modal-body">'+
-    '       <form class="form-horizontal" name="sequenceForm">'+
-    '         <div class="control-group" ng-repeat="key in sequence.toShow">'+
-    '          <div ng-if="key!=$$hashkey">'+
-    '           <label class="control-label">{{key}}</label>'+
-    '             <input type="text" ng-model="sequence.sequences[key]">'+
-    '          </div>' +
-    '         </div>'+
-    '       </form>'+
-    '     </div>'+
-    '     <div class="modal-footer">'+
-    '       <div class="span3 input-append" style="text-align:left;">'+
-    '         <select ng-model="sequence.selectedHidden" ng-show="sequence.hidden.length > 0">'+
-    '           <option ng-repeat="elem in sequence.hidden">{{elem}}</option>'+
-    '         </select>'+
-    '         <a class="btn" ng-click="showHiddenSequence();" ng-href="#" ng-show="sequence.hidden.length > 0"><i class="icon-plus-sign"></i></a>'+
-    '       </div>'+
-    '       <div class="span2">'+
-    '         <button class="btn btn-success" ng-click="save()">Save</button>'+
-    '         <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
-    '       </div>'+
-    '     </div>'+
-    '  </script>'+
-    '  <script type="text/ng-template" id="sequenceAddModal.html">'+ //Add sequence modal template
-    '    <div class="modal-header">'+
-    '      <h4>Add sequence</h4>'+
-    '    </div>'+ //end oF  modal header
-    '    <div class="modal-body">'+
-    '      <form class="form-horizontal" name="sequenceForm">'+
-    '        <div class="control-group" ng-if="define_name">'+
-    '          <label class="control-label">Name</label>'+
-    '          <div class="controls">'+
-    '            <input type="text" ng-model="sequences.newSequenceName" name="Name" required>'+
-    '            <span class="error" ng-show="sequenceForm.Name.$error.required">'+
-    '               Required!</span>'+
-    '          </div>'+
-    '        </div>'+
-    '        <div class="control-group" ng-repeat="(key, value) in sequences.newSequence">'+
-    '          <div ng-if="key!=$$hashKey">'+
-    '            <label class="control-label">{{key}}</label>'+
-    '            <div class="controls">'+
-    '              <input type="text" ng-model="sequences.newSequence[key]">'+
-    '            </div>'+
-    '          </div>'+
-    '      </form>'+
-    '    </div>'+ //end of modal body
-    '    <div class="modal-footer">'+
-    '      <button class="btn btn-success" ng-click="save()" ng-disabled="sequenceForm.Name.$error.required">Save</button>'+
-    '      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>'+
-    '    </div>'+ //end of modal footer
-    '  </script>'+
-    '  <ul ng-switch="dbName">'+
-    '   <a rel="tooltip" title="Display sequences" ng-click="displaySequences();" ng-hide="showSequences" ng-href="#">'+
-    '     <i class="icon-eye-open"></i>'+
-    '   </a>'+
-    '   <a rel="tooltip" title="Display sequences" ng-click="displaySequences();" ng-show="showSequences" ng-href="#">'+
-    '     <i class="icon-eye-close"></i>'+
-    '   </a>'+
-    '  <div ng-switch-when="requests" ng-show="showSequences">'+
-    '    <li ng-repeat="(sequence_id, sequence) in drivers">{{sequence}}'+
-    '      <div ng-controller="ModalDemoCtrl">'+
-    '        <a rel="tooltip" title="Edit sequence" ng-click="openSequenceEdit(\'\',\'\',sequence_id);" ng-hide="hideSequence(1);" ng-href="#">'+
-    '          <i class="icon-wrench"></i>'+
-    '        </a>'+
-    '        <a rel="tooltip" title="Remove sequence" ng-click="removeSequence($index);" ng-hide="hideSequence(1);" ng-href="#">'+
-    '          <i class="icon-remove-sign"></i>'+
-    '        </a>'+
-    '    </li>'+
-    '  </div>'+
-    '  <div ng-switch-default ng-show="showSequences">'+
-    '    <li ng-repeat="(key,value) in result.sequences">'+
-    '      <ul>'+
-    '        {{key}}'+
-    '      </ul>'+
-    '      <ul ng-repeat="(name,elem) in value">'+
-    '      <div ng-controller="ModalDemoCtrl">'+
-    '        <li>{{drivers[key][name]}}'+
-    '          <a rel="tooltip" title="Edit sequence" ng-click="openSequenceEdit(key,name,$index);" ng-hide="hideSequence(1);" ng-href="#">'+
-    '            <i class="icon-wrench"></i>'+
-    '          </a>'+
-    '          <a rel="tooltip" title="Remove subsequence" ng-click="removeSubSequence(key, name);" ng-hide="hideSequence(1);" ng-href="#">'+ //button to get default sequences, and make plus-sign available
-    '            <i class="icon-remove-sign"></i>'+
-    '          </a>'+
-    '        </li>'+
-    '      </div>'+ //end of modalControler DIV
-    '      </ul>'+
-    '        <div ng-controller="ModalDemoCtrl">'+
-    '          <a rel="tooltip" title="Remove sequence" ng-click="removeSequence(key);" ng-hide="hideSequence(1);" ng-href="#">'+ //button to get default sequences, and make plus-sign available
-    '            <i class="icon-remove-sign"></i>'+
-    '          </a>'+
-    '          <a rel="tooltip" title="Add new subsequence" ng-click="openNewSequence(true, $index);" ng-hide="hideSequence(1);" ng-href="#">'+ //add sequence
-    '            <i class="icon-plus"></i>'+
-    '          </a>'+
-    '        </div>'+
-    '    </li>'+
-    '  </div>'+
-    '  </ul>'+
-    '  <div ng-controller="ModalDemoCtrl" ng-show="showSequences">'+ //add new sequence to sequence list
-    '    <a rel="tooltip" title="Add new sequence" ng-click="openNewSequence(false);" ng-hide="hideSequence(1);" ng-href="#">'+ //add sequence
-    '      <i class="icon-plus"></i>'+
-    '    </a>'+
-    '  </div>'+
-    '</div>',
+    `<div>
+      <div ng-repeat="(sequenceName, sequenceList) in sequences">
+        <span ng-if="editingSequenceName != sequenceName">
+          {{sequenceName}}
+          <a style="margin-left: 4px" ng-if="editable" ng-click="startEditingSequenceName(sequenceName)" title="Edit group name">
+            <i class="icon-wrench"></i>
+          </a>
+          <a style="margin-left: 4px" ng-if="editable" ng-click="removeSequenceName(sequenceName)" title="Remove sequence group">
+            <i class="icon-minus-sign"></i>
+          </a>
+        </span>
+        <span ng-if="editingSequenceName == sequenceName">
+          <input type="text" style="width: auto;" ng-model="newSequenceName">
+          <a style="margin-left: 4px" ng-click="stopEditingSequenceName(sequenceName, newSequenceName)" title="Finish editing">
+            <i class="icon-ok"></i>
+          </a>
+        </span>
+        <ul>
+          <li ng-repeat="sequence in sequenceList track by $index">
+            <div style="display: flex">
+              <div style="font-size: 0.9em; margin: 2px 0; font-family: monospace; background-color: #f5f5f5; border-radius: 4px; padding: 4px; border: 1px solid rgba(0, 0, 0, 0.15);">
+                {{sequenceStrings[sequenceName][$index]}}
+              </div>
+              <div ng-if="editable" style="display: flex; flex-direction: column; margin: auto 0 auto 4px;">
+                <a ng-click="startEditing(sequenceName, $index)" title="Edit" ng-if="editable">
+                  <i class="icon-wrench"></i>
+                </a>
+                <a ng-click="removeSequence(sequenceName, $index)" title="Remove" ng-if="editable">
+                  <i class="icon-minus-sign"></i>
+                </a>
+              </div>
+            </div>
+            <a ng-click="addSequence(sequenceName)" ng-if="editable && !editingSequenceName && $index == sequenceList.length - 1" title="Add sequence to {{sequenceName}}">
+              <i class="icon-plus"></i>
+            </a>
+          </li>
+        </ul>
+        <a ng-click="addSequence(sequenceName)" ng-if="editable && !editingSequenceName && !sequenceList.length" title="Add sequence to {{sequenceName}}">
+          <i class="icon-plus"></i>
+        </a>
+      </div>
+      <a ng-click="addSequenceName()" title="Add new sequence group" ng-if="editable && !editingSequenceName">
+        <i class="icon-plus-sign"></i>
+      </a>
+    </div>`,
     link: function(scope, element, attr, ctrl){
       ctrl.$render = function(){
-        scope.showSequences = false;
-        scope.showAddNewModal = false;
-        scope.default_sequences = {};
-        scope.sequenceToShow = [];
-        scope.sequenceHidden = [];
-        scope.alreadyShown = false;
-      };
-      scope.removeSequence = function(elem){
-        scope.result.sequences.splice(elem, 1); //remove the value from original sequences
-        scope.result.time_event.splice(elem, 1); //remove the value from original time_event list
-        scope.result.size_event.splice(elem, 1); //remove the value from original size_event list
-        scope.drivers.splice(elem, 1);
-      };
-      scope.removeSubSequence = function(key, name){
-        if (scope.result.sequences[key] != null){
-          delete scope.result.sequences[key][name];
-          delete scope.drivers[key][name];
+        scope.sequences = ctrl.$viewValue;
+        scope.sequenceStrings = {};
+        for (let sequenceName in scope.sequences) {
+          scope.buildStrings(sequenceName);
         }
-        if (_.keys(scope.result.sequences[key]).length == 1){ //$$hashkey dosent count
-          scope.result.sequences.splice(key,1);
-          scope.drivers.splice(key, 1);
-        }
+        scope.campaign = scope.$eval(attr.campaign);
+        scope.editingSequenceName = undefined;
+        scope.newSequenceName = '';
+        scope.defaultSequence = undefined;
       };
-      scope.displaySequences = function(){
-        if (scope.showSequences){ //if shown then -> HIDE;
-          scope.showSequences = false;
+      scope.startEditing = function(name, index) {
+        scope.openSequenceEdit(scope.sequences[name][index], function(newSequence) {
+          scope.sequences[name][index] = newSequence;
+          scope.buildStrings(name);
+        });
+      };
+      scope.startEditingSequenceName = function(name) {
+        scope.editingSequenceName = name;
+        scope.newSequenceName = name;
+      };
+      scope.removeSequenceName = function(name) {
+        delete scope.sequences[name];
+        delete scope.sequenceStrings[name];
+        delete scope.campaign.keep_output[name];
+      };
+      scope.stopEditingSequenceName = function(name, newName) {
+        if (name == newName) {
+          scope.editingSequenceName = undefined;
+          return
+        }
+        if (scope.sequences[newName]) {
+          return
+        }
+        scope.editingSequenceName = undefined;
+        scope.sequences[newName] = JSON.parse(JSON.stringify(scope.sequences[name]));
+        scope.campaign.keep_output[newName] = JSON.parse(JSON.stringify(scope.campaign.keep_output[name]));
+        scope.buildStrings(newName);
+        scope.removeSequenceName(name);
+      };
+      scope.buildStrings = function(sequenceName) {
+        let sequences = scope.sequences[sequenceName];
+        scope.sequenceStrings[sequenceName] = sequences.map(s => scope.buildSequenceString(s));
+      }
+      scope.removeSequence = function(sequenceName, index){
+        scope.sequences[sequenceName].splice(index, 1);
+        scope.sequenceStrings[sequenceName].splice(index, 1);
+        scope.campaign.keep_output[sequenceName].splice(index, 1);
+      };
+      scope.addSequence = function(sequenceName) {
+        if (scope.defaultSequence) {
+          scope.sequences[sequenceName].push(JSON.parse(JSON.stringify(scope.defaultSequence)));
+          scope.campaign.keep_output[sequenceName].push(true);
+          scope.buildStrings(sequenceName);
         } else {
-          scope.showSequences = true; //if hidden -> then display sequences, get the cmsDrivers;
-          if(!scope.alreadyShown) {
-               var promise = $http.get("restapi/"+scope.dbName+"/get_cmsDrivers/"+scope.result.prepid);
-                promise.then(function(data){
-                    scope.drivers = data.data.results;
-
-                }, function(data){
-                    alert("Error: " + data.status);
-                });
-               var promise2 = $http.get("getDefaultSequences");
-              promise2.then(function(data) {
-                  scope.default_sequences = data.data;
-              }, function() {
-                  alert("Error getting default sequences");
-              });
-              scope.alreadyShown = true;
+          const url = 'restapi/campaigns/get_default_sequence';
+          $http.get(url).then(function (data) {
+            scope.defaultSequence = data.data.results;
+            scope.addSequence(sequenceName);
+          });
+        }
+      };
+      scope.addSequenceName = function() {
+        let name = 'default';
+        let number = 0;
+        while (scope.sequences[name]) {
+          number += 1;
+          name = `default-${number}`
+        }
+        scope.sequences[name] = [];
+        scope.sequenceStrings[name] = [];
+        scope.campaign.keep_output[name] = [];
+      };
+      scope.buildSequenceString = function(arguments) {
+        let sequence = 'cmsDriver.py';
+        for (let attr in arguments) {
+          let value = arguments[attr];
+          if (value === '' || value === false || value.length === 0) {
+            continue
+          }
+          if (attr == 'nStreams' && value == 0) {
+            continue
+          }
+          if (attr == 'nThreads' && value == 1) {
+            continue
+          }
+          sequence += ` --${attr}`
+          if (value !== true) {
+            sequence += ` ${value}`;
           }
         }
-      };
+        return sequence;
+      }
     }
   }
 });
+
+testApp.directive("editRequestSequences", function($http){
+  return {
+    require: 'ngModel',
+    template:
+    `<div>
+      <ul>
+        <li ng-repeat="sequence in sequences track by $index">
+          <div style="display: flex">
+            <div style="font-size: 0.9em; margin: 2px 0; font-family: monospace; background-color: #f5f5f5; border-radius: 4px; padding: 4px; border: 1px solid rgba(0, 0, 0, 0.15);">
+              {{sequenceStrings[$index]}}
+            </div>
+            <div ng-if="editable" style="display: flex; flex-direction: column; margin: auto 0 auto 4px;">
+              <a ng-click="startEditing($index)" title="Edit" ng-if="editable">
+                <i class="icon-wrench"></i>
+              </a>
+              <a ng-click="removeSequence($index)" title="Remove" ng-if="editable">
+                <i class="icon-minus-sign"></i>
+              </a>
+            </div>
+          </div>
+          <a ng-click="addSequence()" ng-if="editable && $index == sequences.length - 1" title="Add sequence">
+            <i class="icon-plus"></i>
+          </a>
+        </li>
+      </ul>
+      <a ng-click="addSequence()" ng-if="editable && !sequences.length" title="Add sequence">
+        <i class="icon-plus"></i>
+      </a>
+    </div>`,
+    link: function(scope, element, attr, ctrl){
+      ctrl.$render = function(){
+        scope.sequences = ctrl.$viewValue;
+        scope.sequenceStrings = [];
+        scope.buildStrings();
+        scope.request = scope.$eval(attr.request);
+        scope.defaultSequence = undefined;
+      };
+      scope.buildStrings = function() {
+        scope.sequenceStrings = scope.sequences.map(s => scope.buildSequenceString(s));
+      }
+      scope.startEditing = function(index) {
+        scope.openSequenceEdit(scope.sequences[index], function(newSequence) {
+          scope.sequences[index] = newSequence;
+          scope.buildStrings();
+        });
+      };
+      scope.removeSequence = function(index){
+        scope.sequences.splice(index, 1);
+        scope.sequenceStrings.splice(index, 1);
+        scope.request.keep_output.splice(index, 1);
+        scope.request.time_event.splice(index, 1);
+        scope.request.size_event.splice(index, 1);
+      };
+      scope.addSequence = function() {
+        if (scope.defaultSequence) {
+          scope.sequences.push(JSON.parse(JSON.stringify(scope.defaultSequence)));
+          scope.request.keep_output.push(true);
+          scope.request.time_event.push(-1.0);
+          scope.request.size_event.push(-1.0);
+          scope.buildStrings();
+        } else {
+          const url = 'restapi/campaigns/get_default_sequence';
+          $http.get(url).then(function (data) {
+            scope.defaultSequence = data.data.results;
+            scope.addSequence();
+          });
+        }
+      };
+      scope.buildSequenceString = function(arguments) {
+        let sequence = 'cmsDriver.py';
+        for (let attr in arguments) {
+          let value = arguments[attr];
+          if (value === '' || value === false || value.length === 0) {
+            continue
+          }
+          if (attr == 'nStreams' && value == 0) {
+            continue
+          }
+          if (attr == 'nThreads' && value == 1) {
+            continue
+          }
+          sequence += ` --${attr}`
+          if (value !== true) {
+            sequence += ` ${value}`;
+          }
+        }
+        return sequence;
+      }
+    }
+  }
+});
+
 testApp.directive("selectCampaign", function(){
   return{
       require: 'ngModel',
@@ -600,77 +565,138 @@ testApp.directive("customValidationEdit", function(){
 });
 
 
-testApp.directive("listEdit", function($http){
+testApp.directive("editAttributeWithSuggestions", function($http){
   return {
     replace: false,
     restrict: 'E',
     require: 'ngModel',
     template:
-    '<div>'+
-    '  <ul>'+
-    '   <li ng-repeat="elem in analysis_data">'+
-    '     <span ng-hide="editable[$index]">'+
-    '       {{elem}}'+
-    '     </span>'+
-    '     <span ng-show="editable[$index] && not_editable_list.indexOf(columnName)==-1">'+
-    '       <input type="text" ng-model="new_id" class="input-xxlarge" ng-disabled="not_editable_list.indexOf(columnName)!=-1">'+
-    '       <a ng-click="analysis_data[$index] = new_id; editable[$index] = false;" >'+
-    '         <i class="icon-plus-sign"></i>'+
-    '       </a>'+
-    '       <a ng-click="editable[$index]=!editable[$index]; new_id=analysis_data[$index];">'+
-    '         <i class="icon-minus"></i>'+
-    '       </a>'+
-    '     </span>'+
-    '     <span ng-hide="editable[$index] || not_editable_list.indexOf(columnName)!=-1">'+
-    '       <a ng-click="editable[$index]=!editable[$index]; new_id=analysis_data[$index];">'+
-    '         <i class="icon-wrench"></i>'+
-    '       </a>'+
-    '       <a ng-click="remove($index)">'+
-    '         <i class="icon-remove-sign"></i>'+
-    '       </a>'+
-    '     <span>'+
-    '   </li>'+
-    '  </ul>'+
-    '    <form class="form-inline" ng-hide="not_editable_list.indexOf(columnName)!=-1">'+
-    '      <a ng-click="add_analysis_id=!add_analysis_id;">'+
-    '        <i class="icon-plus" ng-hide="add_analysis_id"></i>'+
-    '        <i class="icon-minus" ng-show="add_analysis_id"></i>'+
-    '      </a>'+
-    '      <input type="text" ng-model="new_analysis_id" ng-show="add_analysis_id" class="input-xxlarge" typeahead="suggestion for suggestion in loadSuggestions($viewValue)"></i>'+
-    '      <i class="icon-plus-sign" ng-click="pushNewAnalysisID()" ng-show="add_analysis_id"></i>'+
-    '    </form>'+
-    '</div>'+
-    '',
-    link: function(scope, element, attr, ctrl)
-    {
+    `<input type="text"
+            ng-model="value"
+            ng-disabled="!editable"
+            typeahead="suggestion for suggestion in loadSuggestions($viewValue)">`,
+    link: function(scope, element, attr, ctrl) {
       ctrl.$render = function(){
-        scope.analysis_data = ctrl.$viewValue;
-        scope.new_analysis_id = "";
-        scope.editable = {};
-        scope.new_id = "";
-        scope.columnName = scope.$eval(attr.column);
-        scope.fieldName = attr.suggestionsFieldname;
+        scope.value = ctrl.$viewValue;
+        scope.editable = scope.$eval(attr.editable);
+        scope.limit = attr.limit ? attr.limit : 20;
+        scope.attribute = attr.attribute;
+        scope.cache = {};
       };
 
-      scope.remove = function(index){
-        scope.analysis_data.splice(index, 1);
-      };
+      scope.startEditing = function(index) {
+        scope.editingIndex = index;
+      }
 
-      scope.pushNewAnalysisID = function(){
-        scope.analysis_data.push(scope.new_analysis_id);
-        scope.add_analysis_id = false;
-        scope.new_analysis_id = "";
-      };
-
-      scope.loadSuggestions = function (fieldValue) {
-        if (scope.fieldName == undefined || fieldValue == '') {
-          return {};
+      scope.stopEditing = function(index) {
+        if (!scope.listItems[index].length) {
+          scope.remove(index);
         }
-        const searchURL = "restapi/requests/unique_values/" + scope.fieldName + "?key=" + fieldValue;
-        return $http.get(searchURL).then(function (data) {
+        scope.editingIndex = undefined;
+      }
+
+      scope.addNew = function() {
+        scope.listItems.push('');
+        scope.editingIndex = scope.listItems.length - 1;
+      }
+
+      scope.loadSuggestions = function (value) {
+        if (value == '') {
+          return [];
+        }
+        if (scope.cache[value]) {
+          return scope.cache[value];
+        }
+        const url = `restapi/${scope.dbName}/unique_values/?attribute=${scope.attribute}&value=${value}&limit=${scope.limit}`;
+        return $http.get(url).then(function (data) {
+          scope.cache[value] = data.data.results;
           return data.data.results;
         }, function (data) {
-          alert("Error getting suggestions for " + scope.fieldName + "=" + fieldValue + ": " + data.status);
+          return [];
+        });
+      };
+    }
+  }
+});
+
+
+testApp.directive("editListWithSuggestions", function($http){
+  return {
+    replace: false,
+    restrict: 'E',
+    require: 'ngModel',
+    template:
+    `<div>
+      <ul ng-if="!editable">
+        <li ng-repeat="item in listItems track by $index">
+          {{item}}
+        </li>
+      </ul>
+      <ul ng-if="editable">
+        <li ng-repeat="item in listItems track by $index">
+          <span ng-if="editingIndex !== $index">
+            {{item}}
+            <a style="margin-left: 4px" ng-click="startEditing($index)" title="Edit">
+              <i class="icon-wrench"></i>
+            </a>
+            <a style="margin-left: 4px" ng-click="listItems.splice($index, 1)" title="Remove">
+              <i class="icon-minus-sign"></i>
+            </a>
+          </span>
+          <span ng-if="editingIndex === $index">
+            <input type="text"
+                    style="width: auto;"
+                    ng-model="listItems[$index]"
+                    typeahead="suggestion for suggestion in loadSuggestions($viewValue)">
+            <a style="margin-left: 4px" ng-click="stopEditing($index)" title="Finish editing">
+              <i class="icon-ok"></i>
+            </a>
+          </span>
+        </li>
+      </ul>
+      <a ng-click="addNew()" ng-if="!editingIndex" title="Add new">
+        <i class="icon-plus"></i>
+      </a>
+    </div>`,
+    link: function(scope, element, attr, ctrl) {
+      ctrl.$render = function(){
+        scope.listItems = ctrl.$viewValue;
+        scope.editable = scope.$eval(attr.editable);
+        scope.limit = attr.limit ? attr.limit : 20;
+        scope.attribute = attr.attribute;
+        scope.editingIndex = undefined;
+        scope.cache = {};
+      };
+
+      scope.startEditing = function(index) {
+        scope.editingIndex = index;
+      }
+
+      scope.stopEditing = function(index) {
+        if (!scope.listItems[index].length) {
+          scope.listItems.splice(index, 1);
+        }
+        scope.editingIndex = undefined;
+      }
+
+      scope.addNew = function() {
+        scope.listItems.push('');
+        scope.editingIndex = scope.listItems.length - 1;
+      }
+
+      scope.loadSuggestions = function (value) {
+        if (value == '') {
+          return [];
+        }
+        if (scope.cache[value]) {
+          return scope.cache[value];
+        }
+        const url = `restapi/${scope.dbName}/unique_values/?attribute=${scope.attribute}&value=${value}&limit=${scope.limit}`;
+        return $http.get(url).then(function (data) {
+          scope.cache[value] = data.data.results;
+          return data.data.results;
+        }, function (data) {
+          return [];
         });
       };
     }

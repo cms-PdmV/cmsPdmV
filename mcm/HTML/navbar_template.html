@@ -167,3 +167,46 @@
   </div>
 </script>
 <!-- End of Clone item MODAL -->
+
+<!-- Edit sequence MODAL -->
+<script type="text/ng-template" id="editSequenceModal.html">
+  <div class="modal-header">
+    <h4>Edit sequence</h4>
+  </div>
+  <div class="modal-body">
+    <table style="width: 100%">
+      <tr ng-repeat="(attribute, value) in sequence">
+        <td>
+          {{attribute}}
+        </td>
+        <td style="width: 100%">
+          <input ng-if="attributeType(value) == 'boolean'"
+                 type="checkbox"
+                 ng-model="sequence[attribute]">
+          <input ng-if="attributeType(value) == 'number'"
+                 type="number"
+                 ng-model="sequence[attribute]">
+          <input ng-if="attributeType(value) == 'string'"
+                 type="text"
+                 ng-model="sequence[attribute]">
+          <ul ng-if="attributeType(value) == 'array'">
+            <li ng-repeat="item in value">{{item}}</li>
+          </ul>
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <div class="span3 input-append" style="text-align:left;">
+      <select ng-model="sequence.selectedHidden" ng-show="sequence.hidden.length > 0">
+        <option ng-repeat="elem in sequence.hidden">{{elem}}</option>
+      </select>
+      <a class="btn" ng-click="showHiddenSequence();" ng-href="#" ng-show="sequence.hidden.length > 0"><i class="icon-plus-sign"></i></a>
+    </div>
+    <div class="span2">
+      <button class="btn btn-success" ng-click="save()">Save</button>
+      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+    </div>
+  </div>
+</script>
+<!-- End of edit sequence MODAL -->

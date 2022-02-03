@@ -168,3 +168,20 @@ class Campaign(json_base):
             cls.database = Database('campaigns')
 
         return cls.database
+
+    def get_editing_info(self):
+        info = super().get_editing_info()
+        info['cmssw_release'] = True
+        info['energy'] = True
+        info['events_per_lumi'] = True
+        info['generators'] = True
+        info['input_dataset'] = True
+        info['keep_output'] = True
+        info['memory'] = True
+        info['notes'] = True
+        info['pileup_dataset_name'] = True
+        info['root'] = True
+        info['sequences'] = True
+        info['type'] = True
+        info['www'] = True
+        return info

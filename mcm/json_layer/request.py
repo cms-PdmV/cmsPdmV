@@ -103,6 +103,12 @@ class Request(json_base):
 
         return cls.database
 
+    def get_editing_info(self):
+        info = super().get_editing_info()
+        info['notes'] = True
+        info['sequences'] = True
+        return info
+
     def validate(self):
         """
         Check if all attributes of the object are valid

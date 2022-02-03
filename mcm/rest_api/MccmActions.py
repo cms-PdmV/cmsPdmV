@@ -9,6 +9,7 @@ from json_layer.mccm import MccM
 from json_layer.user import Role, User
 from json_layer.chained_campaign import ChainedCampaign
 from json_layer.request import Request
+from tools.exceptions import NotFoundException
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import Communicator
@@ -181,15 +182,6 @@ class DeleteMccm(DeleteRESTResource):
         return self.delete_object(prepid, MccM)
 
 
-class GetMccm(RESTResource):
-
-    def get(self, prepid):
-        """
-        Retrieve the MccM for given id
-        """
-        return {'results': MccM.get_database().get(prepid)}
-
-
 class CancelMccm(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
@@ -251,13 +243,37 @@ class NotifyMccm(RESTResource):
         return {"results": True}
 
 
-class GetEditableMccmFields(RESTResource):
+class GetMccM(RESTResource):
+    """
+    Endpoing for retrieving a MccM ticket
+    """
 
     def get(self, prepid):
         """
-        Retrieve the fields that are currently editable for a given mccm
+        Retrieve the MccM ticket for given id
         """
-        return {"results": MccM.fetch(prepid).get_editable()}
+        mccm = MccM.fetch(prepid)
+        if not mccm:
+            raise NotFoundException(prepid)
+
+        return {'results': mccm.json()}
+
+
+class GetEditableMccM(RESTResource):
+    """
+    Endpoing for retrieving a MccM ticket and it's editing info
+    """
+
+    def get(self, prepid):
+        """
+        Retrieve the MccM ticket and it's editing info for given id
+        """
+        mccm = MccM.fetch(prepid)
+        if not mccm:
+            raise NotFoundException(prepid)
+
+        return {'results': {'object': mccm.json(),
+                            'editing_info': mccm.get_editing_info()}}
 
 
 class GenerateChains(RESTResource):

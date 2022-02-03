@@ -16,6 +16,7 @@ from json_layer.sequence import Sequence
 from json_layer.campaign import Campaign
 from json_layer.user import Role, User
 from json_layer.chained_request import ChainedRequest
+from tools.exceptions import NotFoundException
 from tools.locator import locator
 from tools.communicator import Communicator
 from tools.locker import locker
@@ -201,15 +202,6 @@ class RequestUpdate(RESTResource):
         return {"results": True}
 
 
-class RequestGet(RESTResource):
-
-    def get(self, prepid):
-        """
-        Retreive the dictionnary for a given request
-        """
-        return {"results": Request.get_database().get(prepid)}
-
-
 class RequestDelete(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
@@ -301,15 +293,37 @@ class RequestDelete(RESTResource):
         return {'results': True}
 
 
-class RequestGetEditable(RESTResource):
+class GetRequest(RESTResource):
+    """
+    Endpoing for retrieving a request
+    """
 
     def get(self, prepid):
         """
-        Retreive the fields that are currently editable for a given request id
+        Retrieve the request for given id
         """
         request = Request.fetch(prepid)
-        editable = request.get_editable()
-        return {'results': editable}
+        if not request:
+            raise NotFoundException(prepid)
+
+        return {'results': request.json()}
+
+
+class GetEditableRequest(RESTResource):
+    """
+    Endpoing for retrieving a request and it's editing info
+    """
+
+    def get(self, prepid):
+        """
+        Retrieve the request and it's editing info for given id
+        """
+        request = Request.fetch(prepid)
+        if not request:
+            raise NotFoundException(prepid)
+
+        return {'results': {'object': request.json(),
+                            'editing_info': request.get_editing_info()}}
 
 
 class RequestOptionReset(RESTResource):

@@ -1,342 +1,370 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp"  xmlns:ng="http://angularjs.org" id="ng-app">
-  <head>
-    <base href="/mcm/">
-    <title>Edit page McM</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
-    <link href="scripts/codemirror-3.11/lib/codemirror.css" rel="stylesheet">
-    <link href="scripts/codemirror-3.11/theme/eclipse.css" rel="stylesheet">
-    <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
-    <script type="text/javascript" src="scripts/build/mcm.deps2.js"></script>
-    <script src="scripts/snow.js"></script>
-    <!--[IF IE]>
-    <script type="text/javascript">
-      var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
-    </script>
-    <![endif]-->
-    <![if !IE]>
-    <script type="text/javascript">
-      var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
-    </script>
-    <![endif]>
-    <script src="scripts/main_controller.js"></script>
-    <script src="scripts/edit.js"></script>
-    <script src="scripts/edit_controller.js"></script>
-    <!-- angularui is needed for codemirror -->
-    <script src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
-    <script src="scripts/angular-ui.min.js"></script>
-    <style type="text/css">
-      .bs-docs-sidenav > li > a:hover {
-        background-color: #F5F5F5;
-      }
-      .bs-docs-sidenav > li > a {
-        border: 1px solid #E5E5E5;
-        display: block;
-        margin: 0 0 -1px;
-        padding: 8px 14px;
-      }
-      .bs-docs-sidenav {
-        background-color: #FFFFFF;
-        border-radius: 6px 6px 6px 6px;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.067);
-        margin: 30px 0 0;
-        padding: 0;
-      }
-      table th {
-        min-width: 150px;
-      }
-    </style>
-  </head>
-  <body ng-controller="mainCtrl">
-    <span ng-controller="resultCtrl">
-      <div ng-include="'HTML/navbar_template.html'"></div>
-      <div class="container">
-        <div class="row">
-          <div class="col-md-2 col-sm-12 bs-docs-sidebar ">
-            <!--  sidebar span -->
-            <ul class="nav nav-list bs-docs-sidenav" style="position: sticky; top: 20px">
-              <li class="">
-                <a ng-click="submit_edit()" ng-href="#">
+<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+
+<head>
+  <title>McM - Edit</title>
+  <base href="/mcm/">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
+  <link href="scripts/codemirror-3.11/lib/codemirror.css" rel="stylesheet">
+  <link href="scripts/codemirror-3.11/theme/eclipse.css" rel="stylesheet">
+  <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
+  <script type="text/javascript" src="scripts/build/mcm.deps2.js"></script>
+  <script src="scripts/snow.js"></script>
+  <script type="text/javascript">
+    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
+  </script>
+  <script src="scripts/main_controller.js"></script>
+  <script src="scripts/edit.js"></script>
+  <script src="scripts/edit_controller.js"></script>
+  <!-- angularui is needed for codemirror -->
+  <script src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
+  <script src="scripts/angular-ui.min.js"></script>
+  <style type="text/css">
+    .bs-docs-sidenav>li>a:hover {
+      background-color: #F5F5F5;
+    }
+
+    .bs-docs-sidenav>li>a {
+      border: 1px solid #E5E5E5;
+      display: block;
+      margin: 0 0 -1px;
+      padding: 8px 14px;
+    }
+
+    .bs-docs-sidenav {
+      background-color: #FFFFFF;
+      border-radius: 6px 6px 6px 6px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.067);
+      margin: 30px 0 0;
+      padding: 0;
+    }
+
+    table th {
+      min-width: 150px;
+    }
+    input {
+      margin: 0 !important;
+    }
+    input[type="text"] {
+      width: calc(100% - 12px);
+      padding: 4px 6px;
+    }
+    input[type="number"] {
+      width: calc(50% - 12px);
+      padding: 4px 6px;
+      text-align: right;
+    }
+    .table-cell-wrapper > div {
+      display: flex;
+    }
+  </style>
+</head>
+
+<body ng-controller="mainCtrl">
+  <div ng-include="'HTML/navbar_template.html'"></div>
+  <span ng-controller="resultsCtrl">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-2 col-sm-12 bs-docs-sidebar ">
+          <!--  sidebar span -->
+          <ul class="nav nav-list bs-docs-sidenav" style="position: sticky; top: 20px">
+            <li class="">
+              <a ng-click="saveEditableObject()" title="Save {{prepid}}" ng-href="#">
                 <i class="icon-chevron-right"></i>
                 Commit
-                </a>
-              </li>
-              <li class="">
-                <a ng-href='{{dbName}}?prepid={{prepid}}' rel="tooltip" title="View {{dbName}} {{prepid}}" target="_self">
+              </a>
+            </li>
+            <li class="">
+              <a ng-href='{{dbName}}?prepid={{prepid}}' title="View {{prepid}}" target="_self">
                 <i class="icon-chevron-right"></i>
                 View
-                </a>
-              </li>
-              <li class="" ng-hide="role(3);">
-                <a ng-click="delete_edit(result['prepid'])" ng-href="#">
+              </a>
+            </li>
+            <li ng-show="user.is_production_manager">
+              <a ng-click="deleteEditableObject()" title="Delete {{prepid}}" ng-href="#">
                 <i class="icon-chevron-right"></i>
                 Delete
-                </a>
-              </li>
-              <li>
-                <a ng-show="update['success']">
+              </a>
+            </li>
+            <li>
+              <a ng-show="update['success']">
                 Updated. Status code: <font color="green">{{update['status_code']}}</font>
-                </a>
-                <a ng-show="update['fail']">
+              </a>
+              <a ng-show="update['fail']">
                 Update failed. Message: <font color="red">{{update['message']}}</font>
-                </a>
-              </li>
-              <li class="" ng-show="pendingHTTP">
-                <a ng-click="" ng-href="#">
-                <img ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+              </a>
+            </li>
+            <li class="" ng-show="pendingHTTP">
+              <a ng-click="" ng-href="#">
+                <img ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif" />
                 Pending {{ pendingHTTPLenght }} HTTP request(-s)
-                </a>
-              </li>
-            </ul>
-          </div>
+              </a>
+            </li>
+          </ul>
+        </div>
 
-          <div class="col-md-8 col-sm-12 ">
-            <table class="table table-bordered table-stripped" style="margin: 30px auto 0 auto">
-              <thead>
-              </thead>
-              <tbody>
-                <tr ng-repeat="column in defaults">
-                  <th>
-                    {{column.text}} <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#{{dbName}}_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}"><i class="icon-question-sign"></i></a>
-                  </th>
-                  <td>
-                    <ng-form name="antantasForm">
-                      <div ng-switch on="column.text">
-                        <div ng-switch-when="Sequences">
-                          <div sequence-edit ng-model="result[column.db_name]"></div>
-                        </div>
-                        <div ng-switch-when="Notes">
-                          <textarea ng-disabled="not_editable_list.indexOf(column.text)!=-1" ng-model="result[column.db_name]" style="width: calc(100% - 12px); padding: 4px 6px; height: 152px;"></textarea>
-                        </div>
-                        <div ng-switch-when="Submission details">
-                          <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-repeat="(key,value) in result[column.db_name]">
-                            <dt>{{key}}</dt>
-                            <dd>{{value}}</dd>
-                          </dl>
-                        </div>
-                        <div ng-switch-when="Block white list">
-                          <list-edit ng-model="result[column.db_name]" column="column.text"></list-edit>
-                        </div>
-                        <div ng-switch-when="Block black list">
-                          <list-edit ng-model="result[column.db_name]" column="column.text"></list-edit>
-                        </div>
-                        <div ng-switch-when="History">
-                          <div custom-history ng-model="result[column.db_name]"></div>
-                        </div>
-                        <div ng-switch-when="Valid">
-                          <input type="checkbox" ng-model="result[column.db_name]">
-                        </div>
-                        <div ng-switch-when="Validation">
-                          <custom-validation-edit ng-model="result[column.db_name]"></custom-validation-edit>
-                        </div>
-                        <div ng-switch-when="Tags">
-                          <tokenfield  show-autocomplete-on-focus="true" tokens="result[column.db_name]" allow-duplicates="false" before-create="addToken" on-remove="removeToken" type-ahead="{'name':'request_tags', 'prefetch':{'url': 'restapi/tags/get_all',ttl:10,'filter': '(function(data){return data.tags;})'}}"/>
-                        </div>
-                        <div ng-switch-when="Request parameters" ng-controller="ModalDemoCtrl">
-                          <ng-form name="fieldForm" id="fieldForm">
-                            <a class="btn btn-small" href="#" ng-click="update();">
-                            <i class="icon-refresh"></i>
-                            </a>
-                            <a class="btn btn-small btn-info text-uppercase" ng-click="openRequestParametersModal()" href="#">Edit</a>
-                            <span class="badge badge-important" ng-show="fieldForm.$invalid">Bad JSON formatting</span>
-                            <span class="badge badge-success" ng-show="!fieldForm.$invalid">Valid JSON formatting</span>
-                            <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                          </ng-form>
-                        </div>
-                        <div ng-switch-when="Reqmgr name">
-                          <ng-form name="fieldForm">
-                            <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                            <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                          </ng-form>
-                        </div>
-                        <div ng-switch-when="Generator parameters">
-                          <div generator-params ng-model="result[column.db_name]"></div>
-                        </div>
-                        <div ng-switch-when="Fragment">
-                          <span ng-switch on="not_editable_list.indexOf(column.text)!=-1">
-                          <span ng-switch-when="true">
-                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:true}" ui-refresh=true ng-model="result[column.db_name]"></textarea>
-                          </span>
-                          <span ng-switch-when="false">
-                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:false}" ui-refresh=true ng-model="result[column.db_name]"></textarea>
-                          </span>
-                          </span>
-                        </div>
-                        <div ng-switch-when="Keep output">
-                          <ul ng-repeat="elem in result[column.db_name] track by $index">
-                            <li>
-                              Step {{ $index +1 }}:
-                              <input type="checkbox" ng-model="result[column.db_name][$index]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
+        <div class="col-md-8 col-sm-12 ">
+          <table class="table table-bordered table-stripped" style="margin: 30px auto">
+            <tbody>
+              <tr ng-repeat="(attribute, editable) in editingInfo">
+                <td>
+                  {{attribute}}
+                </td>
+                <td>
+                  <!-- VALUE: {{editableObject[attribute]}} EDITABLE: {{editable}} -->
+                  <div ng-switch on="attribute" class="table-cell-wrapper">
+                    <div ng-switch-when="events_per_lumi">
+                      <div ng-if="dbName == 'campaigns'">
+                        <label>Single core</label>
+                        <input type="number"
+                               ng-model="editableObject[attribute].singlecore"
+                               ng-disabled="!editable">
+                        <label>Multi core</label>
+                        <input type="number"
+                               ng-model="editableObject[attribute].multicore"
+                               ng-disabled="!editable">
+                      </div>
+                      <div ng-else>
+
+                      </div>
+                    </div>
+                    <div ng-switch-when="generators">
+                      <edit-list-with-suggestions ng-model="editableObject[attribute]"
+                                                  style="display: flex; width: 100%"
+                                                  editable="editable"
+                                                  attribute="generators"
+                                                  limit="20"></edit-list-with-suggestions>
+                    </div>
+                    <div ng-switch-when="cmssw_release">
+                      <edit-attribute-with-suggestions ng-model="editableObject[attribute]"
+                                                       style="display: flex; width: 100%"
+                                                       editable="editable"
+                                                       attribute="cmssw_release"
+                                                       limit="20"></edit-attribute-with-suggestions>
+                    </div>
+                    <div ng-switch-when="keep_output">
+                      <div ng-if="dbName == 'campaigns'">
+                        <div ng-repeat="(name, values) in editableObject[attribute]">
+                          {{name}}:
+                          <ul>
+                            <li ng-repeat="value in values track by $index">
+                              <input type="checkbox" ng-model="values[$index]" ng-disabled="!editable"> Sequence {{$index + 1}}
                             </li>
                           </ul>
                         </div>
-                        <div ng-switch-when="Extension">
-                          <select class="input-mini" ng-disabled="not_editable_list.indexOf(column.text)!=-1" ng-model="result[column.db_name]" ng-options="key as key for key in [0,1,2,3,4,5]"></select>
-                        </div>
-                        <div ng-switch-when="Allowed campaigns">
-                          <list-predefined ng-model="result[column.db_name]" column="column.text" suggestions="allCampaigns"></list-predefined>
-                        </div>
-                        <div ng-switch-when="Pwg">
-                          <div ng-switch on="dbName">
-                            <div ng-switch-when="users">
-                              <ul ng-repeat="elem in result[column.db_name]">
-                                <li>
-                                  {{elem}} <a ng-click="removeUserPWG(elem);"><i class="icon-remove-sign"></i></a>
-                                </li>
-                              </ul>
-                              <a ng-click="showAddUserPWG();"><i class="icon-plus" ng-hide="showSelectPWG"></i></a>
-                              <select ng-model="selectedPWG" ng-change="addUserPWG(selectedPWG);" ng-options="value for value in all_pwgs" ng-show="showSelectPWG"></select>
-                            </div>
-                            <div ng-switch-default>
-                              <textarea type="text" ng-model="result[column.db_name]" style="width: calc(100% - 12px); padding: 4px 6px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
-                            </div>
-                          </div>
-                        </div>
-                        <div ng-switch-when="Next campaign">
-                          <single-predefined ng-model="result[column.db_name]" column="column.text" suggestions="allCampaigns"></single-predefined>
-                        </div>
-                        <div ng-switch-when="Announced">
-                          <input type="checkbox" ng-model="result[column.db_name]">
-                        </div>
-                        <div ng-switch-when="Text">
-                          <textarea ng-model="result[column.db_name]" style="width: 639px; height: 236px;"></textarea>
-                        </div>
-                        <div ng-switch-when="Analysis id">
-                          <list-edit ng-model="result[column.db_name]" column="column.text"></list-edit>
-                        </div>
-                        <div ng-switch-when="Generators">
-                          <list-edit ng-model="result[column.db_name]" column="column.text" suggestions-fieldname="generators"></list-edit>
-                        </div>
-                        <div ng-switch-when="Type">
-                          <select ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
-                            <option ng-repeat="elem in type_list" ng-selected="elem == result[column.db_name]">{{elem}}</option>
-                          </select>
-                        </div>
-                        <div ng-switch-when="Root">
-                          <select ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
-                            <option value="0" ng-selected="result[column.db_name] == 0">Yes</option>
-                            <option value="-1" ng-selected="result[column.db_name] == -1">Possible</option>
-                            <option value="1" ng-selected="result[column.db_name] == 1">No</option>
-                          </select>
-                        </div>
-                        <div ng-switch-when="Requests">
-                          <custom-requests-edit ng-model="result[column.db_name]"></custom-requests-edit>
-                        </div>
-                        <div ng-switch-when="Action parameters">
-                          <custom-action-parameters ng-model="result[column.db_name]"></custom-action-parameters >
-                        </div>
-                        <div ng-switch-when="Memory">
-                          <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
-                          <a class="label label-info" rel="tooltip" title="megabytes" ng-href="#">MB</a>
-                        </div>
-                        <div ng-switch-when="Size event">
-                          <size-event-edit ng-model="result[column.db_name]" column="column.text"></size-event-edit>
-                        </div>
-                        <div ng-switch-when="Time event">
-                          <time-event-edit ng-model="result[column.db_name]" column="column.text"></time-event-edit>
-                        </div>
-                        <div ng-switch-when="Chains">
-                          <!-- custom chains editor for mccm's -->
-                          <custom-mccm-chains ng-model="result[column.db_name]"></custom-mccm-chains>
-                        </div>
-                        <div ng-switch-when="Value">
-                          <!-- <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea> -->
-                          <ng-form name="fieldForm">
-                            <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                            <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                          </ng-form>
-                        </div>
-                        <div ng-switch-when="Events per lumi">
-                          <div ng-switch on="dbName">
-                            <div ng-switch-when="requests">
-                              <events-lumi-edit ng-model="result[column.db_name]" column="column.text"></events-lumi-edit>
-                            </div>
-                            <div ng-switch-default>
-                              <ng-form name="fieldForm">
-                                <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                                <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                              </ng-form>
-                            </div>
-                          </div>
-                        </div>
-                        <div ng-switch-when="Interested pwg">
-                          <list-predefined ng-model="result[column.db_name]" column="column.text" suggestions-fieldname="pwg" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></list-predefined>
-                        </div>
-                        <div ng-switch-when="Chain type">
-                          <button class="btn btn-info"
-                            ng-click="result[column.db_name] = result[column.db_name] === 'TaskChain' ? 'StepChain' : 'TaskChain'">
-                          {{result[column.db_name]}}
-                          </button>
-                        </div>
-                        <div ng-switch-when="Do not check cmssw versions">
-                          <input type="checkbox" ng-model="result[column.db_name]">
+                      </div>
+                      <div ng-if="dbName == 'requests'">
+                        <li ng-repeat="value in editableObject[attribute] track by $index">
+                          <input type="checkbox" ng-model="editableObject[attribute][$index]" ng-disabled="!editable"> Sequence {{$index + 1}}
+                        </li>
+                      </div>
+                    </div>
+                    <div ng-switch-when="notes">
+                      <textarea style="display: flex; width: 100%;" ng-model="editableObject[attribute]" ng-disabled="!editable"></textarea>
+                    </div>
+                    <div ng-switch-when="sequences">
+                      <edit-campaign-sequences ng-if="dbName == 'campaigns'" ng-model="editableObject[attribute]" disabled="!editable" campaign="editableObject"></edit-campaign-sequences>
+                      <edit-request-sequences ng-if="dbName == 'requests'" ng-model="editableObject[attribute]" disabled="!editable" request="editableObject"></edit-request-sequences>
+                    </div>
+                    <div ng-switch-when="Validation">
+                      <custom-validation-edit ng-model="result[column.db_name]"></custom-validation-edit>
+                    </div>
+                    <div ng-switch-when="Tags">
+                      <tokenfield show-autocomplete-on-focus="true" tokens="result[column.db_name]"
+                        allow-duplicates="false" before-create="addToken" on-remove="removeToken"
+                        type-ahead="{'name':'request_tags', 'prefetch':{'url': 'restapi/tags/get_all',ttl:10,'filter': '(function(data){return data.tags;})'}}" />
+                    </div>
+                    <div ng-switch-when="Request parameters" ng-controller="ModalDemoCtrl">
+                      <ng-form name="fieldForm" id="fieldForm">
+                        <a class="btn btn-small" href="#" ng-click="update();">
+                          <i class="icon-refresh"></i>
+                        </a>
+                        <a class="btn btn-small btn-info text-uppercase" ng-click="openRequestParametersModal()"
+                          href="#">Edit</a>
+                        <span class="badge badge-important" ng-show="fieldForm.$invalid">Bad JSON formatting</span>
+                        <span class="badge badge-success" ng-show="!fieldForm.$invalid">Valid JSON formatting</span>
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                      </ng-form>
+                    </div>
+                    <div ng-switch-when="Reqmgr name">
+                      <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form>
+                    </div>
+                    <div ng-switch-when="Generator parameters">
+                      <div generator-params ng-model="result[column.db_name]"></div>
+                    </div>
+                    <div ng-switch-when="Fragment">
+                      <span ng-switch on="not_editable_list.indexOf(column.text)!=-1">
+                        <span ng-switch-when="true">
+                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:true}" ui-refresh=true
+                            ng-model="result[column.db_name]"></textarea>
+                        </span>
+                        <span ng-switch-when="false">
+                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:false}" ui-refresh=true
+                            ng-model="result[column.db_name]"></textarea>
+                        </span>
+                      </span>
+                    </div>
+                    <div ng-switch-when="Extension">
+                      <select class="input-mini" ng-disabled="not_editable_list.indexOf(column.text)!=-1"
+                        ng-model="result[column.db_name]" ng-options="key as key for key in [0,1,2,3,4,5]"></select>
+                    </div>
+                    <div ng-switch-when="Allowed campaigns">
+                      <list-predefined ng-model="result[column.db_name]" column="column.text"
+                        suggestions="allCampaigns"></list-predefined>
+                    </div>
+                    <div ng-switch-when="Pwg">
+                      <div ng-switch on="dbName">
+                        <div ng-switch-when="users">
+                          <ul ng-repeat="elem in result[column.db_name]">
+                            <li>
+                              {{elem}} <a ng-click="removeUserPWG(elem);"><i class="icon-remove-sign"></i></a>
+                            </li>
+                          </ul>
+                          <a ng-click="showAddUserPWG();"><i class="icon-plus" ng-hide="showSelectPWG"></i></a>
+                          <select ng-model="selectedPWG" ng-change="addUserPWG(selectedPWG);"
+                            ng-options="value for value in all_pwgs" ng-show="showSelectPWG"></select>
                         </div>
                         <div ng-switch-default>
-                          <div ng-switch on="underscore.isBoolean(result[column.db_name])">
-                            <div ng-switch-when="true">
-                              <input type="checkbox" ng-model="result[column.db_name]" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
-                            </div>
-                            <div ng-switch-default>
-                              <textarea type="text" ng-model="result[column.db_name]" style="height: 20px; margin-bottom: 0px; width: calc(100% - 12px); padding: 4px 6px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
-                            </div>
-                          </div>
-                        </div>
-                        <div ng-switch-when="Pilot">
-                          <input type="checkbox" ng-model="result[column.db_name]">
-                        </div>
-                        <div ng-switch-when="Generated chains">
-                          <small>
-                            <ul>
-                              <li ng-repeat="(chain, _) in result[column.db_name]">
-                                <a href="chained_requests?prepid={{chain}}" target="_blank">{{chain}}</a>
-                              </li>
-                            </ul>
-                          </small>
-                        </div>
-                        <div ng-switch-when="Block">
-                          <select style="margin-bottom: 0;"
-                                  ng-model="result[column.db_name]"
-                                  ng-disabled="not_editable_list.indexOf(column.text) != -1"
-                                  convert-to-number>
-                            <option value="0" ng-selected='result[column.db_name] == 0'>0 (not selected)</option>
-                            <option value="1" ng-selected='result[column.db_name] == 1'>1 (110k)</option>
-                            <option value="2" ng-selected='result[column.db_name] == 2'>2 (90k)</option>
-                            <option value="3" ng-selected='result[column.db_name] == 3'>3 (85k)</option>
-                            <option value="4" ng-selected='result[column.db_name] == 4'>4 (80k)</option>
-                            <option value="5" ng-selected='result[column.db_name] == 5'>5 (70k)</option>
-                            <option value="6" ng-selected='result[column.db_name] == 6'>6 (63k)</option>
-                          </select>
-                        </div>
-                        <div ng-switch-when="Repetitions">
-                          <select style="margin-bottom: 0;"
-                                  ng-model="result[column.db_name]"
-                                  ng-disabled="not_editable_list.indexOf(column.text) != -1"
-                                  ng-options="key as key for key in [1,2,3,4,5,6,7,8,9,10]"></select>
-                          </select>
-                        </div>
-                        <div ng-switch-when="Role">
-                          <select style="margin-bottom: 0;"
-                                  ng-model="result[column.db_name]"
-                                  ng-disabled="!user.is_production_manager">
-                            <option ng-if="user.is_user" value="user" ng-selected='result[column.db_name] == "user"'>User</option>
-                            <option ng-if="user.is_generator_contact" value="generator_contact" ng-selected='result[column.db_name] == "generator_contact"'>Generator Contact</option>
-                            <option ng-if="user.is_generator_convener" value="generator_convener" ng-selected='result[column.db_name] == "generator_convener"'>Generator Convener</option>
-                            <option ng-if="user.is_production_manager" value="production_manager" ng-selected='result[column.db_name] == "production_manager"'>Production Manager</option>
-                            <option ng-if="user.is_production_expert" value="production_expert" ng-selected='result[column.db_name] == "production_expert"'>Production Expert</option>
-                            <option ng-if="user.is_administrator" value="administrator" ng-selected='result[column.db_name] == "administrator"'>Administrator</option>
-                          </select>
+                          <textarea type="text" ng-model="result[column.db_name]"
+                            ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
                         </div>
                       </div>
-                    </ng-form>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <!--END of span12-->
+                    </div>
+                    <div ng-switch-when="Next campaign">
+                      <single-predefined ng-model="result[column.db_name]" column="column.text"
+                        suggestions="allCampaigns"></single-predefined>
+                    </div>
+
+                    <div ng-switch-when="Type">
+                      <select ng-model="result[column.db_name]"
+                        ng-disabled="not_editable_list.indexOf(column.text)!=-1">
+                        <option ng-repeat="elem in type_list" ng-selected="elem == result[column.db_name]">{{elem}}
+                        </option>
+                      </select>
+                    </div>
+                    <div ng-switch-when="Root">
+                      <select ng-model="result[column.db_name]"
+                        ng-disabled="not_editable_list.indexOf(column.text)!=-1">
+                        <option value="0" ng-selected="result[column.db_name] == 0">Yes</option>
+                        <option value="-1" ng-selected="result[column.db_name] == -1">Possible</option>
+                        <option value="1" ng-selected="result[column.db_name] == 1">No</option>
+                      </select>
+                    </div>
+                    <div ng-switch-when="Requests">
+                      <custom-requests-edit ng-model="result[column.db_name]"></custom-requests-edit>
+                    </div>
+                    <div ng-switch-when="Memory">
+                      <textarea type="text" ng-model="result[column.db_name]"
+                        ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
+                      <a class="label label-info" rel="tooltip" title="megabytes" ng-href="#">MB</a>
+                    </div>
+                    <div ng-switch-when="Size event">
+                      <size-event-edit ng-model="result[column.db_name]" column="column.text"></size-event-edit>
+                    </div>
+                    <div ng-switch-when="Time event">
+                      <time-event-edit ng-model="result[column.db_name]" column="column.text"></time-event-edit>
+                    </div>
+                    <div ng-switch-when="Chains">
+                      <!-- custom chains editor for mccm's -->
+                      <custom-mccm-chains ng-model="result[column.db_name]"></custom-mccm-chains>
+                    </div>
+                    <div ng-switch-when="Value">
+                      <!-- <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea> -->
+                      <ng-form name="fieldForm">
+                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
+                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
+                      </ng-form>
+                    </div>
+
+                    <div ng-switch-when="Interested pwg">
+                      <list-predefined ng-model="result[column.db_name]" column="column.text"
+                        suggestions-fieldname="pwg" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
+                      </list-predefined>
+                    </div>
+                    <div ng-switch-when="Chain type">
+                      <button class="btn btn-info"
+                        ng-click="result[column.db_name] = result[column.db_name] === 'TaskChain' ? 'StepChain' : 'TaskChain'">
+                        {{result[column.db_name]}}
+                      </button>
+                    </div>
+                    <div ng-switch-when="Do not check cmssw versions">
+                      <input type="checkbox" ng-model="result[column.db_name]">
+                    </div>
+                    <div ng-switch-when="Generated chains">
+                      <small>
+                        <ul>
+                          <li ng-repeat="(chain, _) in result[column.db_name]">
+                            <a href="chained_requests?prepid={{chain}}" target="_blank">{{chain}}</a>
+                          </li>
+                        </ul>
+                      </small>
+                    </div>
+                    <div ng-switch-when="Block">
+                      <select style="margin-bottom: 0;" ng-model="result[column.db_name]"
+                        ng-disabled="not_editable_list.indexOf(column.text) != -1" convert-to-number>
+                        <option value="0" ng-selected='result[column.db_name] == 0'>0 (not selected)</option>
+                        <option value="1" ng-selected='result[column.db_name] == 1'>1 (110k)</option>
+                        <option value="2" ng-selected='result[column.db_name] == 2'>2 (90k)</option>
+                        <option value="3" ng-selected='result[column.db_name] == 3'>3 (85k)</option>
+                        <option value="4" ng-selected='result[column.db_name] == 4'>4 (80k)</option>
+                        <option value="5" ng-selected='result[column.db_name] == 5'>5 (70k)</option>
+                        <option value="6" ng-selected='result[column.db_name] == 6'>6 (63k)</option>
+                      </select>
+                    </div>
+                    <div ng-switch-when="Repetitions">
+                      <select style="margin-bottom: 0;" ng-model="result[column.db_name]"
+                        ng-disabled="not_editable_list.indexOf(column.text) != -1"
+                        ng-options="key as key for key in [1,2,3,4,5,6,7,8,9,10]"></select>
+                      </select>
+                    </div>
+                    <div ng-switch-when="Role">
+                      <select style="margin-bottom: 0;" ng-model="result[column.db_name]"
+                        ng-disabled="!user.is_production_manager">
+                        <option ng-if="user.is_user" value="user" ng-selected='result[column.db_name] == "user"'>User
+                        </option>
+                        <option ng-if="user.is_generator_contact" value="generator_contact"
+                          ng-selected='result[column.db_name] == "generator_contact"'>Generator Contact</option>
+                        <option ng-if="user.is_generator_convener" value="generator_convener"
+                          ng-selected='result[column.db_name] == "generator_convener"'>Generator Convener</option>
+                        <option ng-if="user.is_production_manager" value="production_manager"
+                          ng-selected='result[column.db_name] == "production_manager"'>Production Manager</option>
+                        <option ng-if="user.is_production_expert" value="production_expert"
+                          ng-selected='result[column.db_name] == "production_expert"'>Production Expert</option>
+                        <option ng-if="user.is_administrator" value="administrator"
+                          ng-selected='result[column.db_name] == "administrator"'>Administrator</option>
+                      </select>
+                    </div>
+                    <div ng-switch-default>
+                      <input ng-if="attributeType(editableObject[attribute]) == 'boolean'"
+                             type="checkbox"
+                             ng-model="editableObject[attribute]"
+                             ng-disabled="!editable">
+                      <input ng-if="attributeType(editableObject[attribute]) == 'number'"
+                             type="number"
+                             ng-model="editableObject[attribute]"
+                             ng-disabled="!editable">
+                      <input ng-if="attributeType(editableObject[attribute]) == 'string'"
+                             type="text"
+                             ng-model="editableObject[attribute]"
+                             ng-disabled="!editable">
+                      <ul ng-if="attributeType(editableObject[attribute]) == 'array'">
+                        <li ng-repeat="item in editableObject[attribute]">{{item}}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+        <!--END of span12-->
       </div>
-    </span>
-  </body>
+    </div>
+  </span>
+</body>
+
 </html>

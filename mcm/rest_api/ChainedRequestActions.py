@@ -104,12 +104,36 @@ class DeleteChainedRequest(DeleteRESTResource):
 
 
 class GetChainedRequest(RESTResource):
+    """
+    Endpoing for retrieving a chained request
+    """
 
     def get(self, prepid):
         """
         Retrieve the chained request for given id
         """
-        return {'results': ChainedRequest.get_database().get(prepid)}
+        chained_request = ChainedRequest.fetch(prepid)
+        if not chained_request:
+            raise NotFoundException(prepid)
+
+        return {'results': chained_request.json()}
+
+
+class GetEditableChainedRequest(RESTResource):
+    """
+    Endpoing for retrieving a chained request and it's editing info
+    """
+
+    def get(self, prepid):
+        """
+        Retrieve the chained request and it's editing info for given id
+        """
+        chained_request = ChainedRequest.fetch(prepid)
+        if not chained_request:
+            raise NotFoundException(prepid)
+
+        return {'results': {'object': chained_request.json(),
+                            'editing_info': chained_request.get_editing_info()}}
 
 
 class UniqueChainsRESTResource(RESTResource):

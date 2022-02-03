@@ -87,6 +87,36 @@ class json_base:
 
             del data_dict[key]
 
+    def get_editing_info(self):
+        """
+        Return a dictionary of that specifies which attributes can be edited
+        If attribute value is a dict, then the editing info value can be either
+        a boolean that would indicate whether edits of the dict are allowed at
+        all or another dict that specifies whether nested attributes can be
+        edited
+        If attribute value is a list, then the editign info value can be either
+        a boolean that would indicate whether edits of the list are allwoed at
+        all (including adding or removing elements) or a more complex structure
+        that would be applied to each element of the list
+        {
+          "prepid": False,
+          "notes": True,
+          "some_list": False,
+          "another_list": { # <- This dict will be applied when checking
+                            #    each element of "another_list"
+              "list_item_attribute_1": False,
+              "list_item_attribute_2": True
+          }
+          "some_dict": True,
+          "another_dict": {
+              "dict_item_attribute_1": True,
+              "dict_item_attribute_2": False
+          }
+        }
+        """
+        self.logger.debug('Getting default editing info for %s', self.get('_id'))
+        return {k: False for k in self.keys()}
+
     def validate(self):
         """
         Iterate through all attributes and validate the value

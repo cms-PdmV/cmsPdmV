@@ -1,6 +1,5 @@
 import time
 import traceback
-from random import shuffle
 import flask
 from couchdb_layer.mcm_database import database as Database
 from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
@@ -190,7 +189,24 @@ class GetCampaign(RESTResource):
         if not campaign:
             raise NotFoundException(prepid)
 
-        return {'results': campaign}
+        return {'results': campaign.json()}
+
+
+class GetEditableCampaign(RESTResource):
+    """
+    Endpoing for retrieving a campaign and it's editing info
+    """
+
+    def get(self, prepid):
+        """
+        Retrieve the campaign and it's editing info for given id
+        """
+        campaign = Campaign.fetch(prepid)
+        if not campaign:
+            raise NotFoundException(prepid)
+
+        return {'results': {'object': campaign.json(),
+                            'editing_info': campaign.get_editing_info()}}
 
 
 class ToggleCampaignStatus(RESTResource):
@@ -226,55 +242,88 @@ class GetCmsDriverForCampaign(RESTResource):
         return {'results': campaign.get_cmsdrivers()}
 
 
+class GetUniqueCampaignValues(RESTResource):
+    """
+    Endpoint for getting unique values of campaign attributes
+    """
+
+    def get(self):
+        """
+        Get unique values of certain attribute
+        """
+        args = flask.request.args.to_dict()
+        attribute = args.get('attribute')
+        value = args.get('value')
+        if not attribute or not value:
+            return {'results': []}
+
+        limit = int(args.get('limit', 10))
+        limit = min(100, max(1, limit))
+        request_db = Request.get_database()
+        return {'results': request_db.query_unique(attribute, value, limit)}
+
+
+class GetDefaultCampaignSequence(RESTResource):
+    """
+    Endpoint for getting an empty campaign sequence
+    """
+
+    def get(self):
+        """
+        Get an empty campaign sequence
+        """
+        return {'results': Sequence.schema()}
+
+
 class InspectCampaigns(RESTResource):
+    """
+    Endpoing for inspecting all requests in the campaign
+    """
 
     @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
-    def get(self, campaign_id):
+    def get(self, prepid):
         """
         Inspect all requests in given campaign(s)
         """
         # Make a list of IDs, although usually a single ID is expected
-        campaign_ids = list(set(campaign_id.split(',')))
-        shuffle(campaign_ids)
-        return flask.Response(flask.stream_with_context(self.inspect(campaign_ids)))
+        return flask.Response(flask.stream_with_context(self.inspect(prepid)))
 
-    def inspect(self, campaign_ids):
+    def inspect(self, campaign_id):
         request_db = Database('requests')
-        for campaign_id in campaign_ids:
-            try:
-                self.logger.info('Starting campaign inspect of %s', campaign_id)
-                yield f'Starting campaign inspect of {campaign_id}\n'
-                query = {'member_of_campaign': campaign_id,
-                         'status': ['submitted', 'approved']}
-                # Do another loop over the requests themselves
-                page = 0
-                requests = [{}]
-                while len(requests) > 0:
-                    requests = request_db.search(query, page=page, limit=200)
-                    self.logger.info('Inspecting %s requests on page %s', len(requests), page)
-                    yield f'Inspecting {len(requests)} requests on page {page}\n'
-                    for request_json in requests:
-                        prepid = request_json['prepid']
-                        self.logger.info('Inspecting request %s', prepid)
-                        yield f'Inspecting request {prepid}\n'
-                        request = Request(request_json)
-                        inspect_result = request.inspect()
-                        if not inspect_result.get('results'):
-                            message = inspect_result.get('message', '?')
-                            self.logger.info('Failure: %s', message)
-                            yield f'Failure: {message}\n'
-                        else:
-                            self.logger.info('Success!')
-                            yield 'Success!\n'
+        try:
+            self.logger.info('Starting campaign inspect of %s', campaign_id)
+            yield f'Starting campaign inspect of {campaign_id}\n'
+            query = {'member_of_campaign': campaign_id,
+                     'status': ['submitted', 'approved']}
+            # Do another loop over the requests themselves
+            page = 0
+            requests = [{}]
+            while len(requests) > 0:
+                requests = request_db.search(query, page=page, limit=200)
+                self.logger.info('Inspecting %s requests on page %s', len(requests), page)
+                yield f'Inspecting {len(requests)} requests on page {page}\n'
+                for request_json in requests:
+                    prepid = request_json['prepid']
+                    self.logger.info('Inspecting request %s', prepid)
+                    yield f'Inspecting request {prepid}\n'
+                    request = Request(request_json)
+                    inspect_result = request.inspect()
+                    if not inspect_result.get('results'):
+                        message = inspect_result.get('message', '?')
+                        self.logger.info('Failure: %s', message)
+                        yield f'Failure: {message}\n'
+                    else:
+                        self.logger.info('Success!')
+                        yield 'Success!\n'
 
-                    page += 1
-                    time.sleep(0.1)
+                page += 1
+                time.sleep(0.1)
 
-                time.sleep(0.2)
-            except Exception as ex:
-                self.logger.error('Exception while inspecting %s campaign: %s\n%s',
-                                  campaign_id,
-                                  ex,
-                                  traceback.format_exc())
+            time.sleep(0.2)
+        except Exception as ex:
+            self.logger.error('Exception while inspecting %s campaign: %s\n%s',
+                                campaign_id,
+                                ex,
+                                traceback.format_exc())
 
-            self.logger.info('Campaign %s inspection finished', campaign_id)
+        self.logger.info('Campaign %s inspection finished', campaign_id)

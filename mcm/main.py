@@ -3,9 +3,9 @@ from rest_api.RestAPIMethod import RESTResource
 from rest_api.RequestActions import (RequestImport,
                                      RequestClone,
                                      RequestDelete,
-                                     RequestGet,
+                                     GetRequest,
                                      RequestUpdate,
-                                     RequestGetEditable,
+                                     GetEditableRequest,
                                      RequestOptionReset,
                                      RequestNextStatus,
                                      RequestReset,
@@ -37,13 +37,28 @@ from rest_api.RequestActions import (RequestImport,
                                      #RequestsPriorityChange,
                                      #UpdateEventsFromWorkflow,
                                      GENLogOutput)
-from rest_api.CampaignActions import CreateCampaign, DeleteCampaign, UpdateCampaign, GetCampaign, ToggleCampaignStatus, GetCmsDriverForCampaign, InspectCampaigns
-from rest_api.ChainedCampaignActions import CreateChainedCampaign, DeleteChainedCampaign, GetChainedCampaign, UpdateChainedCampaign
+from rest_api.CampaignActions import (CreateCampaign,
+                                      DeleteCampaign,
+                                      UpdateCampaign,
+                                      GetCampaign,
+                                      GetEditableCampaign,
+                                      ToggleCampaignStatus,
+                                      GetCmsDriverForCampaign,
+                                      GetUniqueCampaignValues,
+                                      GetDefaultCampaignSequence,
+                                      InspectCampaigns)
+from rest_api.ChainedCampaignActions import (CreateChainedCampaign,
+                                             DeleteChainedCampaign,
+                                             GetChainedCampaign,
+                                             UpdateChainedCampaign,
+                                             GetEditableChainedCampaign)
 from rest_api.ChainedRequestActions import (ChainedRequestFlow,
                                             ChainedRequestRewind,
                                             ChainedRequestRewindToRoot,
                                             UpdateChainedRequest,
                                             DeleteChainedRequest,
+                                            GetChainedRequest,
+                                            GetEditableChainedRequest)
                                             #ForceChainReqToDone,
                                             #ForceStatusDoneToProcessing,
                                             #CreateChainedRequest,
@@ -61,8 +76,7 @@ from rest_api.ChainedRequestActions import (ChainedRequestFlow,
                                             #ToForceFlowList,
                                             #RemoveFromForceFlowList,
                                             #GetUniqueChainedRequestValues,
-                                            GetChainedRequest)
-from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow
+from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow, GetEditableFlow
 from rest_api.UserActions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser
 from rest_api.BatchActions import GetBatch, AnnounceBatch, DeleteBatch
 from rest_api.InvalidationActions import (GetInvalidation,
@@ -72,7 +86,7 @@ from rest_api.InvalidationActions import (GetInvalidation,
                                           HoldInvalidation,
                                           ResetInvalidation)
 from rest_api.DashboardActions import GetLocksInfo, GetValidationInfo, GetStartTime, GetQueueInfo
-from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenConveners, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved, NotifyMccm
+from rest_api.MccmActions import GetMccM, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccM, GenerateChains, MccMReminderProdManagers, MccMReminderGenConveners, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved, NotifyMccm
 from rest_api.SettingsActions import GetSetting, SetSetting
 # from rest_api.TagActions import GetTags, AddTag, RemoveTag
 # from rest_api.ListActions import GetList, UpdateList
@@ -250,10 +264,10 @@ api.add_resource(RequestImport, '/restapi/requests/save')
 api.add_resource(RequestClone, '/restapi/requests/clone')
 api.add_resource(RequestUpdate, '/restapi/requests/update')
 api.add_resource(RequestDelete, '/restapi/requests/delete/<string:prepid>')
-api.add_resource(RequestGet,
+api.add_resource(GetRequest,
                  '/restapi/requests/get/<string:prepid>',
                  '/public/restapi/requests/get/<string:prepid>')
-api.add_resource(RequestGetEditable, '/restapi/requests/editable/<string:prepid>')
+api.add_resource(GetEditableRequest, '/restapi/requests/get_editable/<string:prepid>')
 api.add_resource(RequestOptionReset, '/restapi/requests/option_reset')
 api.add_resource(RequestNextStatus, '/restapi/requests/next_status')
 api.add_resource(RequestReset, '/restapi/requests/reset')
@@ -308,8 +322,11 @@ api.add_resource(CreateCampaign, '/restapi/campaigns/save')
 api.add_resource(UpdateCampaign, '/restapi/campaigns/update')
 api.add_resource(DeleteCampaign, '/restapi/campaigns/delete/<string:prepid>')
 api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:prepid>')
+api.add_resource(GetEditableCampaign, '/restapi/campaigns/get_editable/<string:prepid>')
 api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status')
 api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<string:prepid>')
+api.add_resource(GetUniqueCampaignValues, '/restapi/campaigns/unique_values')
+api.add_resource(GetDefaultCampaignSequence, '/restapi/campaigns/get_default_sequence')
 api.add_resource(InspectCampaigns, '/restapi/campaigns/inspect/<string:prepid>')
 
 # REST Chained Campaign Actions
@@ -317,6 +334,7 @@ api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
 api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:prepid>')
 api.add_resource(GetChainedCampaign, '/restapi/chained_campaigns/get/<string:prepid>')
 api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
+api.add_resource(GetEditableChainedCampaign, '/restapi/chained_campaigns/get_editable/<string:prepid>')
 
 # REST Chained Request Actions
 # api.add_resource(CreateChainedRequest, '/restapi/chained_requests/save')
@@ -326,6 +344,7 @@ api.add_resource(GetChainedRequest, '/restapi/chained_requests/get/<string:prepi
 api.add_resource(ChainedRequestFlow, '/restapi/chained_requests/flow')
 api.add_resource(ChainedRequestRewind, '/restapi/chained_requests/rewind')
 api.add_resource(ChainedRequestRewindToRoot, '/restapi/chained_requests/rewind_to_root')
+api.add_resource(GetEditableChainedRequest, '/restapi/chained_requests/get_editable/<string:prepid>')
 # api.add_resource(
 #     ApproveChainedRequest,
 #     '/restapi/chained_requests/approve/<string:chained_request_id>',
@@ -357,6 +376,7 @@ api.add_resource(UpdateFlow, '/restapi/flows/update')
 api.add_resource(DeleteFlow, '/restapi/flows/delete/<string:prepid>')
 api.add_resource(ApproveFlow, '/restapi/flows/approve')
 api.add_resource(CloneFlow, '/restapi/flows/clone')
+api.add_resource(GetEditableFlow, '/restapi/flows/get_editable/<string:prepid>')
 
 # REST Batches Actions
 api.add_resource(GetBatch, '/restapi/batches/get/<string:prepid>')
@@ -380,14 +400,14 @@ api.add_resource(GetLocksInfo, '/restapi/dashboard/get_lock_info')
 api.add_resource(GetQueueInfo, '/restapi/dashboard/get_submission_info')
 # REST mccms Actions
 api.add_resource(
-    GetMccm,
+    GetMccM,
     '/restapi/mccms/get/<string:prepid>',
     '/public/restapi/mccms/get/<string:prepid>')
 api.add_resource(UpdateMccm, '/restapi/mccms/update')
 api.add_resource(CreateMccm, '/restapi/mccms/save')
 api.add_resource(DeleteMccm, '/restapi/mccms/delete/<string:prepid>')
 api.add_resource(CancelMccm, '/restapi/mccms/cancel')
-api.add_resource(GetEditableMccmFields, '/restapi/mccms/editable/<string:prepid>')
+api.add_resource(GetEditableMccM, '/restapi/mccms/get_editable/<string:prepid>')
 api.add_resource(GenerateChains, '/restapi/mccms/generate')
 api.add_resource(CalculateTotalEvts, '/restapi/mccms/recalculate')
 api.add_resource(CheckIfAllApproved, '/restapi/mccms/check_all_approved/<string:prepid>')

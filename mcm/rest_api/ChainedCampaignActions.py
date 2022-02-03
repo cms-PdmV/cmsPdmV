@@ -2,6 +2,7 @@ from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
 from couchdb_layer.mcm_database import database as Database
 from json_layer.chained_campaign import ChainedCampaign
 from json_layer.user import Role
+from tools.exceptions import NotFoundException
 
 
 class CreateChainedCampaign(RESTResource):
@@ -112,9 +113,33 @@ class DeleteChainedCampaign(DeleteRESTResource):
 
 
 class GetChainedCampaign(RESTResource):
+    """
+    Endpoing for retrieving a chained campaign
+    """
 
     def get(self, prepid):
         """
         Retrieve the chained campaign for given id
         """
-        return {'results': ChainedCampaign.get_database().get(prepid)}
+        chained_campaign = ChainedCampaign.fetch(prepid)
+        if not chained_campaign:
+            raise NotFoundException(prepid)
+
+        return {'results': chained_campaign.json()}
+
+
+class GetEditableChainedCampaign(RESTResource):
+    """
+    Endpoing for retrieving a chained campaign and it's editing info
+    """
+
+    def get(self, prepid):
+        """
+        Retrieve the chained campaign and it's editing info for given id
+        """
+        chained_campaign = ChainedCampaign.fetch(prepid)
+        if not chained_campaign:
+            raise NotFoundException(prepid)
+
+        return {'results': {'object': chained_campaign.json(),
+                            'editing_info': chained_campaign.get_editing_info()}}

@@ -4,6 +4,7 @@ from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
 from json_layer.campaign import Campaign
 from json_layer.flow import Flow
 from json_layer.user import Role
+from tools.exceptions import NotFoundException
 
 
 class FlowRESTResource(RESTResource):
@@ -315,12 +316,36 @@ class DeleteFlow(FlowRESTResource, DeleteRESTResource):
 
 
 class GetFlow(RESTResource):
+    """
+    Endpoing for retrieving a flow
+    """
 
     def get(self, prepid):
         """
         Retrieve the flow for given id
         """
-        return {'results': Flow.get_database().get(prepid)}
+        flow = Flow.fetch(prepid)
+        if not flow:
+            raise NotFoundException(prepid)
+
+        return {'results': flow.json()}
+
+
+class GetEditableFlow(RESTResource):
+    """
+    Endpoing for retrieving a flow and it's editing info
+    """
+
+    def get(self, prepid):
+        """
+        Retrieve the flow and it's editing info for given id
+        """
+        flow = Flow.fetch(prepid)
+        if not flow:
+            raise NotFoundException(prepid)
+
+        return {'results': {'object': flow.json(),
+                            'editing_info': flow.get_editing_info()}}
 
 
 class ApproveFlow(RESTResource):

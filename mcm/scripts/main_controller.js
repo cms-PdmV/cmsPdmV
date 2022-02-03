@@ -252,23 +252,20 @@ angular.module('testApp').controller('mainCtrl',
       $scope.openCloneItemModal = function (database, prepid) {
         const modal = $modal.open({
           templateUrl: 'cloneItemModal.html',
-          controller: function ($scope, $modalInstance, $window, $http, database, prepid, errorModal, setSuccess) {
+          controller: function ($scope, $modalInstance, $window, $http, database, prepid, errorModal) {
             $scope.prepid = prepid;
             $scope.database = database;
             $scope.vars = { 'newPrepid': '' };
             $scope.clone = function () {
               const itemData = { "prepid": $scope.prepid, "new_prepid": $scope.vars.newPrepid };
               $http({ method: 'PUT', url: 'restapi/' + $scope.database + '/clone/', data: itemData }).success(function (data, status) {
-                setSuccess(data["results"]);
                 if (data.results) {
                   $window.location.href = 'edit?db_name=' + $scope.database + '&query=' + data.prepid;
                 } else {
                   errorModal(data.prepid, data['message']);
-                  setSuccess(false, status);
                 }
               }).error(function (data, status) {
                 errorModal(data.prepid, data['message']);
-                setSuccess(false, status);
               });
               $modalInstance.close();
             };
@@ -280,7 +277,6 @@ angular.module('testApp').controller('mainCtrl',
             prepid: function () { return prepid; },
             database: function () { return database; },
             errorModal: function () { return $scope.openErrorModal; },
-            setSuccess: function () { return $scope.setSuccess; },
           }
         })
       };
@@ -288,7 +284,7 @@ angular.module('testApp').controller('mainCtrl',
       $scope.openCreateItemModal = function (database) {
         $modal.open({
           templateUrl: 'createItemModal.html',
-          controller: function ($scope, $modalInstance, database) {
+          controller: function ($scope, $modalInstance, database, errorModal) {
             $scope.vars = { "prepid": "" };
             $scope.database = database;
             $scope.save = function () {
@@ -297,12 +293,10 @@ angular.module('testApp').controller('mainCtrl',
                 if (data.results) {
                   $window.location.href = 'edit?db_name=' + $scope.database + '&query=' + $scope.vars.prepid;
                 } else {
-                  $scope.openErrorModal(prepid, data['message']);
-                  $scope.setSuccess(false, status);
+                  errorModal(itemData.prepid, data['message']);
                 }
               }).error(function (data, status) {
-                $scope.openErrorModal(prepid, data['message']);
-                $scope.setSuccess(false, status);
+                errorModal(itemData.prepid, data['message']);
               });
               $modalInstance.close();
             };
@@ -312,6 +306,7 @@ angular.module('testApp').controller('mainCtrl',
           },
           resolve: {
             database: function () { return database; },
+            errorModal: function () { return $scope.openErrorModal; },
           }
         })
       };
