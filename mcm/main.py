@@ -458,7 +458,7 @@ def setup_access_logger(debug):
         if not os.path.isdir('logs'):
             os.mkdir('logs')
 
-        log_size = 1024 ** 3  # 10MB
+        log_size = 10 * 1024 * 1024  # 10MB
         log_count = 500  # 500 files
         log_name = 'logs/access.log'
         handler = logging.handlers.RotatingFileHandler(log_name, 'a', log_size, log_count)
