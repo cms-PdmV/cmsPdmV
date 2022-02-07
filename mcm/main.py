@@ -10,6 +10,7 @@ from rest_api.RequestActions import (RequestImport,
                                      RequestNextStatus,
                                      RequestReset,
                                      RequestSoftReset,
+                                     GetUniqueRequestValues,
                                      #GetCmsDriverForRequest,
                                      #GetFragmentForRequest,
                                      #GetSetupForRequest,
@@ -272,6 +273,7 @@ api.add_resource(RequestOptionReset, '/restapi/requests/option_reset')
 api.add_resource(RequestNextStatus, '/restapi/requests/next_status')
 api.add_resource(RequestReset, '/restapi/requests/reset')
 api.add_resource(RequestSoftReset, '/restapi/requests/soft_reset')
+api.add_resource(GetUniqueRequestValues, '/restapi/requests/unique_values')
 # api.add_resource(GetCmsDriverForRequest, '/restapi/requests/get_cmsDrivers/<string:request_id>')
 # api.add_resource(
 #     ResetRequestApproval,
@@ -312,7 +314,6 @@ api.add_resource(RequestSoftReset, '/restapi/requests/soft_reset')
 # api.add_resource(UpdateMany, '/restapi/requests/update_many')
 # api.add_resource(GetInjectCommand, '/restapi/requests/get_inject/<string:request_id>')
 # api.add_resource(GetUploadCommand, '/restapi/requests/get_upload/<string:request_id>')
-# api.add_resource(GetUniqueValues, '/restapi/requests/unique_values/<string:field_name>')
 # api.add_resource(Reserve_and_ApproveChain, '/restapi/requests/reserveandapprove/<string:chain_id>')
 # api.add_resource(RequestsPriorityChange, '/restapi/requests/priority_change')
 api.add_resource(GENLogOutput, '/restapi/requests/gen_log/<string:request_id>')

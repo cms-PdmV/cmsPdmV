@@ -94,3 +94,11 @@ class ChainedCampaign(json_base):
         Return campaign name at given index
         """
         return self[index][0]
+
+    def get_editing_info(self):
+        info = super().get_editing_info()
+        info['check_cmssw_version'] = True
+        info['enabled'] = True
+        info['notes'] = True
+        info['threshold'] = True
+        return info

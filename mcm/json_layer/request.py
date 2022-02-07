@@ -105,8 +105,61 @@ class Request(json_base):
 
     def get_editing_info(self):
         info = super().get_editing_info()
-        info['notes'] = True
-        info['sequences'] = True
+        approval_status = self.get_approval_status()
+        if approval_status in {'validation-new', 'submit-approved'}:
+            return info
+
+        user = User()
+        user_role = user.get_role()
+        is_admin = user_role >= Role.ADMINISTRATOR
+        is_prod_expert = user_role >= Role.PRODUCTION_EXPERT
+        is_prod_manager = user_role >= Role.PRODUCTION_MANAGER
+        is_gen_convener = user_role >= Role.GEN_CONVENER
+        is_mc_contact = user_role >= Role.MC_CONTACT
+        is_user = user_role >= Role.USER
+        # Some are always editable
+        info['notes'] = is_user
+        info['tags'] = is_user
+        info['interested_pwg'] = is_user
+        # Depending on status
+        if approval_status == 'none-new':
+            info['cmssw_release'] = is_prod_expert
+            info['dataset_name'] = is_mc_contact and not self.get('flown_with')
+            info['energy'] = is_prod_expert
+            info['extension'] = is_mc_contact
+            info['fragment'] = is_mc_contact
+            info['fragment_tag'] = is_mc_contact
+            info['generator_parameters'] = is_mc_contact
+            info['generators'] = is_mc_contact
+            info['input_dataset'] = is_mc_contact
+            info['keep_output'] = is_mc_contact
+            info['mcdb_id'] = is_mc_contact
+            info['memory'] = is_prod_manager
+            info['name_of_fragment'] = is_mc_contact
+            info['pilot'] = is_mc_contact
+            info['priority'] = is_prod_manager
+            info['process_string'] = is_prod_manager
+            info['sequences'] = is_prod_manager
+            info['size_event'] = is_mc_contact
+            info['time_event'] = is_mc_contact
+            info['total_events'] = is_mc_contact
+            info['size_event'] = is_mc_contact
+            info['time_event'] = is_mc_contact
+            info['validation'] = is_mc_contact
+        elif approval_status == 'defined-defined':
+            info['dataset_name'] = is_prod_manager
+            info['total_events'] = is_prod_manager
+            info['keep_output'] = is_prod_expert
+            info['pilot'] = is_prod_manager
+            info['extension'] = is_prod_manager
+            info['input_dataset'] = is_prod_expert
+            info['time_event'] = is_prod_expert
+            info['size_event'] = is_prod_expert
+            info['process_string'] = is_prod_manager
+            info['priority'] = is_prod_manager
+        elif approval_status == 'approve-approved':
+            info['dataset_name'] = is_gen_convener
+
         return info
 
     def validate(self):

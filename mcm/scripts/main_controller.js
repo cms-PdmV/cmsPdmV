@@ -260,7 +260,7 @@ angular.module('testApp').controller('mainCtrl',
               const itemData = { "prepid": $scope.prepid, "new_prepid": $scope.vars.newPrepid };
               $http({ method: 'PUT', url: 'restapi/' + $scope.database + '/clone/', data: itemData }).success(function (data, status) {
                 if (data.results) {
-                  $window.location.href = 'edit?db_name=' + $scope.database + '&query=' + data.prepid;
+                  $window.location.href = 'edit?db_name=' + $scope.database + '&prepid=' + data.prepid;
                 } else {
                   errorModal(data.prepid, data['message']);
                 }
@@ -291,7 +291,7 @@ angular.module('testApp').controller('mainCtrl',
               const itemData = { "prepid": $scope.vars.prepid };
               $http({ method: 'PUT', url: 'restapi/' + $scope.database + '/save/', "data": itemData }).success(function (data, status) {
                 if (data.results) {
-                  $window.location.href = 'edit?db_name=' + $scope.database + '&query=' + $scope.vars.prepid;
+                  $window.location.href = 'edit?db_name=' + $scope.database + '&prepid=' + $scope.vars.prepid;
                 } else {
                   errorModal(itemData.prepid, data['message']);
                 }

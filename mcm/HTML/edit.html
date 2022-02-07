@@ -15,7 +15,6 @@
     var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
   </script>
   <script src="scripts/main_controller.js"></script>
-  <script src="scripts/edit.js"></script>
   <script src="scripts/edit_controller.js"></script>
   <!-- angularui is needed for codemirror -->
   <script src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
@@ -57,6 +56,20 @@
     }
     .table-cell-wrapper > div {
       display: flex;
+    }
+    .CodeMirror {
+      height: auto;
+      min-height: 50px;
+    }
+    table.generator-parameters td {
+      border: none;
+      padding: 1px 20px 1px 0;
+    }
+    input.tt-hint {
+      display: none !important;
+    }
+    span.twitter-typeahead {
+      margin-top: 2px;
     }
   </style>
 </head>
@@ -108,11 +121,11 @@
           <table class="table table-bordered table-stripped" style="margin: 30px auto">
             <tbody>
               <tr ng-repeat="(attribute, editable) in editingInfo">
-                <td>
-                  {{attribute}}
+                <td style="text-transform: capitalize; white-space: nowrap;">
+                  {{attribute.replaceAll('_', ' ')}}
                 </td>
-                <td>
-                  <!-- VALUE: {{editableObject[attribute]}} EDITABLE: {{editable}} -->
+                <td style="width: 100%;">
+                  <!-- <small style="font-family: monospace;">VALUE: {{editableObject[attribute]}} EDITABLE: {{editable}}</small> -->
                   <div ng-switch on="attribute" class="table-cell-wrapper">
                     <div ng-switch-when="events_per_lumi">
                       <div ng-if="dbName == 'campaigns'">
@@ -125,22 +138,23 @@
                                ng-model="editableObject[attribute].multicore"
                                ng-disabled="!editable">
                       </div>
-                      <div ng-else>
-
+                      <div ng-if="dbName == 'requests'" style="width: 100%">
+                        <edit-events-per-lumi style="width: 100%" ng-model="editableObject[attribute]" editable="editable"></edit-events-per-lumi>
                       </div>
                     </div>
                     <div ng-switch-when="generators">
                       <edit-list-with-suggestions ng-model="editableObject[attribute]"
                                                   style="display: flex; width: 100%"
                                                   editable="editable"
-                                                  attribute="generators"
+                                                  suggest-attribute="generators"
                                                   limit="20"></edit-list-with-suggestions>
                     </div>
                     <div ng-switch-when="cmssw_release">
                       <edit-attribute-with-suggestions ng-model="editableObject[attribute]"
                                                        style="display: flex; width: 100%"
                                                        editable="editable"
-                                                       attribute="cmssw_release"
+                                                       suggest-database="campaigns"
+                                                       suggest-attribute="cmssw_release"
                                                        limit="20"></edit-attribute-with-suggestions>
                     </div>
                     <div ng-switch-when="keep_output">
@@ -167,55 +181,111 @@
                       <edit-campaign-sequences ng-if="dbName == 'campaigns'" ng-model="editableObject[attribute]" disabled="!editable" campaign="editableObject"></edit-campaign-sequences>
                       <edit-request-sequences ng-if="dbName == 'requests'" ng-model="editableObject[attribute]" disabled="!editable" request="editableObject"></edit-request-sequences>
                     </div>
-                    <div ng-switch-when="Validation">
-                      <custom-validation-edit ng-model="result[column.db_name]"></custom-validation-edit>
+                    <div ng-switch-when="root">
+                      <select ng-model="editableObject[attribute]" ng-disabled="!editable" convert-to-number>
+                        <option value="0" ng-selected="editableObject[attribute] == 0">Yes</option>
+                        <option value="-1" ng-selected="editableObject[attribute] == -1">Possible</option>
+                        <option value="1" ng-selected="editableObject[attribute] == 1">No</option>
+                      </select>
                     </div>
-                    <div ng-switch-when="Tags">
-                      <tokenfield show-autocomplete-on-focus="true" tokens="result[column.db_name]"
-                        allow-duplicates="false" before-create="addToken" on-remove="removeToken"
-                        type-ahead="{'name':'request_tags', 'prefetch':{'url': 'restapi/tags/get_all',ttl:10,'filter': '(function(data){return data.tags;})'}}" />
+                    <div ng-switch-when="type">
+                      <select ng-model="editableObject[attribute]" ng-disabled="!editable">
+                        <option value="" disabled ng-selected="editableObject[attribute] == ''">Not selected</option>
+                        <option value="LHE" ng-selected="editableObject[attribute] == 'LHE'">LHE</option>
+                        <option value="Prod" ng-selected="editableObject[attribute] == 'Prod'">Prod</option>
+                        <option value="MCReproc" ng-selected="editableObject[attribute] == 'MCReproc'">MCReproc</option>
+                      </select>
                     </div>
-                    <div ng-switch-when="Request parameters" ng-controller="ModalDemoCtrl">
-                      <ng-form name="fieldForm" id="fieldForm">
-                        <a class="btn btn-small" href="#" ng-click="update();">
-                          <i class="icon-refresh"></i>
-                        </a>
-                        <a class="btn btn-small btn-info text-uppercase" ng-click="openRequestParametersModal()"
-                          href="#">Edit</a>
-                        <span class="badge badge-important" ng-show="fieldForm.$invalid">Bad JSON formatting</span>
-                        <span class="badge badge-success" ng-show="!fieldForm.$invalid">Valid JSON formatting</span>
-                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                      </ng-form>
+                    <div ng-switch-when="allowed_campaigns">
+                      <edit-list-with-suggestions ng-model="editableObject[attribute]"
+                                                  style="display: flex; width: 100%"
+                                                  editable="editable"
+                                                  suggest-database="campaigns"
+                                                  suggest-attribute="prepid"
+                                                  limit="20"></edit-list-with-suggestions>
                     </div>
-                    <div ng-switch-when="Reqmgr name">
-                      <ng-form name="fieldForm">
-                        <div inline-editable ng-model="result[column.db_name]" column="column.text"></div>
-                        <font color="red" ng-show="fieldForm.$invalid">Bad JSON formatting</font>
-                      </ng-form>
+                    <div ng-switch-when="next_campaign">
+                      <edit-attribute-with-suggestions ng-model="editableObject[attribute]"
+                                                       style="display: flex; width: 100%"
+                                                       editable="editable"
+                                                       suggest-database="campaigns"
+                                                       suggest-attribute="prepid"
+                                                       limit="20"></edit-attribute-with-suggestions>
                     </div>
-                    <div ng-switch-when="Generator parameters">
-                      <div generator-params ng-model="result[column.db_name]"></div>
+                    <div ng-switch-when="request_parameters">
+                      <edit-request-parameters ng-model="editableObject[attribute]"
+                                               style="width: 100%;"
+                                               editable="editable"></edit-request-parameters>
                     </div>
-                    <div ng-switch-when="Fragment">
-                      <span ng-switch on="not_editable_list.indexOf(column.text)!=-1">
-                        <span ng-switch-when="true">
-                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:true}" ui-refresh=true
-                            ng-model="result[column.db_name]"></textarea>
-                        </span>
-                        <span ng-switch-when="false">
-                          <textarea ui-codemirror="{ theme:'eclipse', readOnly:false}" ui-refresh=true
-                            ng-model="result[column.db_name]"></textarea>
-                        </span>
-                      </span>
+                    <div ng-switch-when="process_string">
+                      <edit-attribute-with-suggestions ng-model="editableObject[attribute]"
+                                                       style="display: flex; width: 100%"
+                                                       editable="editable"
+                                                       suggest-attribute="process_string"
+                                                       limit="20"></edit-attribute-with-suggestions>
                     </div>
-                    <div ng-switch-when="Extension">
-                      <select class="input-mini" ng-disabled="not_editable_list.indexOf(column.text)!=-1"
-                        ng-model="result[column.db_name]" ng-options="key as key for key in [0,1,2,3,4,5]"></select>
+                    <div ng-switch-when="interested_pwg">
+                      <edit-list-with-suggestions ng-model="editableObject[attribute]"
+                                                  style="display: flex; width: 100%"
+                                                  editable="editable"
+                                                  suggest-database="requests"
+                                                  suggest-attribute="pwg"
+                                                  limit="20"></edit-list-with-suggestions>
                     </div>
-                    <div ng-switch-when="Allowed campaigns">
-                      <list-predefined ng-model="result[column.db_name]" column="column.text"
-                        suggestions="allCampaigns"></list-predefined>
+                    <div ng-switch-when="fragment" style="max-width: 699px; letter-spacing: -0.25px;">
+                      <textarea class="fragment"
+                                ng-model="editableObject[attribute]"></textarea>
                     </div>
+                    <div ng-switch-when="extension">
+                      <select class="input-mini" ng-disabled="!editable" ng-model="editableObject[attribute]" ng-options="key as key for key in [0,1,2,3,4,5]"></select>
+                    </div>
+                    <div ng-switch-when="mcdb_id">
+                      <input type="number"
+                             ng-model="editableObject[attribute]"
+                             ng-disabled="!editable"
+                             min="0"
+                             max="100000">
+                    </div>
+                    <div ng-switch-when="size_event">
+                      <edit-size-event editable="editable" ng-model="editableObject[attribute]"></edit-size-event>
+                    </div>
+                    <div ng-switch-when="time_event">
+                      <edit-time-event editable="editable" ng-model="editableObject[attribute]"></edit-time-event>
+                    </div>
+                    <div ng-switch-when="generator_parameters">
+                      <edit-generator-parameters editable="editable" ng-model="editableObject[attribute]"></edit-generator-parameters>
+                    </div>
+                    <div ng-switch-when="validation">
+                      <edit-request-validation editable="editable" ng-model="editableObject[attribute]"></edit-request-validation>
+                    </div>
+                    <div ng-switch-when="tags">
+                      <edit-tags editable="editable" style="display: flex; width: 100%" ng-model="editableObject[attribute]"></edit-tags>
+                    </div>
+
+                    <div ng-switch-when="chains">
+                      <edit-mccm-chains editable="editable" ng-model="editableObject[attribute]"></edit-mccm-chains>
+                    </div>
+                    <div ng-switch-when="requests">
+                      <edit-mccm-requests editable="editable" ng-model="editableObject[attribute]"></edit-mccm-requests>
+                    </div>
+                    <div ng-switch-when="block">
+                      <select style="margin-bottom: 0;" ng-model="editableObject[attribute]" ng-disabled="!editable" convert-to-number>
+                        <option value="0" ng-selected='result[column.db_name] == 0'>0 (not selected)</option>
+                        <option value="1" ng-selected='result[column.db_name] == 1'>1 (110k)</option>
+                        <option value="2" ng-selected='result[column.db_name] == 2'>2 (90k)</option>
+                        <option value="3" ng-selected='result[column.db_name] == 3'>3 (85k)</option>
+                        <option value="4" ng-selected='result[column.db_name] == 4'>4 (80k)</option>
+                        <option value="5" ng-selected='result[column.db_name] == 5'>5 (70k)</option>
+                        <option value="6" ng-selected='result[column.db_name] == 6'>6 (63k)</option>
+                      </select>
+                    </div>
+                    <div ng-switch-when="repetitions">
+                      <select style="margin-bottom: 0;"
+                              ng-model="editableObject[attribute]"
+                              ng-disabled="!editable"
+                              ng-options="key as key for key in [1,2,3,4,5,6,7,8,9,10]"></select>
+                    </div>
+
                     <div ng-switch-when="Pwg">
                       <div ng-switch on="dbName">
                         <div ng-switch-when="users">
@@ -234,44 +304,6 @@
                         </div>
                       </div>
                     </div>
-                    <div ng-switch-when="Next campaign">
-                      <single-predefined ng-model="result[column.db_name]" column="column.text"
-                        suggestions="allCampaigns"></single-predefined>
-                    </div>
-
-                    <div ng-switch-when="Type">
-                      <select ng-model="result[column.db_name]"
-                        ng-disabled="not_editable_list.indexOf(column.text)!=-1">
-                        <option ng-repeat="elem in type_list" ng-selected="elem == result[column.db_name]">{{elem}}
-                        </option>
-                      </select>
-                    </div>
-                    <div ng-switch-when="Root">
-                      <select ng-model="result[column.db_name]"
-                        ng-disabled="not_editable_list.indexOf(column.text)!=-1">
-                        <option value="0" ng-selected="result[column.db_name] == 0">Yes</option>
-                        <option value="-1" ng-selected="result[column.db_name] == -1">Possible</option>
-                        <option value="1" ng-selected="result[column.db_name] == 1">No</option>
-                      </select>
-                    </div>
-                    <div ng-switch-when="Requests">
-                      <custom-requests-edit ng-model="result[column.db_name]"></custom-requests-edit>
-                    </div>
-                    <div ng-switch-when="Memory">
-                      <textarea type="text" ng-model="result[column.db_name]"
-                        ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
-                      <a class="label label-info" rel="tooltip" title="megabytes" ng-href="#">MB</a>
-                    </div>
-                    <div ng-switch-when="Size event">
-                      <size-event-edit ng-model="result[column.db_name]" column="column.text"></size-event-edit>
-                    </div>
-                    <div ng-switch-when="Time event">
-                      <time-event-edit ng-model="result[column.db_name]" column="column.text"></time-event-edit>
-                    </div>
-                    <div ng-switch-when="Chains">
-                      <!-- custom chains editor for mccm's -->
-                      <custom-mccm-chains ng-model="result[column.db_name]"></custom-mccm-chains>
-                    </div>
                     <div ng-switch-when="Value">
                       <!-- <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea> -->
                       <ng-form name="fieldForm">
@@ -280,47 +312,6 @@
                       </ng-form>
                     </div>
 
-                    <div ng-switch-when="Interested pwg">
-                      <list-predefined ng-model="result[column.db_name]" column="column.text"
-                        suggestions-fieldname="pwg" ng-disabled="not_editable_list.indexOf(column.text)!=-1">
-                      </list-predefined>
-                    </div>
-                    <div ng-switch-when="Chain type">
-                      <button class="btn btn-info"
-                        ng-click="result[column.db_name] = result[column.db_name] === 'TaskChain' ? 'StepChain' : 'TaskChain'">
-                        {{result[column.db_name]}}
-                      </button>
-                    </div>
-                    <div ng-switch-when="Do not check cmssw versions">
-                      <input type="checkbox" ng-model="result[column.db_name]">
-                    </div>
-                    <div ng-switch-when="Generated chains">
-                      <small>
-                        <ul>
-                          <li ng-repeat="(chain, _) in result[column.db_name]">
-                            <a href="chained_requests?prepid={{chain}}" target="_blank">{{chain}}</a>
-                          </li>
-                        </ul>
-                      </small>
-                    </div>
-                    <div ng-switch-when="Block">
-                      <select style="margin-bottom: 0;" ng-model="result[column.db_name]"
-                        ng-disabled="not_editable_list.indexOf(column.text) != -1" convert-to-number>
-                        <option value="0" ng-selected='result[column.db_name] == 0'>0 (not selected)</option>
-                        <option value="1" ng-selected='result[column.db_name] == 1'>1 (110k)</option>
-                        <option value="2" ng-selected='result[column.db_name] == 2'>2 (90k)</option>
-                        <option value="3" ng-selected='result[column.db_name] == 3'>3 (85k)</option>
-                        <option value="4" ng-selected='result[column.db_name] == 4'>4 (80k)</option>
-                        <option value="5" ng-selected='result[column.db_name] == 5'>5 (70k)</option>
-                        <option value="6" ng-selected='result[column.db_name] == 6'>6 (63k)</option>
-                      </select>
-                    </div>
-                    <div ng-switch-when="Repetitions">
-                      <select style="margin-bottom: 0;" ng-model="result[column.db_name]"
-                        ng-disabled="not_editable_list.indexOf(column.text) != -1"
-                        ng-options="key as key for key in [1,2,3,4,5,6,7,8,9,10]"></select>
-                      </select>
-                    </div>
                     <div ng-switch-when="Role">
                       <select style="margin-bottom: 0;" ng-model="result[column.db_name]"
                         ng-disabled="!user.is_production_manager">

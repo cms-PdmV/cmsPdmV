@@ -1,4 +1,5 @@
 import datetime
+from json_layer.user import Role, User
 
 from tools.settings import Settings
 from json_layer.json_base import json_base
@@ -44,6 +45,29 @@ class MccM(json_base):
             cls.database = Database('mccms')
 
         return cls.database
+
+    def get_editing_info(self):
+        info = super().get_editing_info()
+        status = self.get('status')
+        if status != 'new':
+            return info
+
+        user = User()
+        user_role = user.get_role()
+        is_admin = user_role >= Role.ADMINISTRATOR
+        is_prod_expert = user_role >= Role.PRODUCTION_EXPERT
+        is_prod_manager = user_role >= Role.PRODUCTION_MANAGER
+        is_gen_convener = user_role >= Role.GEN_CONVENER
+        is_mc_contact = user_role >= Role.MC_CONTACT
+        is_user = user_role >= Role.USER
+        # Some are always editable
+        info['block'] = is_mc_contact
+        info['chains'] = is_mc_contact
+        info['requests'] = is_mc_contact
+        info['repetitions'] = is_mc_contact
+        info['tags'] = is_mc_contact
+
+        return info
 
     @staticmethod
     def get_meeting_date():

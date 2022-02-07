@@ -50,3 +50,11 @@ class Flow(json_base):
             cls.database = Database('flows')
 
         return cls.database
+
+    def get_editing_info(self):
+        info = super().get_editing_info()
+        info['allowed_campaigns'] = True
+        info['next_campaign'] = True
+        info['notes'] = True
+        info['request_parameters'] = True
+        return info

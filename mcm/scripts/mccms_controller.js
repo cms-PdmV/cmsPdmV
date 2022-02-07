@@ -88,7 +88,7 @@ angular.module('testApp').controller('resultsCtrl',
               const ticketData = {'pwg': $scope.vars.selectedPwg};
               $http({method: 'PUT', url: 'restapi/mccms/save/', data: ticketData}).success(function (data) {
                 if (data.results) {
-                  $window.location.href = "edit?db_name=mccms&query=" + data.prepid;
+                  $window.location.href = "edit?db_name=mccms&prepid=" + data.prepid;
                 } else {
                   errorModal(data.prepid, data['message']);
                 }

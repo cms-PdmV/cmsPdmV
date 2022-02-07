@@ -259,8 +259,8 @@ class GetUniqueCampaignValues(RESTResource):
 
         limit = int(args.get('limit', 10))
         limit = min(100, max(1, limit))
-        request_db = Request.get_database()
-        return {'results': request_db.query_unique(attribute, value, limit)}
+        campaign_db = Campaign.get_database()
+        return {'results': campaign_db.query_unique(attribute, value, limit)}
 
 
 class GetDefaultCampaignSequence(RESTResource):

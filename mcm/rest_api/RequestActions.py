@@ -1192,17 +1192,25 @@ class GetInjectCommand(RESTResource):
         return RequestInjector(prepid=request_id).make_injection_command(req)
 
 
-class GetUniqueValues(RESTResource):
+class GetUniqueRequestValues(RESTResource):
+    """
+    Endpoint for getting unique values of request attributes
+    """
 
-    def get(self, field_name):
+    def get(self):
         """
-        Get unique values for navigation by field_name
+        Get unique values of certain attribute
         """
         args = flask.request.args.to_dict()
-        db = Database('requests')
-        return {'results': db.query_unique(field_name,
-                                           args.get('key', ''),
-                                           int(args.get('limit', 10)))}
+        attribute = args.get('attribute')
+        value = args.get('value')
+        if not attribute or not value:
+            return {'results': []}
+
+        limit = int(args.get('limit', 10))
+        limit = min(100, max(1, limit))
+        request_db = Request.get_database()
+        return {'results': request_db.query_unique(attribute, value, limit)}
 
 
 class RequestsPriorityChange(RESTResource):

@@ -32,7 +32,7 @@ angular.module('testApp').controller('resultsCtrl',
               const requestData = {member_of_campaign: $scope.vars.prepid, pwg: $scope.vars.selectedPwg};
               $http({method: 'PUT', url: 'restapi/requests/save/', data: requestData}).success(function (data) {
                 if (data.results) {
-                  $window.location.href = "edit?db_name=requests&query=" + data.prepid;
+                  $window.location.href = "edit?db_name=requests&prepid=" + data.prepid;
                 } else {
                   errorModal(data.prepid, data['message']);
                 }
