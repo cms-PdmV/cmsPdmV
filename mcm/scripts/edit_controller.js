@@ -31,9 +31,17 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.editingInfo = editableDict.editing_info;
         const hide = ['history', '_id', '_rev', 'next', 'reqmgr_name', 'config_id',
           'output_dataset', 'member_of_chain', 'member_of_campaign',
-          'campaigns', 'generated_chains', 'meeting'];
+          'campaigns', 'generated_chains', 'meeting', 'completed_events', 'version'];
         for (let attr of hide) {
           delete $scope.editingInfo[attr];
+        }
+        // If use is not production manager, show only those fields that can be edited
+        if (!$scope.user.is_mc_contact) {
+          for (let attr in $scope.editingInfo) {
+            if (!$scope.editingInfo[attr]) {
+              delete $scope.editingInfo[attr];
+            }
+          }
         }
         $scope.editableObject = editableDict.object;
         // Fragment field

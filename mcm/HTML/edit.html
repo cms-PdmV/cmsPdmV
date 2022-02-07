@@ -317,8 +317,8 @@
                         ng-disabled="!user.is_production_manager">
                         <option ng-if="user.is_user" value="user" ng-selected='result[column.db_name] == "user"'>User
                         </option>
-                        <option ng-if="user.is_generator_contact" value="generator_contact"
-                          ng-selected='result[column.db_name] == "generator_contact"'>Generator Contact</option>
+                        <option ng-if="user.is_mc_contact" value="mc_contact"
+                          ng-selected='result[column.db_name] == "mc_contact"'>MC Contact</option>
                         <option ng-if="user.is_generator_convener" value="generator_convener"
                           ng-selected='result[column.db_name] == "generator_convener"'>Generator Convener</option>
                         <option ng-if="user.is_production_manager" value="production_manager"

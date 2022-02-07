@@ -84,7 +84,7 @@ angular.module('testApp').controller('mainCtrl',
         $scope.user.pwgs = data.data.pwgs;
         const roles = ['anonymous',
                        'user',
-                       'generator_contact',
+                       'mc_contact',
                        'generator_convener',
                        'production_manager',
                        'production_expert',

@@ -70,7 +70,7 @@
                 <a ng-href="chained_requests?from_ticket={{data.prepid}}" title="Show generated chained requests of {{data.prepid}}" target="_self">
                   <i class="icon-indent-left"></i>
                 </a>
-                <a ng-click="checkApproved(data.prepid)" title="Check approval of requests" ng-show="user.is_generator_contact" ng-href="#">
+                <a ng-click="checkApproved(data.prepid)" title="Check approval of requests" ng-show="user.is_mc_contact" ng-href="#">
                   <i class="icon-eye-open"></i>
                 </a>
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
