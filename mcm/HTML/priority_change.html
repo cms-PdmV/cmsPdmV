@@ -1,28 +1,28 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+<html lang="eng" ng-app="mcmApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
         <base href="/mcm/">
         <title>Priority change page McM</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
+        <link href="scripts/css/mcm.css" rel="stylesheet"/>
 
         <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
 
         <!--[IF IE]>
           <script type="text/javascript">
-            var testApp = angular.module('testApp',['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+            var mcmApp = angular.module('mcmApp',['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
           </script>
         <![endif]-->
         <![if !IE]>
           <script type="text/javascript">
-            var testApp = angular.module('testApp',['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+            var mcmApp = angular.module('mcmApp',['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
           </script>
         <![endif]>
         <script src="scripts/main_controller.js"></script>
         <script src="scripts/priority_change_controller.js"></script>
         <script src="scripts/snow.js"></script>
   </head>
-  <body ng-controller="mainCtrl">
+  <body ng-controller="mainController">
     <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
     <div class="container">
@@ -110,7 +110,7 @@
             <input type="checkbox" ng-click="update_selected_objects($index)" ng-checked="object.selected"/>
           </td>
           <td>
-            <a title="Show {{object.prepid}}" style="cursor: pointer;" ng-click="redirect(object.prepid)" rel="tooltip" title="Show " target="_self">{{object.prepid}}<i class="icon-align-right"></i></a>
+            <a title="Show {{object.prepid}}" style="cursor: pointer;" ng-click="redirect(object.prepid)" rel="tooltip" title="Show " target="_self">{{object.prepid}}<i class="glyphicon glyphicon-align-right"></i></a>
           </td>
           <td>
             <div ng-if="selected_pane == 'Requests'">

@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+<html lang="eng" ng-app="mcmApp" xmlns:ng="http://angularjs.org" id="ng-app">
 
 <head>
   <title>McM - MccM Tickets</title>
   <base href="/mcm/">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
+  <link href="scripts/css/mcm.css" rel="stylesheet" />
   <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
   <script type="text/javascript" src="scripts/build/mcm.deps2.js"></script>
   <script type="text/javascript">
-    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
+    var mcmApp = angular.module('mcmApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
   </script>
   <script src="scripts/main_controller.js"></script>
   <script src="scripts/mccms_controller.js"></script>
   <script src="scripts/snow.js"></script>
 </head>
 
-<body ng-controller="mainCtrl">
+<body ng-controller="mainController">
   <div ng-include="'HTML/navbar_template.html'"></div>
   <span ng-controller="resultsCtrl">
     <div style='margin-bottom: 5px' class="container">
@@ -40,17 +40,17 @@
                 <a ng-href='{{dbName}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
                 <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
                    title="Admin view of {{data.prepid}}"
-                   ng-show="user.is_administrator && !isDevMachine();"><i class="icon-star"></i></a>
+                   ng-show="user.is_administrator && !isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
                 <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
                    title="Admin view of {{data.prepid}}"
-                   ng-show="user.is_administrator && isDevMachine();"><i class="icon-star"></i></a>
+                   ng-show="user.is_administrator && isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
                 <a ng-href='edit?db_name={{dbName}}&prepid={{data.prepid}}' title="Edit {{data.prepid}}" ng-show="user.is_user" target="_self">
-                  <i class="icon-wrench"></i>
+                  <i class="glyphicon glyphicon-wrench"></i>
                 </a>
                 <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_user" ng-href="#">
-                  <i class="icon-minus-sign"></i>
+                  <i class="glyphicon glyphicon-trash"></i>
                 </a>
                 <a ng-click="cancelTicket(data.prepid)" title="Cancel {{data.prepid}}" ng-show="user.is_user && data.status == 'new'" ng-href="#">
                   <i class="icon-thumbs-down"></i>
@@ -65,22 +65,20 @@
                   <i class="icon-filter"></i>
                 </a>
                 <a ng-href="requests?range={{requestRange(data.requests)}}" title="Show requests of {{data.prepid}}" target="_self">
-                  <i class="icon-folder-open"></i>
+                  <i class="glyphicon glyphicon-folder-open"></i>
                 </a>
                 <a ng-href="chained_requests?from_ticket={{data.prepid}}" title="Show generated chained requests of {{data.prepid}}" target="_self">
-                  <i class="icon-indent-left"></i>
+                  <i class="glyphicon glyphicon-align-left"></i>
                 </a>
                 <a ng-click="checkApproved(data.prepid)" title="Check approval of requests" ng-show="user.is_mc_contact" ng-href="#">
-                  <i class="icon-eye-open"></i>
+                  <i class="glyphicon glyphicon-eye-open"></i>
                 </a>
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
                 <img ng-show="actionMessage[data.prepid] == 'loading'" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
                 <span ng-show="actionMessage[data.prepid] != 'OK' && actionMessage[data.prepid] != 'loading'" style="color: red">{{actionMessage[data.prepid]}}</span>
               </div>
               <div ng-switch-when="notes">
-                <div style="width:400px">
-                  <pre class="notes">{{data[column.db_name]}}</pre>
-                </div>
+                <pre ng-if="data.notes.length" class="notes">{{data.notes}}</pre>
               </div>
               <div ng-switch-when="requests">
                 <i ng-show="allRequestsApproved[data.prepid] === false" style="color:red">Not all requests are approved</i>
@@ -89,10 +87,10 @@
                   <div ng-repeat="elem in data[column.db_name]">
                     <li ng-hide="isArray(elem);">
                       <a ng-href='requests?prepid={{elem}}' title="View request {{elem}}" target="_self">{{elem}}</a>
-                      <a ng-href='chained_requests?contains={{elem}}' title="View chains from {{elem}}" target="_self"><i class="icon-indent-left"></i></a>
+                      <a ng-href='chained_requests?contains={{elem}}' title="View chains from {{elem}}" target="_self"><i class="glyphicon glyphicon-align-left"></i></a>
                     </li>
                     <li ng-show="isArray(elem);">
-                      <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' title="View range of rqeuests" target="_self">{{elem[0]}} <i class="icon-arrow-right"></i> {{ elem[1]}}</a>
+                      <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' title="View range of rqeuests" target="_self">{{elem[0]}} <i class="glyphicon glyphicon-arrow-right"></i> {{ elem[1]}}</a>
                     </li>
                   </div>
                 </ul>

@@ -276,6 +276,27 @@ class GetEditableMccM(RESTResource):
                             'editing_info': mccm.get_editing_info()}}
 
 
+class GetUniqueMccMValues(RESTResource):
+    """
+    Endpoint for getting unique values of MccM ticket attributes
+    """
+
+    def get(self):
+        """
+        Get unique values of certain attribute
+        """
+        args = flask.request.args.to_dict()
+        attribute = args.get('attribute')
+        value = args.get('value')
+        if not attribute or not value:
+            return {'results': []}
+
+        limit = int(args.get('limit', 10))
+        limit = min(100, max(1, limit))
+        mccm_db = MccM.get_database()
+        return {'results': mccm_db.query_unique(attribute, value, limit)}
+
+
 class GenerateChains(RESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)

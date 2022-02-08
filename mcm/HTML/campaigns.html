@@ -1,25 +1,30 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+<html lang="eng" ng-app="mcmApp" xmlns:ng="http://angularjs.org" id="ng-app">
 
 <head>
   <title>McM - Campaigns</title>
   <base href="/mcm/">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
-  <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
-  <script type="text/javascript">
-    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
-  </script>
-  <script src="scripts/main_controller.js"></script>
-  <script src="scripts/campaigns_controller.js"></script>
-  <script src="scripts/snow.js"></script>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="scripts/css/bootstrap.min.css">
+  <link rel="stylesheet" href="scripts/css/mcm.css" />
+  <link rel="shortcut icon" type="image/x-icon" href="scripts/img/mcm.png">
+  <script type="text/javascript" src="scripts/angular.min.js"></script>
+  <script type="text/javascript" src="scripts/angular-ui.min.js"></script>
+  <script type="text/javascript" src="scripts/jquery.js"></script>
+  <script type="text/javascript" src="scripts/bootstrap.js"></script>
+  <script type="text/javascript" src="scripts/ui-bootstrap-tpls-2.5.0.js"></script>
+  <script type="text/javascript" src="scripts/main_controller.js"></script>
+  <script type="text/javascript" src="scripts/campaigns_controller.js"></script>
 </head>
 
-<body ng-controller="mainCtrl">
-  <div ng-include="'HTML/navbar_template.html'"></div>
-  <span ng-controller="resultsCtrl">
-    <div style='margin-bottom: 5px' class="container">
-      <select-well ng-if="selectionReady" database="{{dbName}}" selection="columns"></select-well>
+<body ng-controller="mainController">
+  <div ng-include="'HTML/navbar.html'"></div>
+  <div ng-include="'HTML/modals.html'"></div>
+  <div ng-controller="campaignController">
+    <div class="container">
+      <column-select update-query="updateQuery" columns="columns"></column-select>
     </div>
     <table class="table table-bordered table-striped table-hover">
       <thead>
@@ -38,54 +43,49 @@
                 <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
                    title="Database entry of {{data.prepid}}"
                    ng-show="user.is_administrator && !isDevMachine();"
-                   target="_blank"><i class="icon-star"></i></a>
+                   target="_blank"><i class="glyphicon glyphicon-star"></i></a>
                 <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
                    title="Database entry of {{data.prepid}}"
                    ng-show="user.is_administrator && isDevMachine();"
-                   target="_blank"><i class="icon-star"></i></a>
+                   target="_blank"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
                 <a ng-href='edit?db_name={{dbName}}&prepid={{data.prepid}}' title="Edit {{data.prepid}}" ng-show="user.is_production_manager" target="_self">
-                  <i class="icon-wrench"></i>
+                  <i class="glyphicon glyphicon-wrench"></i>
                 </a>
                 <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_production_expert" ng-href="#">
-                  <i class="icon-minus-sign"></i>
+                  <i class="glyphicon glyphicon-trash"></i>
                 </a>
-                <a ng-click="openRequestCreator(data.prepid)" title="Create new request" ng-show="user.is_production_manager && data.root != 1 && data.status == 'started';" ng-href="#">
-                  <i class="icon-plus-sign"></i>
+                <a ng-click="openCloneItemModal('campaigns', data.prepid)" title="Clone campaign" ng-show="user.is_production_manager;" ng-href="#">
+                  <i class="glyphicon glyphicon-duplicate"></i>
+                </a>
+                <a ng-click="openRequestCreator(data.prepid)" title="Create new request in {{data.prepid}}" ng-show="user.is_production_manager && data.root != 1 && data.status == 'started';" ng-href="#">
+                  <i class="glyphicon glyphicon-plus-sign"></i>
                 </a>
                 <a ng-click="nextStatus(data.prepid)" title="Toggle status" ng-show="user.is_production_manager" ng-href="#">
-                  <i class="icon-flag"></i>
+                  <i class="glyphicon glyphicon-flag"></i>
                 </a>
                 <a ng-href='flows?uses={{data.prepid}}' title="View flows using {{data.prepid}}" target="_self">
-                  <i class="icon-magnet"></i>
+                  <i class="glyphicon glyphicon-magnet"></i>
                 </a>
                 <a ng-href='chained_campaigns?contains={{data.prepid}}' title="Show chained campaigns using {{data.prepid}}" target="_self">
-                  <i class="icon-align-right"></i>
+                  <i class="glyphicon glyphicon-align-right"></i>
                 </a>
                 <a ng-href='requests?member_of_campaign={{data.prepid}}' title="Show requests in {{data.prepid}}" target="_self">
-                  <i class="icon-folder-open"></i>
+                  <i class="glyphicon glyphicon-folder-open"></i>
                 </a>
                 <a ng-href="/pmp/present?m=false&r={{data.prepid}}" title="View announced statistics for {{data.prepid}}" target="_blank">
-                  <i class="icon-picture"></i>
-                </a>
-                <a ng-href="/pmp/present?m=true&r={{data.prepid}}" title="View growing statistics for {{data.prepid}}" target="_blank">
-                  <i class="icon-film"></i>
+                  <i class="glyphicon glyphicon-stats"></i>
                 </a>
                 <a ng-href="/pmp/historical?r={{data.prepid}}" title="View historical statistics for {{data.prepid}}" target="_blank">
-                  <i class="icon-facetime-video"></i>
-                </a>
-                <a ng-href="/pmp/performance?m=false&r={{data.prepid}}" title="View  performance statistics for {{data.prepid}}" target="_blank">
-                  <i class="icon-heart"></i>
+                  <i class="glyphicon glyphicon-signal"></i>
                 </a>
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
                 <img ng-show="actionMessage[data.prepid] == 'loading'" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
                 <span ng-show="actionMessage[data.prepid] != 'OK' && actionMessage[data.prepid] != 'loading'" style="color: red">{{actionMessage[data.prepid]}}</span>
               </div>
               <div ng-switch-when="notes">
-                <div style="width:400px">
-                  <pre class="notes">{{data[column.db_name]}}</pre>
-                </div>
+                <pre ng-if="data.notes.length" class="notes">{{data.notes}}</pre>
               </div>
               <div ng-switch-when="sequences">
                 <sequence-display ng-model="data.prepid" database="'campaigns'" prepid="data.prepid"></sequence-display>
@@ -100,8 +100,8 @@
               <div ng-switch-when="next">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="campaign in data[column.db_name]">
-                    <a ng-href='campaigns?prepid={{campaign}}' title="View details of the campaign" target="_self">{{campaign}}<i class="icon-book"></i></a>
-                    <a ng-href='flows?next_campaign={{campaign}}' title="View flows going into {{campaign}}" target="_self"> <i class="icon-magnet"></i></a>
+                    <a ng-href='campaigns?prepid={{campaign}}' title="View details of the campaign" target="_self">{{campaign}}<i class="glyphicon glyphicon-book"></i></a>
+                    <a ng-href='flows?next_campaign={{campaign}}' title="View flows going into {{campaign}}" target="_self"> <i class="glyphicon glyphicon-magnet"></i></a>
                   </li>
                 </ul>
               </div>
@@ -127,8 +127,7 @@
                 </ul>
               </div>
               <div ng-switch-when="memory">
-                {{data[column.db_name]}}
-                <span class="label label-info" ng-if="data[column.db_name]" title="Megabytes">MB<span>
+                {{data[column.db_name]}} <span class="label label-info" title="Megabytes">MB<span>
               </div>
               <div ng-switch-when="keep_output">
                 <ul>
@@ -151,33 +150,16 @@
         </tr>
       </tbody>
     </table>
-    <div class="row-fluid custom-footer">
-      <div class="span4">
-        <div class="span4">
-          <input type="button"
-                  class="btn"
-                  ng-click="openCreateItemModal(dbName)"
-                  value="Create new campaign"
-                  ng-show="user.is_production_manager"
-                  align="left"/>
-        </div>
+    <div class="custom-footer">
+      <div>
+        <input type="button"
+                class="btn btn-primary"
+                ng-click="openCreateItemModal(database)"
+                value="Create new campaign"
+                ng-show="user.is_production_manager"/>
       </div>
     </div>
-  </span>
-  <script type="text/ng-template" id="createRequestModal.html"> <!--hidden modal template-->
-    <div class="modal-header">
-      <h4>Create a request</h4>
-    </div>
-    <div class="modal-body">
-      Create request in {{prepid}} campaign
-      <select ng-options="value for value in vars.pwgs" ng-model="vars.selectedPwg" style="width: 90px; margin-bottom: 0px;">
-      </select>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-success" ng-click="save()">Create</button>
-      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-    </div>
-  </script>
+  </div>
 </body>
 
 </html>

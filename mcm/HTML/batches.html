@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+<html lang="eng" ng-app="mcmApp" xmlns:ng="http://angularjs.org" id="ng-app">
 
 <head>
   <title>McM - Batches</title>
   <base href="/mcm/">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
+  <link href="scripts/css/mcm.css" rel="stylesheet" />
   <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
   <script type="text/javascript">
-    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
+    var mcmApp = angular.module('mcmApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
   </script>
   <script src="scripts/main_controller.js"></script>
   <script src="scripts/batches_controller.js"></script>
   <script src="scripts/snow.js"></script>
 </head>
 
-<body ng-controller="mainCtrl">
+<body ng-controller="mainController">
   <div ng-include="'HTML/navbar_template.html'"></div>
   <span ng-controller="resultsCtrl">
     <div style='margin-bottom: 5px' class="container">
@@ -37,26 +37,24 @@
                 <a ng-href='{{dbName}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
                 <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
                   title="Database entry of {{data.prepid}}" ng-show="user.is_administrator && !isDevMachine();"
-                  target="_blank"><i class="icon-star"></i></a>
+                  target="_blank"><i class="glyphicon glyphicon-star"></i></a>
                 <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
                   title="Database entry of {{data.prepid}}" ng-show="user.is_administrator && isDevMachine();"
-                  target="_blank"><i class="icon-star"></i></a>
+                  target="_blank"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
                 <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_production_expert" ng-href="#">
-                  <i class="icon-minus-sign"></i>
+                  <i class="glyphicon glyphicon-trash"></i>
                 </a>
                 <a ng-click='announce(data.prepid)' title="Announce the batch" ng-show="data.status == 'new' && user.is_production_manager;" ng-href="#">
                   <i class="icon-envelope"></i>
                 </a>
                 <a rel="tooltip" title="View all requests" ng-href="requests?range={{generateAllRequests(data.requests);}}" target="_self">
-                  <i class="icon-folder-open"></i>
+                  <i class="glyphicon glyphicon-folder-open"></i>
                 </a>
               </div>
               <div ng-switch-when="notes">
-                <div style="width:400px">
-                  <pre class="notes">{{data[column.db_name]}}</pre>
-                </div>
+                <pre ng-if="data.notes.length" class="notes">{{data.notes}}</pre>
               </div>
               <div ng-switch-when="history">
                 <div custom-history ng-model="data[column.db_name]"></div>

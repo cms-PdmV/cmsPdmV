@@ -1,27 +1,27 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+<html lang="eng" ng-app="mcmApp" xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
     <base href="/mcm/">
     <title>Lists page McM</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <link href="scripts/build/mcmcss.css" rel="stylesheet"/>
+    <link href="scripts/css/mcm.css" rel="stylesheet"/>
 
     <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
     <!--[IF IE]>
       <script type="text/javascript">
-        var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+        var mcmApp = angular.module('mcmApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
       </script>
     <![endif]-->
     <![if !IE]>
       <script type="text/javascript">
-        var testApp = angular.module('testApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+        var mcmApp = angular.module('mcmApp', ['ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
       </script>
     <![endif]>
     <script src="scripts/main_controller.js"></script>
     <script src="scripts/lists_controller.js"></script>
     <script src="scripts/snow.js"></script>
   </head>
-  <body ng-controller="mainCtrl">
+  <body ng-controller="mainController">
     <span ng-controller="resultsCtrl">
       <div ng-include="'HTML/navbar_template.html'"></div>
       <div class="row-fluid"><div class="offset4"><h2 ng-if="list_overview">Lists in McM</h2><h2 ng-if="!list_overview">List <em>{{list_name}}</em></h2></div></div>
@@ -44,7 +44,7 @@
                 <a ng-href="chained_requests?prepid={{list_info['chain']}}" rel="tooltip" title="View only {{list_info['chain']}}" target="_self"> {{list_info['chain']}}</a>
               </div>
               <div ng-switch-when="notes">
-                <div style="width:400px"><pre class="notes">{{list_info[data.db_name]}} </pre></div>
+                <pre ng-if="data.notes.length" class="notes">{{data.notes}}</pre>
               </div>
               <div ng-switch-when="reason">
                 <div style="width:400px"><pre class="notes">{{list_info[data.db_name]}} </pre></div>

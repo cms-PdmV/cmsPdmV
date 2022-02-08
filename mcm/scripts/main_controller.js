@@ -1,83 +1,39 @@
-angular.module('testApp').controller('mainCtrl',
-  ['$scope', '$http', '$location', '$window', '$modal',
-    function mainCtrl($scope, $http, $location, $window, $modal) {
-      $scope.user = { name: "guest", role: "user", roleIndex: 0 };
-      $scope.math = Math;
-      $scope.dbName = undefined;
+let mcmApp = angular.module('mcmApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode({ enabled: true, requireBase: false }); });
+
+angular.module('mcmApp').controller('mainController',
+  ['$scope', '$http', '$location', '$window', '$uibModal',
+    function mainController($scope, $http, $location, $window, $uibModal) {
+      $scope.database = undefined;
       $scope.columns = undefined;
       $scope.actionMessage = {};
-
-      $scope.setDatabaseInfo = function(database, columns) {
-        $scope.dbName = database;
-        $scope.columns = columns;
-      }
-
-      $scope.objectAction = function (message, prepids, httpDict) {
-        const action = function(prepids, httpDict) {
-          $scope.setLoading(prepids, true);
-          $http(httpDict).success(function (results, status) {
-            let shouldGetData = false;
-            if (!Array.isArray(results)) {
-              results = [results];
-            }
-            for (let result of results) {
-              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
-              shouldGetData = shouldGetData || !!result.results;
-            }
-            if (shouldGetData) {
-              $scope.getData();
-            }
-          }).error(function (data, status) {
-            $scope.openErrorModal(undefined, data['message']);
-            $scope.setLoading(prepids, false);
-          });
-        }
-        if (message != undefined) {
-          $scope.questionModal(message, function() {
-            action(prepids, httpDict);
-          });
-        } else {
-          action(prepids, httpDict);
-        }
-      };
-
-      $scope.questionModal = function (question, callback) {
-        const modal = $modal.open({
-          templateUrl: 'questionModal.html',
-          controller: function ($scope, $modalInstance, question) {
-            $scope.question = question;
-            $scope.yes = function () { $modalInstance.close(); };
-            $scope.no = function () { $modalInstance.dismiss(); };
-          },
-          resolve: {
-            question: function () { return question; }
-          }
-        });
-        modal.result.then(function () { callback(); });
-      };
-
-      $scope.deleteObject = function (prepid) {
-        let message = 'Are you sure you want to delete ' + prepid + '?';
-        $scope.objectAction(message,
-                            [prepid],
-                            {method: 'DELETE',
-                             url: 'restapi/' + $scope.dbName + '/delete/' + prepid})
-      };
-
-      $scope.promptPrepid = function(prepids) {
-        let name = $scope.dbName.replaceAll('_', ' ');
-        return prepids.length == 1 ? prepids[0] : (prepids.length + ' ' + name);
-      }
-
-      $scope.setLoading = function(prepids, loading) {
-        for (let prepid of prepids) {
-          $scope.actionMessage[prepid] = loading ? 'loading' : '';
-        }
-      }
-
-      // GET username and role
       $scope.user = {};
-      $http.get("restapi/users/get", { cache: true }).then(function (data) {
+
+      let urlParams = $location.search();
+      let limit = parseInt(urlParams['limit']);
+      $scope.limit = limit && limit > 0 ? limit : 20;
+
+      let page = parseInt(urlParams["page"]);
+      $scope.page = page && page >= 0 ? page : 0;
+
+      $scope.updatePageLimit = function() {
+        $scope.updateQuery({'page': $scope.page != 0 ? $scope.page : undefined,
+                            'limit': $scope.limit != 20 ? $scope.limit : undefined});
+      }
+      $scope.changeLimit = function (limit) {
+        $scope.limit = limit;
+        $scope.updatePageLimit();
+      };
+      $scope.nextPage = function() {
+        $scope.page = $scope.page + 1;
+        $scope.updatePageLimit();
+      };
+      $scope.previousPage = function() {
+        $scope.page = Math.max(0, $scope.page - 1);
+        $scope.updatePageLimit();
+      }
+
+      // Get user details
+      $http.get('restapi/users/get').then(function (data) {
         $scope.user.username = data.data.username;
         $scope.user.fullname = data.data.user_name;
         $scope.user.role = data.data.role;
@@ -93,40 +49,92 @@ angular.module('testApp').controller('mainCtrl',
           $scope.user['is_' + role] = roles.indexOf(role) <= roles.indexOf(data.data.role);
         }
       }, function (data) {
-        alert("Error getting user information. Error: " + data.status);
+        $scope.openErrorModal(undefined, 'Could not get user details: ' + data.status);
       });
-      // Endo of user info request
 
-      $scope.isDevMachine = function () {
-        const isDev = $location.host().indexOf("dev") != -1;
-        if (isDev) {
-          const body = document.getElementsByTagName("body");
-          _.each(body, function (v) {
-            // v.style.backgroundImage = "url(HTML/draft.png)"
+      $scope.isArray = function(x) {
+        return Array.isArray(x);
+      }
+
+      $scope.setDatabaseInfo = function(database, columns) {
+        $scope.database = database;
+        $scope.columns = columns;
+      }
+
+      $scope.objectAction = function (message, prepids, httpDict) {
+        const action = function(prepids, httpDict) {
+          $scope.setLoading(prepids, true);
+          $http(httpDict).then(function (results) {
+            results = results.data;
+            let shouldGetData = false;
+            if (!Array.isArray(results)) {
+              results = [results];
+            }
+            for (let result of results) {
+              $scope.actionMessage[result.prepid] = result.results ? 'OK' : result.message;
+              shouldGetData = shouldGetData || !!result.results;
+            }
+            if (shouldGetData) {
+              $scope.getData();
+            }
+          }, function (data) {
+            $scope.openErrorModal(prepids.length == 1 ? prepids[0] : undefined, data['message']);
+            $scope.setLoading(prepids, false);
           });
+        }
+        if (message != undefined) {
+          $scope.questionModal(message, function() {
+            action(prepids, httpDict);
+          });
+        } else {
+          action(prepids, httpDict);
+        }
+      };
+
+      $scope.questionModal = function (question, callback) {
+        const modal = $uibModal.open({
+          templateUrl: 'questionModal.html',
+          controller: function ($scope, $uibModalInstance, question) {
+            $scope.question = question;
+            $scope.yes = function () { $uibModalInstance.close(); };
+            $scope.no = function () { $uibModalInstance.dismiss(); };
+          },
+          resolve: {
+            question: function () { return question; }
+          }
+        });
+        modal.result.then(function () { callback(); });
+      };
+
+      $scope.deleteObject = function (prepid) {
+        let message = 'Are you sure you want to delete ' + prepid + '?';
+        $scope.objectAction(message,
+                            [prepid],
+                            {method: 'DELETE',
+                             url: 'restapi/' + $scope.database + '/delete/' + prepid})
+      };
+
+      $scope.promptPrepid = function(prepids) {
+        let name = $scope.database.replaceAll('_', ' ');
+        return prepids.length == 1 ? prepids[0] : (prepids.length + ' ' + name);
+      }
+
+      $scope.setLoading = function(prepids, loading) {
+        for (let prepid of prepids) {
+          $scope.actionMessage[prepid] = loading ? 'loading' : '';
+        }
+      }
+      
+      $scope.isDevMachine = function () {
+        const isDev = $location.host().indexOf('dev') != -1;
+        if (isDev) {
+          const body = document.getElementsByTagName('body');
+          for (let elem of body) {
+            // elem.style.backgroundImage = 'url(HTML/draft.png)';
+          }
         }
         return isDev;
       };
-
-      //return everyting thats after main url
-      $scope.getLocation = function () {
-        var __location = $location.url();
-        return __location.replace(/page=\d+/g, "").substring(1); //remove 1st character which is / to make a relative link
-      };
-      //return fullUrl
-      $scope.getFullLocation = function () {
-        var __location = $location.url();
-        return __location.substring(1); //remove 1st character which is / to make a relative link
-      };
-
-      //watch length of pending HTTP requests -> if there are display loading;
-      $scope.$watch(function () { return $http.pendingRequests.length; }, function (v) {
-        $scope.pendingHTTPLenght = v;
-        if (v == 0) {  //if HTTP requests pending == 0
-          $scope.pendingHTTP = false;
-        } else
-          $scope.pendingHTTP = true;
-      });
 
       $scope.numberWithCommas = function (x) {
         if (x) {
@@ -138,27 +146,40 @@ angular.module('testApp').controller('mainCtrl',
         }
       };
 
+      $scope.updateQuery = function(params) {
+        let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
+        urlParams = Object.assign({}, urlParams, params);
+        Object.keys(urlParams).forEach(key => urlParams[key] === undefined && delete urlParams[key]);
+        let urlQuery = new URLSearchParams(urlParams).toString();
+        if (urlQuery) {
+          urlQuery = '?' + urlQuery;
+          urlQuery = decodeURI(urlQuery);
+        }
+        let newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname + urlQuery;
+        window.history.replaceState({path: newUrl}, '', newUrl);
+      };
+
       /* Support modal actions*/
 
       $scope.openSupportModal = function () {
-        $modal.open({
+        $uibModal.open({
           templateUrl: "supportModal.html",
-          controller: function ($scope, $modalInstance) {
+          controller: function ($scope, $uibModalInstance) {
             $scope.close = function () {
-              $modalInstance.close();
+              $uibModalInstance.close();
             }
           }
         });
       };
 
       $scope.openErrorModal = function (prepid, message) {
-        const modal = $modal.open({
+        const modal = $uibModal.open({
           templateUrl: 'errorModal.html',
-          controller: function ($scope, $modalInstance, prepid, message) {
+          controller: function ($scope, $uibModalInstance, prepid, message) {
             $scope.prepid = prepid;
             $scope.message = message;
             $scope.ok = function () {
-              $modalInstance.dismiss();
+              $uibModalInstance.dismiss();
             };
           },
           resolve: {
@@ -176,11 +197,11 @@ angular.module('testApp').controller('mainCtrl',
         /*Upload a file to server*/
         $scope.got_results = false;
         $scope.resultsFromFile = true;
-        $http({ method: 'PUT', url: 'restapi/' + $scope.dbName + '/listwithfile', data: file }).success(function (data, status) {
+        $http({ method: 'PUT', url: 'restapi/' + $scope.database + '/listwithfile', data: file }).success(function (data, status) {
           $scope.result = data.results;
           $scope.result_status = data.status;
           $scope.got_results = true;
-          $scope.total_results = data.results.length;
+          $scope.totalRows = data.results.length;
           if ($scope.result.length != 0) {
             columns = Object.keys($scope.result[0]);
             let defaultColumns = new Set($scope.columns.map(x => x.db_name));
@@ -203,29 +224,23 @@ angular.module('testApp').controller('mainCtrl',
         if ($scope.file_was_uploaded) {
           $scope.upload($scope.uploaded_file);
         } else {
-          if (!$scope.dbName) {
+          if (!$scope.database) {
             return;
           }
-          let query = "";
-          _.each($location.search(), function (value, key) {
-            if ((key != 'shown') && (key != 'fields')) {
-              query += "&" + key + "=" + value;
+          let query = [`search?db_name=${$scope.database}`];
+          const search = $location.search();
+          for (let key in search) {
+            if (key != 'shown') {
+              query.push(`${key}=${search[key]}`)
             }
-          });
-          $scope.got_results = false; //to display/hide the 'found n results' while reloading
+          }
+          $scope.loading = true;
           $scope.resultsFromFile = false;
-          $http.get("search?" + "db_name=" + $scope.dbName + query).then(function (data) {
-            $scope.got_results = true;
+          $http.get(query.join('&')).then(function (data) {
             $scope.result = data.data.results;
-            if ($scope.result === undefined) {
-              alert('The following url-search key(s) is/are not valid : ' + _.keys(data.data));
-              return; //stop doing anything if results are undefined
-            }
-            $scope.total_results = data.data.total_rows;
             if ($scope.result.length != 0) {
               columns = Object.keys($scope.result[0]);
               let defaultColumns = new Set($scope.columns.map(x => x.db_name))
-
               columns.filter(x => x[0] != '_' && !defaultColumns.has(x))
                      .sort()
                      .map(x => Object({'text': x[0].toUpperCase() + x.substring(1).replaceAll('_', ' '),
@@ -233,9 +248,14 @@ angular.module('testApp').controller('mainCtrl',
                                        'db_name': x }))
                      .map(function(c) { $scope.columns.push(c)});
             }
-            $scope.selectionReady = true;
-          }, function (data, status) {
-            $scope.setSuccess(false, data.message);
+            $scope.totalRows = data.data.total_rows;
+            $scope.pageStart = $scope.totalRows == 0 ? 0 : $scope.page * $scope.limit + 1;
+            $scope.pageEnd = Math.min($scope.totalRows, $scope.page * $scope.limit + $scope.limit);
+            $scope.loading = false;
+          }, function (data) {
+            $scope.loading = false;
+            $scope.openErrorModal(undefined, data.message);
+            $scope.setSuccess(false, data.message ? data.message : 'Error loading results');
           });
         }
       };
@@ -245,32 +265,32 @@ angular.module('testApp').controller('mainCtrl',
         return "page" + loc_dict["page"] + "limit" + loc_dict["limit"];
       },
         function () {
-          $scope.getData($scope.dbName);
+          $scope.getData($scope.database);
         }
       );
 
       $scope.openCloneItemModal = function (database, prepid) {
-        const modal = $modal.open({
+        const modal = $uibModal.open({
           templateUrl: 'cloneItemModal.html',
-          controller: function ($scope, $modalInstance, $window, $http, database, prepid, errorModal) {
+          controller: function ($scope, $uibModalInstance, $window, $http, database, prepid, errorModal) {
             $scope.prepid = prepid;
-            $scope.database = database;
-            $scope.vars = { 'newPrepid': '' };
+            $scope.vars = {'newPrepid': ''};
+            $scope.objectName = database.substr(0, database.length - 1).replaceAll('_', ' ');
             $scope.clone = function () {
-              const itemData = { "prepid": $scope.prepid, "new_prepid": $scope.vars.newPrepid };
-              $http({ method: 'PUT', url: 'restapi/' + $scope.database + '/clone/', data: itemData }).success(function (data, status) {
-                if (data.results) {
-                  $window.location.href = 'edit?db_name=' + $scope.database + '&prepid=' + data.prepid;
+              let itemData = {'prepid': prepid, 'new_prepid': $scope.vars.newPrepid};
+              $http({ method: 'PUT', url: 'restapi/' + database + '/clone', data: itemData }).then(function (data) {
+                if (data.data.results) {
+                  $window.location.href = 'edit?db_name=' + database + '&prepid=' + data.data.prepid;
                 } else {
-                  errorModal(data.prepid, data['message']);
+                  errorModal(data.data.prepid, data.data.message);
                 }
               }).error(function (data, status) {
-                errorModal(data.prepid, data['message']);
+                errorModal(data.data.prepid, data.data.message);
               });
-              $modalInstance.close();
+              $uibModalInstance.close();
             };
             $scope.close = function () {
-              $modalInstance.dismiss();
+              $uibModalInstance.dismiss();
             };
           },
           resolve: {
@@ -282,26 +302,26 @@ angular.module('testApp').controller('mainCtrl',
       };
 
       $scope.openCreateItemModal = function (database) {
-        $modal.open({
+        $uibModal.open({
           templateUrl: 'createItemModal.html',
-          controller: function ($scope, $modalInstance, database, errorModal) {
-            $scope.vars = { "prepid": "" };
-            $scope.database = database;
+          controller: function ($scope, $uibModalInstance, database, errorModal) {
+            $scope.vars = {'prepid': ''};
+            $scope.objectName = database.substr(0, database.length - 1).replaceAll('_', ' ');
             $scope.save = function () {
-              const itemData = { "prepid": $scope.vars.prepid };
-              $http({ method: 'PUT', url: 'restapi/' + $scope.database + '/save/', "data": itemData }).success(function (data, status) {
-                if (data.results) {
-                  $window.location.href = 'edit?db_name=' + $scope.database + '&prepid=' + $scope.vars.prepid;
+              let itemData = {'prepid': $scope.vars.prepid };
+              $http({ method: 'PUT', url: 'restapi/' + database + '/save', 'data': itemData }).then(function (data) {
+                if (data.data.results) {
+                  $window.location.href = 'edit?db_name=' + database + '&prepid=' + data.data.prepid;
                 } else {
-                  errorModal(itemData.prepid, data['message']);
+                  errorModal(data.data.prepid, data.data.message);
                 }
-              }).error(function (data, status) {
-                errorModal(itemData.prepid, data['message']);
+              }, function (data) {
+                errorModal(data.data.prepid, data.data.message);
               });
-              $modalInstance.close();
+              $uibModalInstance.close();
             };
             $scope.close = function () {
-              $modalInstance.dismiss();
+              $uibModalInstance.dismiss();
             };
           },
           resolve: {
@@ -313,36 +333,7 @@ angular.module('testApp').controller('mainCtrl',
     }
   ]);
 
-testApp.directive('slider', function () {
-  return {
-    restrict: 'AE',
-    scope: {
-      value: '=',
-      sliding: '='
-    },
-    link: function (scope, element, attrs, ctrl) {
-      var slider_lines = $("input", element).slider();
-      slider_lines.data('slider').setValue(scope.value);
-
-      slider_lines.on('slide', function (ev) {
-        scope.$parent.$apply(function () {
-          scope.sliding = true;
-          scope.value = slider_lines.data('slider').getValue();
-        });
-      });
-
-      slider_lines.on('slideStop', function (ev) {
-        scope.$parent.$apply(function () {
-          scope.sliding = false;
-        });
-      });
-
-    },
-    template: '<input type="text" class="slider" data-slider-min=5 data-slider-max=101 data-slider-selection="after" data-slider-tooltip="hide" data-slider-handle="round-square">'
-  }
-});
-
-testApp.directive('tokenfield', function ($parse) {
+mcmApp.directive('tokenfield', function ($parse) {
   return {
     restrict: 'AE',
     scope: {
@@ -406,7 +397,7 @@ testApp.directive('tokenfield', function ($parse) {
   }
 });
 
-testApp.directive('ddlFileReader', function ($http, $rootScope) {
+mcmApp.directive('ddlFileReader', function ($http, $rootScope) {
   return {
     require: "ngModel",
     replace: true,
@@ -442,7 +433,7 @@ testApp.directive('ddlFileReader', function ($http, $rootScope) {
 Angular-UI panes/tab directive with local customisation
 http://angular-ui.github.io/bootstrap/
 */
-testApp.controller('TabsController', ['$scope', '$element', function ($scope, $element) {
+mcmApp.controller('TabsController', ['$scope', '$element', function ($scope, $element) {
   var panes = $scope.panes = [];
 
   this.select = $scope.select = function selectPane(pane) {
@@ -476,7 +467,7 @@ testApp.controller('TabsController', ['$scope', '$element', function ($scope, $e
     }
   };
 }]);
-testApp.directive('tabs', function () {
+mcmApp.directive('tabs', function () {
   return {
     restrict: 'EA',
     transclude: true,
@@ -495,7 +486,7 @@ testApp.directive('tabs', function () {
     replace: true
   };
 });
-testApp.directive('pane', ['$parse', function ($parse) {
+mcmApp.directive('pane', ['$parse', function ($parse) {
   return {
     require: '^tabs',
     restrict: 'EA',
@@ -535,7 +526,7 @@ testApp.directive('pane', ['$parse', function ($parse) {
   };
 }]);
 
-testApp.constant('buttonConfig', {
+mcmApp.constant('buttonConfig', {
   activeClass: 'active',
   toggleEvent: 'click'
 })
@@ -590,7 +581,7 @@ testApp.constant('buttonConfig', {
     };
   }]);
 
-testApp.directive('dropdownToggle', ['$document', '$location', function ($document, $location) {
+mcmApp.directive('dropdownToggle', ['$document', '$location', function ($document, $location) {
   var openElement = null,
     closeMenu = angular.noop;
   return {
@@ -629,7 +620,7 @@ testApp.directive('dropdownToggle', ['$document', '$location', function ($docume
   };
 }]);
 
-testApp.directive("reqmgrName", function ($http) {
+mcmApp.directive("reqmgrName", function ($http) {
   return {
     require: 'ngModel',
     restrict: 'E',
@@ -666,156 +657,77 @@ testApp.directive("reqmgrName", function ($http) {
   }
 });
 
-testApp.directive("customFooter", function ($location, $compile, $http) {
+mcmApp.directive("customFooter", function ($location, $compile, $http) {
   return {
     restrict: 'C',
     link: function (scope, element) {
-
-      scope.custom_footer_limit_opts = [20, 50, 100];
-
-      var limit = $location.search()["limit"];
-      if (limit === undefined) {
-        limit = 20;
-      }
-      scope.custom_footer_limit = parseInt(limit);
-      if (scope.custom_footer_limit_opts.indexOf(scope.custom_footer_limit) == -1) {
-        scope.custom_footer_limit_opts.push(scope.custom_footer_limit);
-      }
-
-      var page = $location.search()["page"];
-
-      if (page === undefined) {
-        page = 0;
-        $location.search("page", 0);
-      }
-      scope.custom_footer_list_page = parseInt(page);
-
-      scope.custom_footer_previous_page = function (current_page) {
-        if (current_page > -1) {
-          $location.search("page", current_page - 1);
-          scope.custom_footer_list_page = current_page - 1;
-        }
-      };
-
-      scope.custom_footer_new_limit = function () {
-        scope.custom_footer_list_page = 0;
-        $location.search("limit", scope.custom_footer_limit);
-        $location.search("page", 0);
-      };
-
-      scope.custom_footer_next_page = function (current_page) {
-        if (scope.result.length != 0 && scope.result.length >= scope.custom_footer_limit) {
-          $location.search("page", current_page + 1);
-          scope.custom_footer_list_page = current_page + 1;
-        }
-      };
-
       $http.get('HTML/templates/footer.custom.html').then(function (response) {
         element.append($compile(response.data)(scope));
       });
+
+      
     }
   }
 });
 
-testApp.directive('selectWell', function ($location) {
+mcmApp.directive('columnSelect', function ($location) {
   return {
-    restrict: 'EA',
+    restrict: 'E',
     template:
-      '<input type="button" value="Show selection options" class="btn" ng-click="showWell=!showWell" ng-show="!showWell && !alwaysShow">' +
-      '<input type="button" value="Hide selection options" class="btn" ng-click="showWell=!showWell" ng-show="showWell && !alwaysShow">' +
-      '<div class="well" ng-show="showWell">' +
-      '<div>' +
-      '<input type="button" class="btn" value="Select all" ng-click="selectAll()" ng-hide="selectedCount==selection.length">' +
-      '<input type="button" class="btn" value="Deselect" ng-click="selectAll()" ng-show="selectedCount==selection.length">' +
-      '<input type="button" class="btn" value="Save selection" ng-click="saveCookie()" ng-if="useCookie">' +
-      '<a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#View_Characteristics" rel="tooltip" title="Help with view characteristics" target="_blank"><i class="icon-question-sign"></i></a>' +
-      '</div>' +
-      '<span ng-repeat="value in selection">' +
-      '<label class="checkbox inline" style="padding-left:20px;">' +
-      '<input type="checkbox" ng-model="value.select" style="margin-left: -15px;">{{value.text}}' +
-      '</label>' +
-      '</span>' +
-      '</div>',
+    `<div class="well" style="padding: 8px; text-align: center;">
+      <div class="column-select">
+        <div ng-repeat="column in columns track by $index">
+          <label class="checkbox inline" style="padding-left:20px;">
+            <input type="checkbox" ng-model="column.select" style="margin-left: -15px;">{{column.text}}
+          </label>
+        </div>
+      </div>
+      <input type="button" class="btn btn-primary btn-xs" value="Select all" ng-click="selectAll()" ng-hide="selectedCount == columns.length">
+      <input type="button" class="btn btn-primary btn-xs" value="Deselect" ng-click="selectAll()" ng-show="selectedCount == columns.length">
+    </div>`,
     scope: {
-      selection: '=',
-      database: '@',
-      alwaysShow: "=?",
-      useCookie: "=?"
+      columns: '=',
+      updateQuery: '&'
     },
     link: function ($scope) {
       $scope.selectedCount = 0;
-      $scope.alwaysShow = $scope.alwaysShow === undefined ? false : $scope.alwaysShow;
-      $scope.showWell = $scope.alwaysShow;
-      $scope.useCookie = $scope.useCookie === undefined ? true : $scope.useCookie;
-      var previousSelection = [];
+      $scope.previous = [];
 
-      if (!$scope.database) {
-        $scope.database = $location.search()["db_name"];
-      }
-
-      var shown = $location.search()["shown"] || ($scope.useCookie ? $.cookie($scope.database + "shown") : false);
-      if ($location.search()["fields"]) //if fields in url don't force to calculate shown from cookie or shown number
-      {
-        shown = false;
-      }
+      let shown = $location.search()["shown"];
       if (shown) {
         $location.search("shown", shown);
-        var binary_shown = parseInt(shown).toString(2).split('').reverse().join(''); //make a binary string interpretation of shown number
-        for (var column = 0; column < $scope.selection.length; column++) {
-          var binary_bit = binary_shown.charAt(column);
-          if (binary_bit != "") { //if not empty -> we have more columns than binary number length
-            $scope.selection[column].select = binary_bit == 1;
-          } else { //if the binary index isnt available -> this means that column "by default" was not selected
-            $scope.selection[column].select = false;
+        // Make a binary string interpretation of shown number
+        let shownBinary = parseInt(shown).toString(2).split('').reverse().join('');
+        for (let index =  0; index < $scope.columns.length; index++) {
+          let bit = shownBinary.charAt(index);
+          $scope.columns[index].select = bit === '1';
+          if (bit === '1') {
+            $scope.previous.push($scope.columns[index].db_name);
           }
         }
       }
-      _.each($scope.selection, function (elem, index) {
-        if (elem.select) {
-          previousSelection.push(index);
-        }
-      });
 
-      $scope.$watch('selection', function () { //on chage of column selection -> recalculate the shown number
-        var bin_string = ""; //reconstruct from begining
+      $scope.$watch('columns', function () { //on chage of column selection -> recalculate the shown number
+        var shownBinary = '';
         var count = 0;
-        _.each($scope.selection, function (column) { //iterate all columns
+        for (let column of $scope.columns) {
           if (column.select) {
-            count += 1;
-            bin_string = "1" + bin_string; //if selected add 1 to binary interpretation
+            shownBinary = '1' + shownBinary;
+            count++;
           } else {
-            bin_string = "0" + bin_string;
+            shownBinary = '0' + shownBinary;
           }
-        });
-        $scope.selectedCount = count;
-        $location.search("shown", parseInt(bin_string, 2)); //put into url the interger of binary interpretation
+          $scope.selectedCount = count;
+        }
+        $scope.updateQuery()({'shown': parseInt(shownBinary, 2)});
       }, true);
 
       $scope.selectAll = function () {
-        var currentSelected = [];
-        _.each($scope.selection, function (elem, index) {
-          if (elem.select) {
-            currentSelected.push(index);
-          }
-          elem.select = true;
-        });
-        if ($scope.selectedCount == _.size($scope.selection)) {
-          _.each($scope.selection, function (elem) {
-            elem.select = false;
-          });
-          _.each(previousSelection, function (elem) {
-            $scope.selection[elem].select = true;
-          });
+        if ($scope.selectedCount == $scope.columns.length) {
+          $scope.columns.map(x => x.select = $scope.previous.includes(x.db_name));
         } else {
-          previousSelection = currentSelected;
-        }
-      };
-
-
-      $scope.saveCookie = function () {
-        var cookie_name = $scope.database + "shown";
-        if ($location.search()["shown"]) {
-          $.cookie(cookie_name, $location.search()["shown"], { expires: 7000 });
+          $scope.previous = $scope.columns.filter(x => x.select).map(x => x.db_name);
+          $scope.columns.map(x => x.select = true);
         }
       };
     }
@@ -823,7 +735,7 @@ testApp.directive('selectWell', function ($location) {
 
 });
 
-testApp.directive("customHistory", function () {
+mcmApp.directive("customHistory", function () {
   return {
     require: 'ngModel',
     template:
@@ -870,7 +782,7 @@ testApp.directive("customHistory", function () {
   }
 });
 
-testApp.directive("sequenceDisplay", function ($http) {
+mcmApp.directive("sequenceDisplay", function ($http) {
   return {
     restrict: 'EA',
     template:

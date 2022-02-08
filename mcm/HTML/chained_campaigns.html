@@ -1,32 +1,35 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+<html lang="eng" ng-app="mcmApp" xmlns:ng="http://angularjs.org" id="ng-app">
 
 <head>
   <title>McM - Chained Campaigns</title>
   <base href="/mcm/">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
-  <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
-  <script type="text/javascript">
-    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
-  </script>
-  <script src="scripts/main_controller.js"></script>
-  <script src="scripts/chained_campaigns_controller.js"></script>
-  <script src="scripts/snow.js"></script>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="scripts/css/bootstrap.min.css">
+  <link rel="stylesheet" href="scripts/css/mcm.css" />
+  <link rel="shortcut icon" type="image/x-icon" href="scripts/img/mcm.png">
+  <script type="text/javascript" src="scripts/angular.min.js"></script>
+  <script type="text/javascript" src="scripts/angular-ui.min.js"></script>
+  <script type="text/javascript" src="scripts/jquery.js"></script>
+  <script type="text/javascript" src="scripts/bootstrap.js"></script>
+  <script type="text/javascript" src="scripts/ui-bootstrap-tpls-2.5.0.js"></script>
+  <script type="text/javascript" src="scripts/main_controller.js"></script>
+  <script type="text/javascript" src="scripts/chained_campaigns_controller.js"></script>
 </head>
 
-<body ng-controller="mainCtrl">
-  <div ng-include="'HTML/navbar_template.html'"></div>
-  <span ng-controller="resultsCtrl">
-    <div style='margin-bottom: 5px' class="container">
-      <select-well ng-if="selectionReady" database="{{dbName}}" selection="columns"></select-well>
+<body ng-controller="mainController">
+  <div ng-include="'HTML/navbar.html'"></div>
+  <div ng-include="'HTML/modals.html'"></div>
+  <div ng-controller="chainedCampaignController">
+    <div class="container">
+      <column-select update-query="updateQuery" columns="columns"></column-select>
     </div>
     <table class="table table-bordered table-striped table-hover">
       <thead>
         <tr>
-          <th ng-repeat="column in columns"
-              ng-if="column.select"
-              style="white-space: nowrap; text-align: center;">
+          <th ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap; text-align: center;">
             {{column.text}}
           </th>
         </tr>
@@ -40,51 +43,49 @@
                 <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/chained_campaigns/{{data[column.db_name]}}"
                    rel="tooltip"
                    title="Admin view of {{data[column.db_name]}}"
-                   ng-show="user.is_administrator && !isDevMachine();"><i class="icon-star"></i></a>
+                   ng-show="user.is_administrator && !isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
                 <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/chained_campaigns/{{data[column.db_name]}}"
                    rel="tooltip"
                    title="Admin view of {{data[column.db_name]}}"
-                   ng-show="user.is_administrator && isDevMachine();"><i class="icon-star"></i></a>
+                   ng-show="user.is_administrator && isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
               </div>
 
               <div ng-switch-when="">
                 <a ng-href='edit?db_name=chained_campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-show="user.is_production_manager" target="_self">
-                  <i class="icon-wrench"></i>
+                  <i class="glyphicon glyphicon-wrench"></i>
                 </a>
                 <a ng-click='deleteObject(data.prepid)' rel="tooltip" title="Delete chained campaign" ng-show="user.is_production_manager" ng-href="#">
-                  <i class="icon-minus-sign"></i>
+                  <i class="glyphicon glyphicon-trash"></i>
                 </a>
                 <a ng-href='chained_requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self">
-                  <i class="icon-indent-left"></i>
+                  <i class="glyphicon glyphicon-align-left"></i>
                 </a>
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
                 <img ng-show="actionMessage[data.prepid] == 'loading'" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
                 <span ng-show="actionMessage[data.prepid] != 'OK' && actionMessage[data.prepid] != 'loading'" style="color: red">{{actionMessage[data.prepid]}}</span>
               </div>
               <div ng-switch-when="notes">
-                <div style="width:400px">
-                  <pre class="notes">{{data[column.db_name]}}</pre>
-                </div>
+                <pre ng-if="data.notes.length" class="notes">{{data.notes}}</pre>
               </div>
               <div ng-switch-when="campaigns">
                 <ul>
                   <li ng-repeat="element in data[column.db_name]">
-                    <div ng-switch on="_.isArray(element)">
+                    <div ng-switch on="isArray(element)">
                       <div ng-switch-when="true" ng-switch on="element[1]!=null;">
                         <div ng-switch-when="true">
-                          <a ng-href='chained_campaigns?contains={{element[1]}}' rel="tooltip" title="View chained campaigns using {{element[1]}}" target="_self">{{element[1]}}<i class="icon-align-right"></i></a>
-                          <a ng-href='flows?prepid={{element[1]}}' rel="tooltip" title="View details of {{element[1]}}" target="_self"><i class="icon-magnet"></i></a>
-                          <a><i class="icon-arrow-right"></i></a>
-                          <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="icon-align-right"></i></a>
-                          <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="icon-book"></i></a>
+                          <a ng-href='chained_campaigns?contains={{element[1]}}' rel="tooltip" title="View chained campaigns using {{element[1]}}" target="_self">{{element[1]}}<i class="glyphicon glyphicon-align-right"></i></a>
+                          <a ng-href='flows?prepid={{element[1]}}' rel="tooltip" title="View details of {{element[1]}}" target="_self"><i class="glyphicon glyphicon-magnet"></i></a>
+                          <a><i class="glyphicon glyphicon-arrow-right"></i></a>
+                          <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="glyphicon glyphicon-align-right"></i></a>
+                          <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="glyphicon glyphicon-book"></i></a>
                         </div>
                         <div ng-switch-when="false">
-                          <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="icon-align-right"></i></a>
-                          <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="icon-book"></i></a>
+                          <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="glyphicon glyphicon-align-right"></i></a>
+                          <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="glyphicon glyphicon-book"></i></a>
                         </div>
                         <div ng-switch-default>
                           <a>
-                            <i class="icon-arrow-right"></i>
+                            <i class="glyphicon glyphicon-arrow-right"></i>
                           </a>
                           {{element}}
                         </div>
@@ -92,14 +93,6 @@
                     </div>
                   </li>
                 </ul>
-              </div>
-              <div ng-switch-when="check_cmssw_version" align="center" title="Check whether CMSSW versions in chained requests are the same or increasing">
-                <i class="icon-ok" ng-show="data.check_cmssw_version"></i>
-                <i class="icon-remove" ng-show="!data.check_cmssw_version"></i>
-              </div>
-              <div ng-switch-when="enabled" align="center">
-                <i class="icon-ok" ng-show="data.enabled"></i>
-                <i class="icon-remove" ng-show="!data.enabled"></i>
               </div>
               <div ng-switch-when="history">
                 <div custom-history ng-model="data[column.db_name]"></div>
@@ -115,45 +108,14 @@
         </tr>
       </tbody>
     </table>
-    <div class="row-fluid custom-footer">
-      <div class="span4">
-        <div>
-          <!-- MODAL -->
-          <input type="button" class="btn" ng-click="openChainCreationModal()" value="Create a chained campaign" ng-show="user.is_production_manager" align="left" />
-          <script type="text/ng-template" id="chainedCampaignCreateModal.html">
-            <div class="modal-header">
-              <h4>Create new chained campaign</h4>
-            </div>
-            <div class="modal-body">
-              <table>
-                <tr>
-                  <th>Step</th>
-                  <th>Flow</th>
-                  <th>Campaign</th>
-                </tr>
-                <tr ng-repeat="pair in pairs track by $index">
-                  <td style="text-align:center">{{ $index + 1 }}</td>
-                  <td><select ng-options="flow.prepid for flow in pair.flows" ng-model="pair.selectedFlow" ng-change="updateFlow($index)" ng-disabled="$index == 0"></select></td>
-                  <td><select ng-options="prepid for prepid in pair.campaigns" ng-model="pair.selectedCampaign" ng-change="updateCampaign($index)" ng-disabled="$index != 0"></select></td>
-                </tr>
-              </table>
-              <h5 ng-show="pairs.length > 1">Chained campaign will look like this</h5>
-              <ul>
-                <li ng-show="pair.selectedFlow.prepid || ($index == 0 && pair.selectedCampaign)" ng-repeat="pair in pairs track by $index">Step {{ $index + 1}}:
-                  <ul>
-                    <li ng-show="$index != 0">Flow: {{pair.selectedFlow.prepid}}</li>
-                    <li>Campaign: {{pair.selectedCampaign}}</li>
-                  </ul>
-                </li>
-              </ul>
-            </div>
-            <div class="modal-footer">
-              <button class="btn btn-success" ng-click="save()" ng-disabled="pairs.length < 1">Create</button>
-              <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-            </div>
-          </script>
-        </div>
-      </div> <!-- END OF MODAL -->
+    <div class="custom-footer">
+      <div>
+        <input type="button"
+                class="btn btn-primary"
+                ng-click="openChainCreationModal()"
+                value="Create new chained campaign"
+                ng-show="user.is_production_manager"/>
+      </div>
     </div>
   </span>
 </body>

@@ -1,0 +1,47 @@
+<nav class="navbar navbar-default" ng-class="{'navbar-inverse': isDevMachine()}" style="border-radius: 0 !important;">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/mcm/" target="_self">McM</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li><a ng-class="{'active': database == 'campaigns'}" ng-href='campaigns' target="_self">Campaigns <i class="glyphicon glyphicon-book"></i></a></li>
+        <li><a ng-class="{'active': database == 'flows'}" ng-href='flows' target="_self">Flows <i class="glyphicon glyphicon-magnet"></i></a></li>
+        <li><a ng-class="{'active': database == 'chained_campaigns'}" ng-href='chained_campaigns' target="_self">Chained campaigns <i class="glyphicon glyphicon-align-right"></i></a></li>
+        <li><a ng-class="{'active': database == 'requests'}" ng-href='requests' target="_self">Requests <i class="glyphicon glyphicon-folder-open"></i></a></li>
+        <li><a ng-class="{'active': database == 'chained_requests'}" ng-href='chained_requests' target="_self">Chained requests <i class="glyphicon glyphicon-align-left"></i></a></li>
+        <li><a ng-class="{'active': database == 'batches'}" ng-href='batches' target="_self">Batches <i class="glyphicon glyphicon-tags"></i></a></li>
+        <li><a ng-class="{'active': database == 'invalidations'}" ng-href='invalidations' target="_self" ng-if="user.is_production_manager">Invalidations <i class="glyphicon glyphicon-exclamation-sign"></i></a></li>
+        <li><a ng-class="{'active': database == 'mccms'}" ng-href='mccms' target="_self">MccM tickets <i class="glyphicon glyphicon-tasks"></i></a></li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">More... <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="#">Priority change</a></li>
+            <li><a href="#">Users</a></li>
+            <li><a href="#">Lists</a></li>
+            <li role="separator" class="divider"></li>
+            <li><a href="#">Database</a></li>
+            <li><a href="#">Settings</a></li>
+            <li><a href="#">Documentation</a></li>
+            <li role="separator" class="divider"></li>
+            <li><a href="#">Report an issue</a></li>
+            <li><a href="#">PdmV</a></li>
+          </ul>
+        </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+          <a ng-href='users?prepid={{user.username}}' target="_blank">{{user.fullname}} <small>({{user.role}})</small>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>

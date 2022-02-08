@@ -1,51 +1,44 @@
-angular.module('testApp').controller('resultsCtrl',
+angular.module('mcmApp').controller('indexController',
   ['$scope', '$http', '$window',
-  function resultsCtrl($scope, $http, $window) {
-    $scope.searchForm = {};
+  function indexController($scope, $http, $window) {
+    $scope.requestPrepid = '';
+    $scope.requestDataset = '';
+    $scope.requestTag = '';
+    $scope.mccmPrepid = '';
 
-    $scope.preloadPrepids = function (viewValue, database) {
-      const promise = $http.get("search/?db_name=" + database + "&page=0&limit=10&include_fields=prepid&prepid=" + viewValue + "*");
-      return promise.then(function(data){
-        return data.data.results.map(x => x.prepid);
-      }, function(data){
-        console.error("Error fetching prepids: " + data.status);
-        return [];
-      });
-    };
-
-    $scope.preloadUniques = function(viewValue, database) {
-      var promise = $http.get("restapi/requests/unique_values/" + database + "?key=" + viewValue);
-      return promise.then(function(data){
+    $scope.loadSuggestions = function(database, attribute, value) {
+      return $http.get(`restapi/${database}/unique_values?attribute=${attribute}&value=${value}`).then(function(data) {
+        console.log(data.data.results);
         return data.data.results;
       }, function(data){
-        console.error("Error fetching suggestions: " + data.status);
+        console.error(`Error fetching suggestions: ${data.status}`);
         return [];
       });
     };
 
     $scope.searchRequests = function (){
-      const prepid  = $scope.searchForm.prepid;
-      const dataset = $scope.searchForm.dataset;
-      const tags = $scope.searchForm.tags;
       let query = [];
-      if (prepid && prepid.length){
-        query.push("prepid=" + prepid);
+      if ($scope.requestPrepid.length){
+        query.push(`prepid=${$scope.requestPrepid}`);
       }
-      if (dataset && dataset.length){
-        query.push("dataset_name=" + dataset);
+      if ($scope.requestDataset.length){
+        query.push(`dataset_name=${$scope.requestDataset}`);
       }
-      if (tags && tags.length){
-        query.push("tags=" + tags);
+      if ($scope.requestTag.length){
+        query.push(`tags=${$scope.requestTag}`);
       }
       if (query.length){
-        $window.location.href = "requests?" + query.join('&');
+        $window.location.href = `requests?${query.join('&')}`;
       }
     };
 
     $scope.searchTickets = function (){
-      const prepid  = $scope.searchForm.ticket;
-      if (prepid && prepid.length){
-        $window.location.href = "mccms?prepid=" + prepid;
+      if ($scope.mccmPrepid.length){
+        $window.location.href = `mccms?prepid=${$scope.mccmPrepid}`;
       }
     };
+
+    $scope.openItem = function(database, attribute, value) {
+      $window.location.href = `${database}?${attribute}=${value}`;
+    }
 }]);

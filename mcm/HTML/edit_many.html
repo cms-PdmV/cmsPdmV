@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp"  xmlns:ng="http://angularjs.org" id="ng-app">
+<html lang="eng" ng-app="mcmApp"  xmlns:ng="http://angularjs.org" id="ng-app">
   <head>
     <base href="/mcm/">
     <title>Edit page McM</title>
@@ -11,12 +11,12 @@
     <script type="text/javascript" src="scripts/build/mcm.deps2.js"></script>
     <!--[IF IE]>
     <script type="text/javascript">
-      var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
+      var mcmApp = angular.module('mcmApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(false);});
     </script>
     <![endif]-->
     <![if !IE]>
     <script type="text/javascript">
-      var testApp = angular.module('testApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
+      var mcmApp = angular.module('mcmApp', ['ui','ui.bootstrap']).config(function($locationProvider){$locationProvider.html5Mode(true);});
     </script>
     <![endif]>
     <script src="scripts/main_controller.js"></script>
@@ -47,7 +47,7 @@
       }
     </style>
   </head>
-  <body ng-controller="mainCtrl">
+  <body ng-controller="mainController">
     <span ng-controller="resultsCtrl">
       <div ng-include="'HTML/navbar_template.html'"></div>
       <div class="container" ng-show="role(1);">

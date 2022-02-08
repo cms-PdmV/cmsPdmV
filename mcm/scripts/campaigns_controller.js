@@ -1,6 +1,6 @@
-angular.module('testApp').controller('resultsCtrl',
-  ['$scope', '$http', '$location', '$window', '$modal',
-    function resultsCtrl($scope, $http, $location, $window, $modal) {
+angular.module('mcmApp').controller('campaignController',
+  ['$scope', '$uibModal',
+    function campaignController($scope, $uibModal) {
 
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
@@ -11,43 +11,44 @@ angular.module('testApp').controller('resultsCtrl',
         { text: 'Next', select: true, db_name: 'next' },
         { text: 'Notes', select: true, db_name: 'notes' },
       ];
-      $scope.dbName = "campaigns";
-      $scope.setDatabaseInfo($scope.dbName, $scope.columns);
+      $scope.setDatabaseInfo('campaigns', $scope.columns);
 
       $scope.nextStatus = function (prepid) {
         $scope.objectAction(undefined,
                             [prepid],
                             {method: 'POST',
-                             url: 'restapi/' + $scope.dbName + '/status',
+                             url: 'restapi/' + $scope.database + '/status',
                              data: {'prepid': prepid}});
       };
 
       $scope.openRequestCreator = function (campaignPrepid) {
-        const pwgs = $scope.user.pwgs;
-        $modal.open({
+        $uibModal.open({
           templateUrl: 'createRequestModal.html',
-          controller: function ($scope, $modalInstance, $window, $http, pwgs, prepid, errorModal) {
-            $scope.vars = {'prepid': prepid, 'pwgs': pwgs, 'selectedPwg': pwgs[0]};
+          controller: function ($scope, $uibModalInstance, $window, $http, pwgs, campaignPrepid, errorModal) {
+            $scope.vars = {'pwgs': pwgs, 'selectedPwg': pwgs[0]};
             $scope.save = function () {
-              const requestData = {member_of_campaign: $scope.vars.prepid, pwg: $scope.vars.selectedPwg};
-              $http({method: 'PUT', url: 'restapi/requests/save/', data: requestData}).success(function (data) {
-                if (data.results) {
-                  $window.location.href = "edit?db_name=requests&prepid=" + data.prepid;
+              let requestData = {'member_of_campaign': campaignPrepid,
+                                 'pwg': $scope.vars.selectedPwg};
+              $http({method: 'PUT', url: 'restapi/requests/save/', data: requestData}).then(function (data) {
+                console.log(data.data);
+                if (data.data.results) {
+                  $window.location.href = "edit?db_name=requests&prepid=" + data.data.prepid;
                 } else {
-                  errorModal(data.prepid, data['message']);
+                  errorModal(data.data.prepid, data.data.message);
                 }
-              }).error(function (data, status) {
-                errorModal(data.prepid, data['message']);
+              }, function (data) {
+                console.log(data)
+                errorModal(data.data.prepid, data.data.message);
               });
-              $modalInstance.close();
+              $uibModalInstance.close();
             };
             $scope.close = function () {
-              $modalInstance.dismiss();
+              $uibModalInstance.dismiss();
             };
           },
           resolve: {
-            pwgs: function () { return pwgs; },
-            prepid: function () { return campaignPrepid; },
+            pwgs: function () { return $scope.user.pwgs; },
+            campaignPrepid: function () { return campaignPrepid; },
             errorModal: function () { return $scope.openErrorModal; },
           }
         })

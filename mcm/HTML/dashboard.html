@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+<html lang="eng" ng-app="mcmApp" xmlns:ng="http://angularjs.org" id="ng-app">
 
 <head>
   <title>McM - Dashboard</title>
   <base href="/mcm/">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
+  <link href="scripts/css/mcm.css" rel="stylesheet" />
   <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
   <script type="text/javascript">
-    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
+    var mcmApp = angular.module('mcmApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
   </script>
   <script src="scripts/main_controller.js"></script>
   <script src="scripts/dashboard_controller.js"></script>
   <script src="scripts/snow.js"></script>
 </head>
 
-<body ng-controller="mainCtrl">
+<body ng-controller="mainController">
   <div ng-include="'HTML/navbar_template.html'"></div>
   <span ng-controller="resultsCtrl">
     <div class="row-fluid">

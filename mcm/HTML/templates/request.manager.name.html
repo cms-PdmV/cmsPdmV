@@ -7,7 +7,7 @@
       <span ng-show="!isDevMachine();">
         <a ng-href="https://cmsweb.cern.ch/reqmgr2/fetch?rid={{reqmgr.name}}" rel="tooltip" title="Open {{reqmgr.name}} in ReqMgr2" target="_blank">{{reqmgr.name}}</a>
       </span>
-      <a ng-click="getrqmnr_data(reqmgr.name);" ng-hide="stats_cache[reqmgr.name]" rel="tooltip" title="Load {{reqmgr.name}} summary from Stats" ng-href="#"> <i class="icon-eye-open"></i></a>
+      <a ng-click="getrqmnr_data(reqmgr.name);" ng-hide="stats_cache[reqmgr.name]" rel="tooltip" title="Load {{reqmgr.name}} summary from Stats" ng-href="#"> <i class="glyphicon glyphicon-eye-open"></i></a>
       <span ng-show="stats_cache[reqmgr.name] && !underscore.isObject(stats_cache[reqmgr.name])">
         <ul>
           <li>

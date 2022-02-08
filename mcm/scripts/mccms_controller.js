@@ -1,4 +1,4 @@
-angular.module('testApp').controller('resultsCtrl',
+angular.module('mcmApp').controller('resultsCtrl',
   ['$scope', '$http', '$location', '$window', '$modal',
     function resultsCtrl($scope, $http, $location, $window, $modal) {
 
@@ -80,9 +80,9 @@ angular.module('testApp').controller('resultsCtrl',
 
       $scope.openTicketCreator = function () {
         const pwgs = $scope.user.pwgs;
-        $modal.open({
+        $uibModal.open({
           templateUrl: 'createTicketModal.html',
-          controller: function ($scope, $modalInstance, $window, $http, pwgs, errorModal) {
+          controller: function ($scope, $uibModalInstance, $window, $http, pwgs, errorModal) {
             $scope.vars = {'pwgs': pwgs, 'selectedPwg': pwgs[0]};
             $scope.save = function () {
               const ticketData = {'pwg': $scope.vars.selectedPwg};
@@ -95,10 +95,10 @@ angular.module('testApp').controller('resultsCtrl',
               }).error(function (data, status) {
                 errorModal(data.prepid, data['message']);
               });
-              $modalInstance.close();
+              $uibModalInstance.close();
             };
             $scope.close = function () {
-              $modalInstance.dismiss();
+              $uibModalInstance.dismiss();
             };
           },
           resolve: {
@@ -108,9 +108,9 @@ angular.module('testApp').controller('resultsCtrl',
         })
       };
       $scope.openTicketChainGenerator = function (mccm) {
-        $modal.open({
+        $uibModal.open({
           templateUrl: 'generateChainsModal.html',
-          controller: function ($scope, $modalInstance, $http, mccm, errorModal) {
+          controller: function ($scope, $uibModalInstance, $http, mccm, errorModal) {
             $scope.vars = {'prepid': mccm.prepid,
                            'skipExisting': false,
                            'allowDuplicates': false};
@@ -127,10 +127,10 @@ angular.module('testApp').controller('resultsCtrl',
               }).error(function (data, status) {
                 errorModal(data.prepid, data['message']);
               });
-              $modalInstance.close();
+              $uibModalInstance.close();
             };
             $scope.close = function () {
-              $modalInstance.dismiss();
+              $uibModalInstance.dismiss();
             };
           },
           resolve: {

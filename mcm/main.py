@@ -87,7 +87,7 @@ from rest_api.InvalidationActions import (GetInvalidation,
                                           HoldInvalidation,
                                           ResetInvalidation)
 from rest_api.DashboardActions import GetLocksInfo, GetValidationInfo, GetStartTime, GetQueueInfo
-from rest_api.MccmActions import GetMccM, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccM, GenerateChains, MccMReminderProdManagers, MccMReminderGenConveners, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved, NotifyMccm
+from rest_api.MccmActions import GetMccM, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccM, GetUniqueMccMValues, GenerateChains, MccMReminderProdManagers, MccMReminderGenConveners, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved, NotifyMccm
 from rest_api.SettingsActions import GetSetting, SetSetting
 # from rest_api.TagActions import GetTags, AddTag, RemoveTag
 # from rest_api.ListActions import GetList, UpdateList
@@ -409,6 +409,7 @@ api.add_resource(CreateMccm, '/restapi/mccms/save')
 api.add_resource(DeleteMccm, '/restapi/mccms/delete/<string:prepid>')
 api.add_resource(CancelMccm, '/restapi/mccms/cancel')
 api.add_resource(GetEditableMccM, '/restapi/mccms/get_editable/<string:prepid>')
+api.add_resource(GetUniqueMccMValues, '/restapi/mccms/unique_values')
 api.add_resource(GenerateChains, '/restapi/mccms/generate')
 api.add_resource(CalculateTotalEvts, '/restapi/mccms/recalculate')
 api.add_resource(CheckIfAllApproved, '/restapi/mccms/check_all_approved/<string:prepid>')

@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html lang="eng" ng-app="testApp" xmlns:ng="http://angularjs.org" id="ng-app">
+<html lang="eng" ng-app="mcmApp" xmlns:ng="http://angularjs.org" id="ng-app">
 
 <head>
   <title>McM - Invalidations</title>
   <base href="/mcm/">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <link href="scripts/build/mcmcss.css" rel="stylesheet" />
+  <link href="scripts/css/mcm.css" rel="stylesheet" />
   <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
   <script type="text/javascript" src="scripts/build/mcm.deps2.js"></script>
   <script type="text/javascript">
-    var testApp = angular.module('testApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
+    var mcmApp = angular.module('mcmApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
   </script>
   <script src="scripts/main_controller.js"></script>
   <script src="scripts/invalidations_controller.js"></script>
   <script src="scripts/snow.js"></script>
 </head>
 
-<body ng-controller="mainCtrl">
+<body ng-controller="mainController">
   <div ng-include="'HTML/navbar_template.html'"></div>
   <span ng-controller="resultsCtrl">
     <div style='margin-bottom: 5px' class="container">
@@ -38,20 +38,20 @@
                 <a ng-href='{{dbName}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
                 <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data[column.db_name]}}"
                   rel="tooltip" title="Admin view of {{data[column.db_name]}}"
-                  ng-show="user.is_administrator && !isDevMachine();"><i class="icon-star"></i></a>
+                  ng-show="user.is_administrator && !isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
                 <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data[column.db_name]}}"
                   rel="tooltip" title="Admin view of {{data[column.db_name]}}"
-                  ng-show="user.is_administrator && isDevMachine();"><i class="icon-star"></i></a>
+                  ng-show="user.is_administrator && isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
                 <a rel="tooltip" title="Remove invalidation" ng-click="delete(invalidations_info['_id']);"
                   ng-hide="role(4);" ng-href="#">
-                  <i class="icon-minus-sign"></i>
+                  <i class="glyphicon glyphicon-trash"></i>
                 </a>
                 <a rel="tooltip" title="Edit invalidation"
                   ng-href="edit?db_name=invalidations&prepid={{objectToId(invalidations_info['object'])}}"
                   ng-hide="role(2);" target="_self">
-                  <i class="icon-wrench"></i>
+                  <i class="glyphicon glyphicon-wrench"></i>
                 </a>
                 <a rel="tooltip" title="Clear invalidation" ng-click="do_action(invalidations_info['_id'], 'clear');"
                   ng-hide="role(3);" ng-href="#">

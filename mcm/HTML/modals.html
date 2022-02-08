@@ -1,88 +1,16 @@
-<div class="navbar navbar-static-top" ng-class="{ 'navbar-inverse': isDevMachine() }"  style="margin-bottom: 20px;"> <!--  place for NAV-BAR-->
-  <div class="navbar-inner">
-    <ul class="nav">
-      <li ng-class='{ "active": dbName=="campaigns"}'>
-        <a ng-href='campaigns' target="_self">Campaign <i class="icon-book"></i></a>
-      </li>
-      <li class="divider-vertical"></li>
-      <li ng-class='{ "active": dbName=="chained_campaigns"}'>
-        <a ng-href='chained_campaigns' target="_self">Chained campaign <i class="icon-align-right"></i></a>
-      </li>
-      <li class="divider-vertical"></li>
-      <li ng-class='{ "active": dbName=="flows"}'>
-        <a ng-href='flows' target="_self">Flow <i class="icon-magnet"></i></a>
-      </li>
-      <li class="divider-vertical"></li>
-      <li>
-        <a ng-href='priority_change' target="_self">Priority change<i class="icon-qrcode"></i></a>
-      </li>
-      <li class="divider-vertical"></li>
-      <li ng-class='{ "active": dbName=="requests"}'>
-        <a ng-href='requests' target="_self">Request <i class="icon-folder-open"></i></a>
-      </li>
-      <li class="divider-vertical"></li>
-      <li ng-class='{ "active": dbName=="chained_requests"}'>
-        <a ng-href='chained_requests' target="_self">Chained request <i class="icon-indent-left"></i></a>
-      </li>
-      <li class="divider-vertical"></li>
-      <li ng-class='{ "active": dbName=="batches"}'>
-        <a ng-href='batches?status=new' target="_self">Batch <i class="icon-tags"></i></a>
-      </li>
-      <li class="divider-vertical" ng-hide="role(3);"></li>
-      <li ng-class='{ "active": dbName=="invalidations"}' ng-hide="role(3);">
-        <a ng-href='invalidations?status=new' target="_self">Invalidations <i class="icon-exclamation-sign"></i></a>
-      </li>
-      <li class="divider-vertical" ng-hide="role(1);"></li>
-      <li ng-class='{ "active": dbName=="mccms"}' ng-hide="role(1);">
-        <a ng-href='mccms' target="_self">MccM <i class="icon-tasks"></i></a>
-      </li>
-      <li class="divider-vertical" ng-hide="role(1);"></li>
-      <li ng-class='{ "active": dbName=="dashboard"}' ng-hide="role(1);">
-        <a ng-href='dashboard' target="_self">Dashboard <i class="icon-picture"></i></a>
-      </li>
-      <li class="divider-vertical"></li>
-      <li ng-class='{ "active": dbName=="users"}'>
-        <a ng-href='users' target="_self">User <i class="icon-user"></i></a>
-      </li>
-      <li class="divider-vertical" ng-hide="role(4);"></li>
-      <li ng-class='{ "active": dbName=="settings"}' ng-hide="role(4);">
-        <a ng-href='settings' target="_self">Settings <i class="icon-briefcase"></i></a>
-      </li>
-      <li class="divider-vertical"></li>
-      <li ng-class='{ "active": dbName=="lists"}'>
-        <a ng-href='lists' target="_self">Lists <i class="icon-list-alt"></i></a>
-      </li>
-      <li class="divider-vertical" ng-hide="role(4);"></li>
-      <li ng-hide="role(4);">
-        <a ng-href='admin/_utils/' target="_self">Admin <i class="icon-star"></i></a>
-      </li>
-      <li class="divider-vertical" ></li>
-      <li>
-        <a ng-href='https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM' target="_blank">Help <i class="icon-question-sign"></i></a>
-      </li>
-      <li>
-        <a ng-href='/pmp' target="_blank">pMp <i class="icon-film"></i></a>
-      </li>
-      <li class="divider-vertical" ></li>
-      <li>
-        <a ng-click="openSupportModal();" ng-href="#">
-          Support <i class="icon-envelope"></i></a>
-      </li>
-      <li class="divider-vertical" ></li>
-      <li>
-        <a ng-href="/mcm" target="_self">
-          Home <i class="icon-home"></i>
-        </a>
-      </li>
-      <li class="divider-vertical" ></li>
-      <ul class="nav pull-right">
-        <li>
-          <a ng-href='users?prepid={{user.username}}' target="_blank">{{user.fullname}} ({{user.role}}, {{user.pwgs.length}} groups)</a>
-        </li>
-      </ul>
-    </ul>
+<script type="text/ng-template" id="createRequestModal.html">
+  <div class="modal-header">
+    <h4>Create a request</h4>
   </div>
-</div> <!--END of navbar-->
+  <div class="modal-body">
+    Create request in {{prepid}} campaign
+    <select ng-options="value for value in vars.pwgs" ng-model="vars.selectedPwg" style="width: 90px; margin-bottom: 0px;"></select>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" ng-click="save()">Create</button>
+    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+  </div>
+</script>
 
 <!--     Support MODAL -->
 <script type="text/ng-template" id="supportModal.html"> <!--hidden modal template-->
@@ -141,10 +69,10 @@
 <!-- Create item MODAL -->
 <script type="text/ng-template" id="createItemModal.html">
   <div class="modal-header">
-    <h4>Create new {{database.substr(0, database.length - 1).replaceAll('_', ' ')}}</h4>
+    <h4>Create new {{objectName}}</h4>
   </div>
   <div class="modal-body">
-    New PrepID: <input type="text" ng-model="vars.prepid" />
+    New {{objectName}} name: <input type="text" ng-model="vars.prepid" />
   </div>
   <div class="modal-footer">
     <button class="btn btn-success" ng-click="save()">Create</button>
@@ -156,10 +84,10 @@
 <!-- Clone item MODAL -->
 <script type="text/ng-template" id="cloneItemModal.html">
   <div class="modal-header">
-    <h4>Clone {{prepid}}</h4>
+    <h4>Clone {{objectName}} {{prepid}}</h4>
   </div>
   <div class="modal-body">
-    New PrepID: <input type="text" ng-model="vars.newPrepid" />
+    New {{objectName}} name: <input type="text" ng-model="vars.newPrepid" />
   </div>
   <div class="modal-footer">
     <button class="btn btn-success" ng-click="clone()">Clone</button>
@@ -201,7 +129,7 @@
       <select ng-model="sequence.selectedHidden" ng-show="sequence.hidden.length > 0">
         <option ng-repeat="elem in sequence.hidden">{{elem}}</option>
       </select>
-      <a class="btn" ng-click="showHiddenSequence();" ng-href="#" ng-show="sequence.hidden.length > 0"><i class="icon-plus-sign"></i></a>
+      <a class="btn" ng-click="showHiddenSequence();" ng-href="#" ng-show="sequence.hidden.length > 0"><i class="glyphicon glyphicon-plus-sign"></i></a>
     </div>
     <div class="span2">
       <button class="btn btn-success" ng-click="save()">Save</button>
@@ -210,3 +138,55 @@
   </div>
 </script>
 <!-- End of edit sequence MODAL -->
+
+<script type="text/ng-template" id="chainedCampaignCreateModal.html">
+  <div class="modal-header">
+    <h4>Create new chained campaign</h4>
+  </div>
+  <div class="modal-body">
+    <table>
+      <tr>
+        <th>Step</th>
+        <th>Flow</th>
+        <th>Campaign</th>
+      </tr>
+      <tr ng-repeat="pair in pairs track by $index">
+        <td style="text-align:center">{{ $index + 1 }}</td>
+        <td><select ng-options="flow.prepid for flow in pair.flows" ng-model="pair.selectedFlow" ng-change="updateFlow($index)" ng-disabled="$index == 0"></select></td>
+        <td><select ng-options="prepid for prepid in pair.campaigns" ng-model="pair.selectedCampaign" ng-change="updateCampaign($index)" ng-disabled="$index != 0"></select></td>
+      </tr>
+    </table>
+    <h5 ng-show="pairs.length > 1">Chained campaign will look like this</h5>
+    <ul>
+      <li ng-show="pair.selectedFlow.prepid || ($index == 0 && pair.selectedCampaign)" ng-repeat="pair in pairs track by $index">Step {{ $index + 1}}:
+        <ul>
+          <li ng-show="$index != 0">Flow: {{pair.selectedFlow.prepid}}</li>
+          <li>Campaign: {{pair.selectedCampaign}}</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" ng-click="save()" ng-disabled="pairs.length < 1">Create</button>
+    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+  </div>
+</script>
+
+<!-- MODAL-->
+<script type="text/ng-template" id="reserveChainModal.html"> <!--hidden modal template-->
+  <div class="modal-header">
+    <h4>Chain reservation</h4>
+  </div>
+  <div class="modal-body">
+    <div ng-repeat="chainedRequest in chainedRequests">
+      <small style="word-break: break-all">{{chainedRequest.prepid}}</small>
+      <br>
+      Reserve up to:<select ng-options="elem for elem in chainedRequest.campaigns" ng-model="chainedRequest.campaign" style="width: 60%"></select>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-warning" ng-click="confirm()">Confirm</button>
+    <button class="btn btn-success" ng-click="cancel()">Cancel</button>
+  </div>
+</script>
+<!-- END of MODAL-->

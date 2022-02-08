@@ -1,4 +1,4 @@
-<div class="span4" style="margin-top: 10px; text-align: center;">
+<!-- <div class="span4" style="margin-top: 10px; text-align: center;">
   <span class="alert alert-error" ng-show="got_results && result_status != 200 && result_status">
     <strong>
       Sorry, HTTP Error {{result_status}}
@@ -47,4 +47,21 @@
       </select>
     </li>
 </ul>
+</div> -->
+<div>
+  <span ng-if="!loading"><small>Page</small> {{page}} <small>showing items</small> {{pageStart}} - {{pageEnd}} <small>of</small> {{totalRows}}</span>
+  <img ng-if="loading" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+</div>
+<div>
+
+  <div class="btn-group" role="group" aria-label="...">
+    <button type="button" ng-if="page > 0" ng-click="previousPage();" class="btn btn-default">Previous page</button>
+    <button type="button" ng-if="pageEnd < totalRows" ng-click="nextPage();" class="btn btn-default">Next page</button>
+  </div>
+  <div class="btn-group" role="group" aria-label="...">
+    <button type="button" ng-class="{'btn-primary': limit == 20}" ng-click="changeLimit(20);" class="btn btn-default">20</button>
+    <button type="button" ng-class="{'btn-primary': limit == 50}" ng-click="changeLimit(50);" class="btn btn-default">50</button>
+    <button type="button" ng-class="{'btn-primary': limit == 100}" ng-click="changeLimit(100);" class="btn btn-default">100</button>
+  </div>
+
 </div>

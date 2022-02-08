@@ -7,24 +7,62 @@ body {
 
 .custom-footer{
     background: white; 
-    height: 64px;
+    height: 50px;
+    width: 100%;
     position: fixed; 
     bottom: 0;
     box-shadow: 0px -2px 6px 0px rgba(0, 0, 0, .2);
-}
-
-.custom-footer-priority{
-    background: white;
-    height: 64px;
-    position: fixed;
-    bottom: 0;
-    box-shadow: 0px -2px 6px 0px rgba(0, 0, 0, .2);
+    display: flex;
+    justify-content: space-between;
 }
 
 .custom-footer > div{
-    margin-top: 17px;
-    padding: 0 4px;
-    line-height: 30px;
+    margin: 0 4px;
+    line-height: 50px;
+}
+
+pre.notes {
+    margin: 0;
+    padding: 4px 8px;
+    min-width: 250px;
+    max-width: 400px;
+}
+
+td {
+    vertical-align: middle !important;
+}
+
+img {
+    vertical-align: baseline;
+}
+
+table td ul {
+    padding-left: 16px;
+    margin-bottom: 0;
+}
+
+table .glyphicon {
+    color: rgba(0,0,0,0.87);
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+.column-select {
+    display: flex;
+    flex-flow: row wrap;
+    margin-bottom: 2px;
+}
+
+.column-select > div {
+    flex-basis: 0;
+    flex: 0 0 16.666%;
+    text-align: left;
+}
+
+.column-select label {
+    margin-top: 2px;
+    margin-bottom: 2px;
+    font-weight: 100;
 }
 
 .overlay-text{
@@ -79,6 +117,8 @@ body {
     overflow-y:scroll;
 }
 
+
+
 .well.batch-info{
     overflow-y: scroll;
     max-height: 600px;
@@ -115,4 +155,5 @@ img.led {
 
 .notes {
     word-break: break-word;
+    white-space: pre-wrap;
 }

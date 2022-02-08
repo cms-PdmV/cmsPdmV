@@ -1,6 +1,6 @@
-angular.module('testApp').controller('resultsCtrl',
-  ['$scope', '$http', '$location', '$window', '$modal',
-    function resultsCtrl($scope, $http, $location, $window, $modal) {
+angular.module('mcmApp').controller('chainedRequestController',
+  ['$scope', '$http',
+    function chainedRequestController($scope, $http) {
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
         { text: 'Actions', select: true, db_name: '' },
@@ -8,33 +8,16 @@ angular.module('testApp').controller('resultsCtrl',
         { text: 'Chain', select: true, db_name: 'chain' },
       ];
 
-      $scope.dbName = "chained_requests";
-      $scope.setDatabaseInfo($scope.dbName, $scope.columns);
-      $scope.underscore = _;
+      $scope.setDatabaseInfo('chained_requests', $scope.columns);
       $scope.shortView = {};
       $scope.selectedItems = [];
-
-      $scope.tabsettings = {
-        "view": {
-          active: false
-        },
-        "search": {
-          active: false
-        },
-        "navigation": {
-          active: false
-        },
-        "navigation2": {
-          active: false
-        }
-      };
 
       $scope.validate = function (prepid) {
         let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
         $scope.objectAction(undefined,
           prepids,
           {method: 'POST',
-           url: 'restapi/' + $scope.dbName + '/validate',
+           url: 'restapi/' + $scope.database + '/validate',
            data: {'prepid': prepids}});
       };
 
@@ -44,7 +27,7 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.objectAction(message,
           prepids,
           {method: 'POST',
-           url: 'restapi/' + $scope.dbName + '/rewind',
+           url: 'restapi/' + $scope.database + '/rewind',
            data: {'prepid': prepids}});
       };
 
@@ -54,7 +37,7 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.objectAction(message,
           prepids,
           {method: 'POST',
-           url: 'restapi/' + $scope.dbName + '/rewind_to_root',
+           url: 'restapi/' + $scope.database + '/rewind_to_root',
            data: {'prepid': prepids}});
       };
 
@@ -64,7 +47,7 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.objectAction(message,
           prepids,
           {method: 'POST',
-           url: 'restapi/' + $scope.dbName + '/flow',
+           url: 'restapi/' + $scope.database + '/flow',
            data: {'prepid': prepids}});
       };
 
@@ -84,7 +67,7 @@ angular.module('testApp').controller('resultsCtrl',
         }
         let chains = $scope.result.filter(x => prepidsToFetch.includes(x.prepid));
         let requests = [...new Set(chains.map(x => x.chain).flat())];
-        const status_map = {
+        const statusMap = {
           'submit-done': 'led-green.gif',
           'submit-submitted': 'led-blue.gif',
           'submit-approved': 'led-red.gif',
@@ -110,46 +93,28 @@ angular.module('testApp').controller('resultsCtrl',
               }
             }
           }
-          $http({ method: 'GET', url: 'public/restapi/requests/get_status_and_approval/' + requestsChunk.join(',') }).success(function (data, status) {
+          $http({ method: 'GET', url: 'public/restapi/requests/get_status_and_approval/' + requestsChunk.join(',') }).then(function (data) {
             for (let chain of chains) {
               for (let request of requestsChunk) {
                 if ($scope.shortView[chain.prepid][request]) {
-                  let requestStatus = data[request];
-                  if (status_map[requestStatus]) {
-                    $scope.shortView[chain.prepid][request] = [requestStatus, status_map[requestStatus]];
+                  let requestStatus = data.data[request];
+                  if (statusMap[requestStatus]) {
+                    $scope.shortView[chain.prepid][request] = [requestStatus, statusMap[requestStatus]];
                   } else {
                     $scope.shortView[chain.prepid][request] = ['Error status', 'led-cup-red-close.gif'];
                   }
                 }
               }
             }
-          }).error(function (status) {
-            console.error(status);
-          });
+          }, function (data) {});
         });
-      };
-
-      $scope.statusIcon = function (value) {
-        const icons = {
-          'new': 'icon-edit',
-          'validation': 'icon-eye-open',
-          'defined': 'icon-check',
-          'approved': 'icon-share',
-          'submitted': 'icon-inbox',
-          'done': 'icon-ok'
-        }
-        if (icons[value]) {
-          return icons[value];
-        } else {
-          return "icon-question-sign";
-        }
       };
 
       $scope.openReserveChainModal = function (chainedRequest) {
         let chainedRequests = chainedRequest == 'selected' ? $scope.result.filter(x => $scope.selectedItems.includes(x.prepid)): [chainedRequest];
-        $modal.open({
+        $uibModal.open({
           templateUrl: 'reserveChainModal.html',
-          controller: function ($scope, $modalInstance, $http, chainedRequests, objectAction) {
+          controller: function ($scope, $uibModalInstance, $http, chainedRequests, objectAction) {
             $scope.chainedRequests = chainedRequests.map(x => Object({'prepid': x.prepid,
                                                                       'member_of_campaign': x.member_of_campaign,
                                                                       'campaigns': ['---'],
@@ -174,10 +139,10 @@ angular.module('testApp').controller('resultsCtrl',
                   objectAction('flow', chainedRequest.prepid + '/reserve/' + chainedRequest.campaign);
                 }
               }
-              $modalInstance.close();
+              $uibModalInstance.close();
             };
             $scope.cancel = function () {
-              $modalInstance.dismiss();
+              $uibModalInstance.dismiss();
             };
           },
           resolve: {
@@ -206,7 +171,7 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.upload = function (file) {
         /*Upload a file to server*/
         $scope.got_results = false;
-        $http({ method: 'PUT', url: 'restapi/' + $scope.dbName + '/listwithfile', data: file }).success(function (data, status) {
+        $http({ method: 'PUT', url: 'restapi/' + $scope.database + '/listwithfile', data: file }).success(function (data, status) {
           $scope.result = data.results;
           $scope.result_status = data.status;
           $scope.got_results = true;
@@ -217,168 +182,3 @@ angular.module('testApp').controller('resultsCtrl',
         });
       };
     }]);
-
-// NEW for directive
-// var testApp = angular.module('testApp', []).config(function($locationProvider){$locationProvider.html5Mode(true);});
-testApp.directive("loadFields", function ($http, $location) {
-  return {
-    replace: true,
-    restrict: 'E',
-    template:
-      '<div>' +
-      '  <form class="form-inline">' +
-      '    <span class="control-group navigation-form" ng-repeat="key in searchable_fields">' +
-      '      <label style="width:140px;">{{key}}</label>' +
-      '      <input class="input-medium" type="text" ng-model="listfields[key]" typeahead="suggestion for suggestion in loadSuggestions($viewValue, key)">' +
-      '    </span>' +
-      '  </form>' +
-      '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>' +
-      '  <button type="button" class="btn btn-small" ng-click="getSearch();">Reload menus</button>' +
-      '  <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>' +
-      '</div>'
-    ,
-    link: function (scope, element, attr) {
-      scope.listfields = {};
-      scope.showUrl = false;
-      scope.showOption = {};
-
-      scope.searchable_fields = [
-        'approval',
-        'dataset_name',
-        'last_status',
-        'member_of_campaign',
-        'prepid',
-        'pwg',
-        'status',
-        'step'
-      ];
-
-      scope.getSearch = function () {
-        scope.listfields = {};
-        scope.showUrl = false;
-        var promise = $http.get("restapi/" + scope.dbName + "/searchable/do");
-        scope.loadingData = true;
-        promise.then(function (data) {
-          scope.loadingData = false;
-          scope.searchable = data.data;
-          _.each(scope.searchable, function (element, key) {
-            element.unshift("------"); //lets insert into begining of array an default value to not include in search
-            scope.listfields[key] = "------";
-          });
-        }, function (data) {
-          scope.loadingData = false;
-          alert("Error getting searchable fields: " + data.status);
-        });
-      };
-      scope.cleanSearchUrl = function () {
-        _.each($location.search(), function (elem, key) {
-          $location.search(key, null);
-        });
-        $location.search("page", 0);
-      };
-      scope.getUrl = function () {
-        scope.cleanSearchUrl();
-        //var url = "?";
-        _.each(scope.listfields, function (value, key) {
-          if (value != "") {
-            //url += key +"=" +value+"&";
-            $location.search(key, String(value));
-          } else {
-            $location.search(key, null);//.remove(key);
-          }
-        });
-        scope.getData();
-      };
-      scope.loadSuggestions = function (fieldValue, fieldName) {
-        if (fieldValue == '') {
-          return {};
-        }
-
-        const searchURL = "restapi/chained_requests/unique_values/" + fieldName + "?key=" + fieldValue;
-        return $http.get(searchURL).then(function (data) {
-          return data.data.results;
-        }, function (data) {
-          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
-        });
-      };
-    }
-  }
-});
-testApp.directive("loadRequestsFields", function ($http, $location) {
-  return {
-    replace: true,
-    restrict: 'E',
-    template:
-      '<div>' +
-      '  <form class="form-inline">' +
-      '    <span class="control-group navigation-form" ng-repeat="key in searchable_fields">' +
-      '      <label style="width:140px;">{{key}}</label>' +
-      '      <input class="input-medium" type="text" ng-model="listfields[key]" typeahead="suggestion for suggestion in loadSuggestions($viewValue, key)">' +
-      '    </span>' +
-      '  </form>' +
-      '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>' +
-      '  <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>' +
-      '</div>'
-    ,
-    link: function (scope, element, attr) {
-      scope.listfields = {};
-      scope.showUrl = false;
-      scope.showOption = {};
-
-      scope.searchable_fields = [
-        'status',
-        'member_of_chain',
-        'prepid',
-        'extension',
-        'tags',
-        'energy',
-        'mcdb_id',
-        'flown_with',
-        'pwg',
-        'process_string',
-        'generators',
-        'member_of_campaign',
-        'approval',
-        'dataset_name'
-      ];
-
-      scope.cleanSearchUrl = function () {
-        _.each($location.search(), function (elem, key) {
-          $location.search(key, null);
-        });
-        $location.search("page", 0);
-      };
-      scope.getUrl = function () {
-        scope.cleanSearchUrl();
-        _.each(scope.listfields, function (value, key) {
-          if (value != "") {
-            $location.search(key, String(value));
-          } else {
-            $location.search(key, null);//.remove(key);
-          }
-        });
-        $location.search("searchByRequests", true);
-        scope.getData();
-      };
-      scope.toggleSelectOption = function (option) {
-        if (scope.showOption[option]) {
-          scope.showOption[option] = false;
-        } else {
-          scope.showOption[option] = true;
-        }
-      };
-      scope.loadSuggestions = function (fieldValue, fieldName) {
-        if (fieldValue == '') {
-          return {};
-        }
-
-        const searchURL = "restapi/chained_requests/unique_values/" + fieldName + "?key=" + fieldValue;
-        return $http.get(searchURL).then(function (data) {
-          return data.data.results;
-        }, function (data) {
-          alert("Error getting suggestions for " + fieldName + "=" + fieldValue + ": " + data.status);
-        });
-      };
-    }
-  }
-});

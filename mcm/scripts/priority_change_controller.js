@@ -1,4 +1,4 @@
-angular.module('testApp').controller('resultsCtrl',
+angular.module('mcmApp').controller('resultsCtrl',
   ['$scope', '$http', '$location', '$window','$modal',
   function resultsCtrl($scope, $http, $location, $window, $modal){
     $scope.selected_pane = 'Requests'

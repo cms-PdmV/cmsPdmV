@@ -1,21 +1,18 @@
-angular.module('testApp').controller('resultsCtrl',
-  ['$scope', '$http', '$location', '$window', '$modal',
-    function resultsCtrl($scope, $http, $location, $window, $modal) {
+angular.module('mcmApp').controller('chainedCampaignController',
+  ['$scope',
+    function chainedCampaignController($scope) {
 
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
         { text: 'Actions', select: true, db_name: '' },
         { text: 'Campaigns', select: true, db_name: 'campaigns' }
       ];
-      $scope.dbName = "chained_campaigns";
-      $scope.setDatabaseInfo($scope.dbName, $scope.columns);
-
-      $scope._ = _; //enable underscorejs to be accessed from HTML template
+      $scope.setDatabaseInfo('chained_campaigns', $scope.columns);
 
       $scope.openChainCreationModal = function () {
-        const modal = $modal.open({
+        const modal = $uibModal.open({
           templateUrl: "chainedCampaignCreateModal.html",
-          controller: function ($scope, $modalInstance, $window, $http, errorModal, setSuccess) {
+          controller: function ($scope, $uibModalInstance, $window, $http, errorModal, setSuccess) {
             $scope.pairs = [{ campaigns: [], flows: [], selectedCampaign: '', selectedFlow: { prepid: undefined } }]
             let promise = $http.get("search?db_name=campaigns&page=-1");
             promise.then(function (data) {
@@ -64,7 +61,7 @@ angular.module('testApp').controller('resultsCtrl',
               });
             };
             $scope.close = function () {
-              $modalInstance.dismiss();
+              $uibModalInstance.dismiss();
             }
           },
           resolve: {

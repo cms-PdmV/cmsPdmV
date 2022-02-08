@@ -1,6 +1,6 @@
-angular.module('testApp').controller('resultsCtrl',
-  ['$scope', '$http', '$location', '$window', '$modal',
-    function resultsCtrl($scope, $http, $location, $window, $modal) {
+angular.module('mcmApp').controller('requestController',
+  ['$scope', '$http', '$window',
+    function requestController($scope, $http, $window) {
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
         { text: 'Actions', select: true, db_name: '' },
@@ -11,9 +11,7 @@ angular.module('testApp').controller('resultsCtrl',
         { text: 'Tags', select: true, db_name: 'tags' }
       ];
 
-      $scope.dbName = "requests";
-      $scope.setDatabaseInfo($scope.dbName, $scope.columns);
-      $scope.underscore = _;
+      $scope.setDatabaseInfo('requests', $scope.columns);
       $scope.file_was_uploaded = false;
       $scope.tabsettings = {
         "view": {
@@ -144,13 +142,13 @@ angular.module('testApp').controller('resultsCtrl',
         if (_.isString(prepid)) {
           prepid = [prepid]
         }
-        var notifyModal = $modal.open({
+        var notifyModal = $uibModal.open({
           templateUrl: 'notifyModal.html',
           controller: NotifyModalInstance
         });
 
         notifyModal.result.then(function (text) {
-          $http({ method: 'PUT', url: 'restapi/' + $scope.dbName + '/notify/', data: JSON.stringify({ prepids: prepid, message: text }) }).success(function (data, status) {
+          $http({ method: 'PUT', url: 'restapi/' + $scope.database + '/notify/', data: JSON.stringify({ prepids: prepid, message: text }) }).success(function (data, status) {
 
             $scope.update["success"] = true;
             $scope.update["fail"] = false;
@@ -166,9 +164,9 @@ angular.module('testApp').controller('resultsCtrl',
 
 
       $scope.openCloneRequestModal = function (request) {
-        const modal = $modal.open({
+        const modal = $uibModal.open({
           templateUrl: 'cloneRequestModal.html',
-          controller: function ($http, $scope, $modalInstance, request, pwgs, errorModal) {
+          controller: function ($http, $scope, $uibModalInstance, request, pwgs, errorModal) {
             $scope.vars = {
               pwg: '',
               campaign: ''
@@ -196,10 +194,10 @@ angular.module('testApp').controller('resultsCtrl',
               }).error(function (data, status) {
                 errorModal(data.prepid, data['message']);
               });
-              $modalInstance.close();
+              $uibModalInstance.close();
             };
             $scope.close = function () {
-              $modalInstance.dismiss();
+              $uibModalInstance.dismiss();
             };
           },
           resolve: {
@@ -247,19 +245,19 @@ angular.module('testApp').controller('resultsCtrl',
       };
     }]);
 
-var NotifyModalInstance = function ($scope, $modalInstance) {
+var NotifyModalInstance = function ($scope, $uibModalInstance) {
   $scope.data = { text: "" };
 
   $scope.notify = function () {
-    $modalInstance.close($scope.data.text);
+    $uibModalInstance.close($scope.data.text);
   };
 
   $scope.close = function () {
-    $modalInstance.dismiss();
+    $uibModalInstance.dismiss();
   };
 };
 
-testApp.directive("generatorParams", function ($http) {
+mcmApp.directive("generatorParams", function ($http) {
   return {
     require: 'ngModel',
     template:
@@ -331,14 +329,14 @@ testApp.directive("generatorParams", function ($http) {
   };
 });
 
-testApp.directive("loadFields", function ($http, $location) {
+mcmApp.directive("loadFields", function ($http, $location) {
   return {
     replace: true,
     restrict: 'E',
     template:
       '<div>' +
       '  <form class="form-inline">' +
-      '    <span class="control-group navigation-form" bindonce="searchable" ng-repeat="key in searchable_fields">' +
+      '    <span class="control-group navigation-form" ng-repeat="key in searchable_fields">' +
       '      <label style="width:140px;">{{key}}</label>' +
       '      <input class="input-medium" type="text" ng-model="listfields[key]" typeahead="suggestion for suggestion in loadSuggestions($viewValue, key)">' +
       '    </span>' +
@@ -409,7 +407,7 @@ testApp.directive("loadFields", function ($http, $location) {
   }
 });
 
-testApp.directive("customActorList", function ($http) {
+mcmApp.directive("customActorList", function ($http) {
   return {
     restrict: 'EA',
     template:
@@ -440,7 +438,7 @@ testApp.directive("customActorList", function ($http) {
   }
 });
 
-testApp.directive("fragmentDisplay", function ($http) {
+mcmApp.directive("fragmentDisplay", function ($http) {
   return {
     require: 'ngModel',
     template:

@@ -1,8 +1,7 @@
-angular.module('testApp').controller('resultsCtrl',
-  ['$scope', '$http', '$location', '$window', '$modal',
-    function resultsCtrl($scope, $http, $location, $window, $modal) {
+angular.module('mcmApp').controller('editController',
+  ['$scope', '$http', '$location', '$window', '$uibModal',
+    function editController($scope, $http, $location, $window, $uibModal) {
 
-      $scope.underscore = _;
       $scope.update = [];
       $scope.editingInfo = {};
       $scope.editableObject = {};
@@ -13,13 +12,13 @@ angular.module('testApp').controller('resultsCtrl',
 
       $scope.getObject = function () {
         let url = 'restapi/' + $scope.dbName + '/get_editable/' + $scope.prepid;
-        $http.get(url).success(function (data) {
+        $http.get(url).then(function (data) {
           if (data.results) {
             $scope.parseEditableObject(data.results);
           } else {
             $scope.openErrorModal(data.prepid, data['message']);
           }
-        }).error(function (data, status) {
+        }, function (data) {
           $scope.openErrorModal(data.prepid, data['message']);
         });
       };
@@ -61,18 +60,23 @@ angular.module('testApp').controller('resultsCtrl',
         }, 300);
       };
 
+      $scope.$watch(function () { return $http.pendingRequests.length; }, function (len) {
+        $scope.pendingHTTPLength = len;
+        $scope.pendingHTTP = len != 0;
+      });
+
       $scope.openSequenceEdit = function (sequence, onSave) {
-        $modal.open({
+        $uibModal.open({
           templateUrl: 'editSequenceModal.html',
-          controller: function ($scope, $modalInstance, $window, $http, sequence, onSave, attributeType) {
+          controller: function ($scope, $uibModalInstance, $window, $http, sequence, onSave, attributeType) {
             $scope.sequence = JSON.parse(JSON.stringify(sequence));
             $scope.attributeType = attributeType;
             $scope.save = function () {
               onSave($scope.sequence);
-              $modalInstance.close();
+              $uibModalInstance.close();
             };
             $scope.close = function () {
-              $modalInstance.dismiss();
+              $uibModalInstance.dismiss();
             };
           },
           resolve: {
@@ -129,7 +133,9 @@ angular.module('testApp').controller('resultsCtrl',
         });
       };
 
-      $scope.submit_edit = function () {
+      $scope.commitEdit = function () {
+        console.log('Saving...');
+        console.log($scope.editableObject);
         switch ($scope.dbName) {
           case "requests":
             _.each($scope.result["sequences"], function (sequence) {
@@ -244,7 +250,7 @@ angular.module('testApp').controller('resultsCtrl',
     }
   ]);
 
-  testApp.directive("editCampaignSequences", function($http){
+  mcmApp.directive("editCampaignSequences", function($http){
     return {
       require: 'ngModel',
       template:
@@ -394,7 +400,7 @@ angular.module('testApp').controller('resultsCtrl',
     }
   });
   
-  testApp.directive("editRequestSequences", function($http){
+  mcmApp.directive("editRequestSequences", function($http){
     return {
       require: 'ngModel',
       template:
@@ -490,7 +496,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive("editRequestParameters", function ($modal) {
+  mcmApp.directive("editRequestParameters", function () {
     return {
       replace: false,
       restrict: 'E',
@@ -532,7 +538,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive("editGeneratorParameters", function($http){
+  mcmApp.directive("editGeneratorParameters", function(){
     return {
       replace: false,
       restrict: 'E',
@@ -624,7 +630,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive('editRequestValidation', function(){
+  mcmApp.directive('editRequestValidation', function(){
     return {
       require: 'ngModel',
       replace: true,
@@ -651,7 +657,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive('editTags', function(){
+  mcmApp.directive('editTags', function(){
     return {
       require: 'ngModel',
       replace: false,
@@ -690,7 +696,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive("editAttributeWithSuggestions", function($http){
+  mcmApp.directive("editAttributeWithSuggestions", function($http){
     return {
       replace: false,
       restrict: 'E',
@@ -733,7 +739,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive("editListWithSuggestions", function($http){
+  mcmApp.directive("editListWithSuggestions", function($http){
     return {
       replace: false,
       restrict: 'E',
@@ -815,7 +821,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive("editEventsPerLumi", function(){
+  mcmApp.directive("editEventsPerLumi", function(){
     return {
       replace: false,
       restrict: 'E',
@@ -853,7 +859,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive("editTimeEvent", function(){
+  mcmApp.directive("editTimeEvent", function(){
     return {
       replace: false,
       restrict: 'E',
@@ -887,7 +893,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive('convertToNumber', function() {
+  mcmApp.directive('convertToNumber', function() {
     return {
       require: 'ngModel',
       link: function(scope, element, attrs, ngModel) {
@@ -902,7 +908,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive("editSizeEvent", function(){
+  mcmApp.directive("editSizeEvent", function(){
     return {
       replace: false,
       restrict: 'E',
@@ -936,7 +942,7 @@ angular.module('testApp').controller('resultsCtrl',
   });
   
   
-  testApp.directive("editMccmRequests", function ($http, $rootScope) {
+  mcmApp.directive("editMccmRequests", function ($http, $rootScope) {
     return {
       require: 'ngModel',
       replace: true,
@@ -1058,7 +1064,7 @@ angular.module('testApp').controller('resultsCtrl',
     }
   });
   
-  testApp.directive("editMccmChains", function ($http, $rootScope) {
+  mcmApp.directive("editMccmChains", function ($http, $rootScope) {
     return {
       replace: false,
       restrict: 'E',
