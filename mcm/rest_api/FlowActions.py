@@ -92,10 +92,11 @@ class FlowRESTResource(RESTResource):
                     'message': 'Next campaign cannot be among allowed campaigns'}
 
         campaign_db = Database('campaigns')
-        next_campaign = campaign_db.get(next_campaign_id)
-        if not next_campaign:
-            return {'results': False,
-                    'message': 'Next campaign "%s" does not exist' % (next_campaign_id)}
+        if next_campaign_id:
+            next_campaign = campaign_db.get(next_campaign_id)
+            if not next_campaign:
+                return {'results': False,
+                        'message': 'Next campaign "%s" does not exist' % (next_campaign_id)}
 
         for allowed_campaign_id in allowed_campaign_ids:
             allowed_campaign = campaign_db.get(allowed_campaign_id)
