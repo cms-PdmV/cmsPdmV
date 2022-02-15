@@ -164,7 +164,7 @@ class RequestUpdate(RESTResource):
             request_json.update(data)
             new_request = Request(request_json)
             # Check edited values
-            editing_info = old_request.get_editable()
+            editing_info = old_request.get_editing_info()
             for (key, editable) in editing_info.items():
                 if editable or key == 'sequences':
                     # Do not check attributes that can be edited

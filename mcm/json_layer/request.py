@@ -125,7 +125,7 @@ class Request(json_base):
         if approval_status == 'none-new':
             info['cmssw_release'] = is_prod_expert
             info['dataset_name'] = is_mc_contact and not self.get('flown_with')
-            info['energy'] = is_prod_expert
+            info['energy'] = is_mc_contact
             info['extension'] = is_mc_contact
             info['fragment'] = is_mc_contact
             info['fragment_tag'] = is_mc_contact
@@ -356,56 +356,6 @@ class Request(json_base):
         approval = self.get_attribute('approval')
         status = self.get_attribute('status')
         return '%s-%s' % (approval, status)
-
-    def get_editable(self):
-        """
-        Return editing info for the request
-        """
-        editable = {}
-        approval_status = self.get_approval_status()
-        # Nothing is editable by default
-        for key in self._json_base__schema:
-            editable[key] = False
-
-        # Prevent anything to happen during validation
-        if approval_status == 'validation-new':
-            return editable
-
-        user = User()
-        user_role = user.get_role()
-        is_admin = user_role >= Role.ADMINISTRATOR
-        is_prod_expert = user_role >= Role.PRODUCTION_EXPERT
-        is_prod_manager = user_role >= Role.PRODUCTION_MANAGER
-        is_gen_convener = user_role >= Role.GEN_CONVENER
-        is_gen_contact = user_role >= Role.MC_CONTACT
-        is_user = user_role >= Role.USER
-        # Some are always editable
-        editable['notes'] = is_user
-        editable['tags'] = is_user
-        editable['interested_pwg'] = is_user
-        # Depending on status
-        if approval_status == 'none-new':
-            editable["keep_output"] = is_gen_contact
-            editable["pilot"] = is_gen_contact
-            editable['dataset_name'] = is_gen_contact
-            editable['energy'] = is_gen_contact
-            editable['extension'] = is_gen_contact
-            editable['fragment'] = is_gen_contact
-            editable['generator_parameters'] = is_gen_contact
-            editable['generators'] = is_gen_contact
-            editable['input_dataset'] = is_gen_contact
-            editable['size_event'] = is_gen_contact
-            editable['time_event'] = is_gen_contact
-            editable['total_events'] = is_gen_contact
-        elif approval_status == 'approve-approved':
-            editable['dataset_name'] = is_gen_convener
-
-        if approval_status not in {'submit-approved', 'submit-submitted', 'submit-done'}:
-            editable['memory'] = is_prod_manager
-            editable['sequences'] = is_prod_manager
-            editable['pileup_dataset_name'] = is_prod_manager
-
-        return editable
 
     def move_to_validating(self, for_chain=False):
         """

@@ -48,22 +48,16 @@
                    ng-show="user.is_administrator && isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
-                <a ng-href='edit?db_name={{database}}&prepid={{data.prepid}}' title="Edit {{data.prepid}}" ng-show="user.is_user" target="_self">
+                <a ng-href='edit?db_name={{database}}&prepid={{data.prepid}}' title="Edit {{data.prepid}}" ng-show="user.is_mc_contact" target="_self">
                   <i class="glyphicon glyphicon-wrench"></i>
                 </a>
-                <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_user" ng-href="#">
+                <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_mc_contact && data.status == 'new'" ng-href="#">
                   <i class="glyphicon glyphicon-trash"></i>
-                </a>
-                <a ng-click="cancelTicket(data.prepid)" title="Cancel {{data.prepid}}" ng-show="user.is_user && data.status == 'new'" ng-href="#">
-                  <i class="glyphicon glyphicon-thumbs-down"></i>
-                </a>
-                <a ng-click="cancelTicket(data.prepid)" title="Uncancel {{data.prepid}}" ng-show="user.is_user && data.status == 'cancelled'" ng-href="#">
-                  <i class="glyphicon glyphicon-thumbs-up"></i>
                 </a>
                 <a ng-click="openTicketChainGenerator(data)" title="Generate chains for {{data.prepid}}" ng-show="user.is_production_manager" ng-href="#">
                   <i class="glyphicon glyphicon-play"></i>
                 </a>
-                <a ng-click="recalculate(data.prepid)" title="Recalculate total events for {{data.prepid}}" ng-show="user.is_user" ng-href="#">
+                <a ng-click="recalculate(data.prepid)" title="Recalculate total events for {{data.prepid}}" ng-href="#">
                   <i class="glyphicon glyphicon-filter"></i>
                 </a>
                 <a ng-href="requests?range={{requestRange(data.requests)}}" title="Show requests of {{data.prepid}}" target="_self">

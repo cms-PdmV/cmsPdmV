@@ -59,7 +59,7 @@
                 <a ng-click="openCloneItemModal('campaigns', data.prepid)" title="Clone campaign" ng-show="user.is_production_manager;" ng-href="#">
                   <i class="glyphicon glyphicon-duplicate"></i>
                 </a>
-                <a ng-click="openRequestCreator(data.prepid)" title="Create new request in {{data.prepid}}" ng-show="user.is_production_manager && data.root != 1 && data.status == 'started';" ng-href="#">
+                <a ng-click="openRequestCreator(data.prepid)" title="Create new request in {{data.prepid}}" ng-show="user.is_mc_contact && data.root != 1 && data.status == 'started';" ng-href="#">
                   <i class="glyphicon glyphicon-plus-sign"></i>
                 </a>
                 <a ng-click="nextStatus(data.prepid)" title="Toggle status" ng-show="user.is_production_manager" ng-href="#">

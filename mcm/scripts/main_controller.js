@@ -124,7 +124,7 @@ angular.module('mcmApp').controller('mainController',
           $scope.actionMessage[prepid] = loading ? 'loading' : '';
         }
       }
-      
+
       $scope.isDevMachine = function () {
         const isDev = $location.host().indexOf('dev') != -1;
         if (isDev) {
@@ -134,6 +134,10 @@ angular.module('mcmApp').controller('mainController',
           }
         }
         return isDev;
+      };
+
+      $scope.dictIsEmptry = function(dict) {
+        return !dict || Object.keys(dict).length == 0;
       };
 
       $scope.numberWithCommas = function (x) {
@@ -337,69 +341,6 @@ angular.module('mcmApp').controller('mainController',
     }
   ]);
 
-mcmApp.directive('tokenfield', function ($parse) {
-  return {
-    restrict: 'AE',
-    scope: {
-      onClick: '=onClick', // function which can use the e.token.value and e.token.label elements
-      onRemove: '=onRemove', // function which can use the e.token.value and e.token.label elements
-      afterCreate: '=afterCreate', // function which can use the e.token.value and e.token.label elements
-      beforeCreate: '=beforeCreate', // function which can use the e.token.value and e.token.label elements
-      tokens: '&'
-    },
-    link: function (scope, element, attrs, ctrl) {
-      var token_arguments = {};
-      if (!(typeof attrs.allowDuplicates === 'undefined'))
-        token_arguments.allowDuplicates = scope.$eval(attrs.allowDuplicates);
-      if (!(typeof attrs.showAutocompleteOnFocus === 'undefined'))
-        token_arguments.showAutocompleteOnFocus = scope.$eval(attrs.showAutocompleteOnFocus);
-      if (!(typeof attrs.typeAhead === 'undefined')) {
-        token_arguments.typeahead = scope.$eval(attrs.typeAhead);
-        if (!(typeof token_arguments.typeahead.prefetch === 'undefined') && !(typeof token_arguments.typeahead.prefetch.filter === 'undefined')) {
-          token_arguments.typeahead.prefetch.filter = eval(token_arguments.typeahead.prefetch.filter)
-        }
-      }
-      var tokenfield = $("input", element).tokenfield(token_arguments);
-
-      if (!(typeof scope.tokens === 'undefined'))
-        tokenfield.tokenfield("setTokens", scope.$eval(scope.tokens));
-
-      tokenfield.on('clickToken', function (e) {
-        if (!(typeof scope.onClick === 'undefined'))
-          scope.onClick(e.token)
-      });
-
-      tokenfield.on('removeToken', function (e) {
-        if (!(typeof scope.onRemove === 'undefined'))
-          scope.onRemove(e.token)
-      });
-
-      tokenfield.on('afterCreateToken', function (e) {
-        if (!(typeof scope.afterCreate === 'undefined'))
-          scope.afterCreate(e.token)
-      });
-
-      tokenfield.on('beforeCreateToken', function (e) {
-        if (!(typeof scope.beforeCreate === 'undefined'))
-          scope.beforeCreate(e.token)
-      });
-
-      if (!(typeof attrs.ngDisabled === 'undefined')) {
-        scope.$parent.$watch(attrs.ngDisabled
-          , function (newVal) {
-            if (newVal) {
-              tokenfield.tokenfield('disable')
-            } else {
-              tokenfield.tokenfield('enable')
-            }
-          })
-      }
-
-    },
-
-    template: '<input id="tokenfield" type="text" class="form-control" value=""/>'
-  }
-});
 
 mcmApp.directive('ddlFileReader', function ($http, $rootScope) {
   return {
@@ -669,7 +610,7 @@ mcmApp.directive("customFooter", function ($location, $compile, $http) {
         element.append($compile(response.data)(scope));
       });
 
-      
+
     }
   }
 });

@@ -14,14 +14,6 @@ angular.module('mcmApp').controller('mccmController',
       $scope.setDatabaseInfo('mccms', $scope.columns);
       $scope.allRequestsApproved = {};
 
-      $scope.cancelTicket = function (prepid) {
-        $scope.objectAction(undefined,
-                            [prepid],
-                            {method: 'POST',
-                             url: 'restapi/mccms/cancel',
-                             data: {'prepid': prepid}});
-      };
-
       $scope.generate = function (prepid) {
         let message = 'Are you sure you want to generate chained requests from ' + prepid + '?';
         $scope.objectAction(message,

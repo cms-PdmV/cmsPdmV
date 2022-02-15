@@ -82,7 +82,8 @@ class User():
         if not user_json:
             return user_info
 
-        user_json.pop('_id', None)
+        user_info['_id'] = user_json['_id']
+        user_info['_rev'] = user_json['_rev']
         user_info['role'] = user_json['role']
         user_info['history'] = user_json['history']
         user_info['notes'] = user_json['notes']
@@ -135,11 +136,11 @@ class User():
         history.append(entry)
 
     @classmethod
-    def fetch(cls, username):
+    def fetch(cls, username, cache=True):
         """
         Return a single user if it exists in database
         """
-        if cls.cache.has(username):
+        if cache and cls.cache.has(username):
             return cls(cls.cache.get(username))
 
         user_json = cls.get_database().get(username)

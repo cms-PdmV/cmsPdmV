@@ -96,7 +96,7 @@
                 <span ng-repeat="chain in data[column.db_name]">
                   <a ng-show="$index==0"
                      ng-href='mccms?contains={{chain}}'
-                     
+
                      title="Show MccM tickets for {{chain}}"
                      target="_self"><i class="glyphicon glyphicon-tasks"></i></a>
                   <a ng-href='requests?prepid={{chain}}&page=0'  title="Show request {{chain}}" target="_self">
@@ -105,12 +105,12 @@
                   </a>
                   <a ng-show="$index==0"
                      ng-href='chained_requests?root_request={{data[column.db_name][0]}}&page=0'
-                     
+
                      title="Show chained request starting with {{data[column.db_name][0]}}"
                      target="_self"><i class='glyphicon glyphicon-align-left'></i></a>
                   <a ng-hide="$index==0"
                      ng-href='chained_requests?contains={{chain}}'
-                     
+
                      title="Show chains containing {{chain}}"
                      target="_self"><i class="glyphicon glyphicon-align-left"></i></a>
                   <a ng-show="$index == data.step"  title="Currently processing"> <i class="glyphicon glyphicon-asterisk"></i></a>
@@ -122,10 +122,10 @@
                 </span>
               </div>
               <div ng-switch-when="member_of_campaign">
-                <a ng-href='chained_requests?member_of_campaign={{data[column.db_name]}}&page=0' 
+                <a ng-href='chained_requests?member_of_campaign={{data[column.db_name]}}&page=0'
                   title="View chained requests for {{data[column.db_name]}}" target="_self">{{data[column.db_name]}}<i
                     class="glyphicon glyphicon-align-left"></i></a>
-                <a ng-href='chained_campaigns?prepid={{data[column.db_name]}}&page=0' 
+                <a ng-href='chained_campaigns?prepid={{data[column.db_name]}}&page=0'
                   title="Show chained campaign {{data[column.db_name]}}" target="_self"><i
                     class="glyphicon glyphicon-align-right"></i></a>
               </div>
@@ -160,7 +160,7 @@
           <a ng-click="loadShortView('selected')"  title="Load short view for selected requests" ng-href="#">
             <i class="glyphicon glyphicon-eye-open"></i>
           </a>
-          <a ng-click="rewind('selected')" 
+          <a ng-click="rewind('selected')"
             title="Rewind chained request to root" ng-hide="role(3);" ng-href="#">
             <i class="glyphicon glyphicon-fast-backward"></i>
           </a>

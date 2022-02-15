@@ -182,37 +182,6 @@ class DeleteMccm(DeleteRESTResource):
         return self.delete_object(prepid, MccM)
 
 
-class CancelMccm(RESTResource):
-
-    @RESTResource.ensure_role(Role.MC_CONTACT)
-    @RESTResource.request_with_json
-    def post(self, data):
-        """
-        Cancel the MccM tickets
-        Does not delete it but put the status as cancelled.
-        """
-        user = User()
-        def cancel_ticket(mccm):
-            status = mccm.get_attribute('status')
-            if status == 'done':
-                raise Exception("Ticket is done, cannot be cancelled")
-
-            if user.get_role() < Role.PRODUCTION_MANAGER:
-                user_pwgs = user.get_user_pwgs()
-                ticket_pwg = mccm.get_attribute("pwg")
-                if ticket_pwg not in user_pwgs:
-                    raise Exception("You cannot cancel ticket with different PWG than yours")
-
-            if status == 'new':
-                mccm.set_attribute('status', 'cancelled')
-                mccm.update_history('cancel')
-            elif status == 'cancelled':
-                mccm.set_attribute('status', 'new')
-                mccm.update_history('uncancel')
-
-        return self.do_multiple_items(data['prepid'], MccM, cancel_ticket)
-
-
 class NotifyMccm(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
@@ -495,7 +464,7 @@ class MccMReminderGenContacts(RESTResource):
         message_template += 'Below you can find a list of MccM tickets where not all requests are '
         message_template += 'in "defined" status.\n'
         message_template += 'Please check them and once all are defined, present them in MccM or '
-        message_template += 'cancel/delete tickets if they are no longer needed.\n\n'
+        message_template += 'delete tickets if they are no longer needed.\n\n'
         base_url = l_type.baseurl()
         contacts = self.get_contacts_by_pwg()
         for pwg, pwg_mccms in by_pwg.items():
@@ -570,7 +539,7 @@ class MccMReminderProdManagers(RESTResource):
         message = 'Dear Production Managers,\n\n'
         message += 'Below you can find a list of MccM tickets in status "new" '
         message += 'that have all requests "approved".\n'
-        message += 'You can now operate on them or delete/cancel unneeded ones.\n'
+        message += 'You can now operate on them or delete unneeded ones.\n'
         by_pwg = {}
         for mccm in mccms:
             pwg = mccm.get_attribute('pwg')

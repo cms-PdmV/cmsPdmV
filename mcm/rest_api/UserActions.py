@@ -35,12 +35,14 @@ class UpdateUser(RESTResource):
 
         changer = User()
         with Locker().lock(username):
-            old_user = User.fetch(username)
+            old_user = User.fetch(username, cache=False)
             if not old_user:
                 raise NotFoundException(username)
 
             self.logger.info('Updating user "%s"', username)
             new_user = User(data)
+            new_user.get('_rev')
+            old_user.get('_rev')
             if new_user.get('_rev') != old_user.get('_rev'):
                 raise BadAttributeException('Provided revision does not match revision in database')
 
