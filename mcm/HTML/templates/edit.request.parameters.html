@@ -11,13 +11,13 @@
         </div>
         <div ng-if="params.id == 'more'">
           <div class="control-group" ng-repeat="more in params.value track by $index">
-            <div class="text-uppercase btn btn-small" ng-click="addrem(false, $index)"><i class="icon-minus"></i> Remove</div>
+            <div class="text-uppercase btn btn-small" ng-click="addrem(false, $index)"><i class="glyphicon glyphicon-minus"></i> Remove</div>
             <input type="text" class="text-bold" ng-model="more.field" placeholder="name"></input>
             <input type="text" ng-model="more.value" placeholder="value"></input>
           </div>
         </div>
       </div>
-      <div class="control-group text-uppercase btn btn-small" ng-click="addrem(false, -1)"><i class="icon-plus"></i> Add field</div>
+      <div class="control-group text-uppercase btn btn-small" ng-click="addrem(false, -1)"><i class="glyphicon glyphicon-plus"></i> Add field</div>
     </div>
     <div class="span3 pull-right">
       <label>Sequences</label>

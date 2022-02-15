@@ -30,7 +30,6 @@ angular.module('mcmApp').controller('campaignController',
               let requestData = {'member_of_campaign': campaignPrepid,
                                  'pwg': $scope.vars.selectedPwg};
               $http({method: 'PUT', url: 'restapi/requests/save/', data: requestData}).then(function (data) {
-                console.log(data.data);
                 if (data.data.results) {
                   $window.location.href = "edit?db_name=requests&prepid=" + data.data.prepid;
                 } else {

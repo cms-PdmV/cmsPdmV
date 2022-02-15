@@ -1,6 +1,6 @@
-angular.module('mcmApp').controller('resultsCtrl',
-  ['$scope', '$http', '$location', '$window', '$modal',
-    function resultsCtrl($scope, $http, $location, $window, $modal) {
+angular.module('mcmApp').controller('mccmController',
+  ['$scope', '$http', '$uibModal',
+    function mccmController($scope, $http, $uibModal) {
 
       $scope.columns = [
         { text: 'Prepid', select: true, db_name: 'prepid' },
@@ -11,15 +11,14 @@ angular.module('mcmApp').controller('resultsCtrl',
         { text: 'Chains', select: true, db_name: 'chains' },
       ];
 
-      $scope.dbName = "mccms";
-      $scope.setDatabaseInfo($scope.dbName, $scope.columns);
+      $scope.setDatabaseInfo('mccms', $scope.columns);
       $scope.allRequestsApproved = {};
 
       $scope.cancelTicket = function (prepid) {
         $scope.objectAction(undefined,
                             [prepid],
                             {method: 'POST',
-                             url: 'restapi/' + $scope.dbName + '/cancel',
+                             url: 'restapi/mccms/cancel',
                              data: {'prepid': prepid}});
       };
 
@@ -28,7 +27,7 @@ angular.module('mcmApp').controller('resultsCtrl',
         $scope.objectAction(message,
                             [prepid],
                             {method: 'POST',
-                             url: 'restapi/' + $scope.dbName + '/generate',
+                             url: 'restapi/mccms/generate',
                              data: {'prepid': prepid}});
       };
 
@@ -36,7 +35,7 @@ angular.module('mcmApp').controller('resultsCtrl',
         $scope.objectAction(undefined,
                             [prepid],
                             {method: 'POST',
-                             url: 'restapi/' + $scope.dbName + '/recalculate',
+                             url: 'restapi/mccms/recalculate',
                              data: {'prepid': prepid}});
       };
 
@@ -65,15 +64,15 @@ angular.module('mcmApp').controller('resultsCtrl',
           delete $scope.allRequestsApproved[prepid];
         } else {
           $scope.actionMessage[prepid] = 'loading';
-          $http({ method: 'GET', url: 'restapi/mccms/check_all_approved/' + prepid }).success(function (data, status) {
-            $scope.allRequestsApproved[prepid] = data.results;
+          $http({ method: 'GET', url: 'restapi/mccms/check_all_approved/' + prepid }).then(function (data) {
+            $scope.allRequestsApproved[prepid] = data.data.results;
             if (data.message) {
               $scope.openErrorModal(prepid, data.message);
             }
             delete $scope.actionMessage[prepid];
-          }).error(function (data, status) {
+          }, function (data) {
             delete $scope.actionMessage[prepid];
-            errorModal(data.prepid, data['message']);
+            errorModal(data.data.prepid, data.data.message);
           });
         }
       };
@@ -86,14 +85,14 @@ angular.module('mcmApp').controller('resultsCtrl',
             $scope.vars = {'pwgs': pwgs, 'selectedPwg': pwgs[0]};
             $scope.save = function () {
               const ticketData = {'pwg': $scope.vars.selectedPwg};
-              $http({method: 'PUT', url: 'restapi/mccms/save/', data: ticketData}).success(function (data) {
-                if (data.results) {
-                  $window.location.href = "edit?db_name=mccms&prepid=" + data.prepid;
+              $http({method: 'PUT', url: 'restapi/mccms/save/', data: ticketData}).then(function (data) {
+                if (data.data.results) {
+                  $window.location.href = "edit?db_name=mccms&prepid=" + data.data.prepid;
                 } else {
-                  errorModal(data.prepid, data['message']);
+                  errorModal(data.data.prepid, data.data.message);
                 }
-              }).error(function (data, status) {
-                errorModal(data.prepid, data['message']);
+              }, function (data,) {
+                errorModal(data.data.prepid, data.data.message);
               });
               $uibModalInstance.close();
             };
@@ -118,14 +117,14 @@ angular.module('mcmApp').controller('resultsCtrl',
               const ticketData = {'prepid': mccm.prepid,
                                   'skip_existing': $scope.vars.skipExisting,
                                   'allow_duplicates': $scope.vars.allowDuplicates};
-              $http({method: 'POST', url: 'restapi/mccms/generate', data: ticketData}).success(function (data) {
-                if (data.results) {
+              $http({method: 'POST', url: 'restapi/mccms/generate', data: ticketData}).then(function (data) {
+                if (data.data.results) {
                   console.log('Get data')
                 } else {
-                  errorModal(data.prepid, data['message']);
+                  errorModal(data.data.prepid, data.data.message);
                 }
-              }).error(function (data, status) {
-                errorModal(data.prepid, data['message']);
+              }, function (data, status) {
+                errorModal(data.data.prepid, data.data.message);
               });
               $uibModalInstance.close();
             };

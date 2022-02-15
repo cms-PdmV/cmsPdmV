@@ -7,19 +7,20 @@ angular.module('mcmApp').controller('editController',
       $scope.editableObject = {};
 
       const urlParams = $location.search()
-      $scope.dbName = urlParams['db_name'];
+      $scope.database = urlParams['db_name'];
       $scope.prepid = urlParams['prepid'];
+      let fragmentEditor = undefined;
 
       $scope.getObject = function () {
-        let url = 'restapi/' + $scope.dbName + '/get_editable/' + $scope.prepid;
+        let url = 'restapi/' + $scope.database + '/get_editable/' + $scope.prepid;
         $http.get(url).then(function (data) {
-          if (data.results) {
-            $scope.parseEditableObject(data.results);
+          if (data.data.results) {
+            $scope.parseEditableObject(data.data.results);
           } else {
-            $scope.openErrorModal(data.prepid, data['message']);
+            $scope.openErrorModal(data.data.prepid, data.data.message);
           }
         }, function (data) {
-          $scope.openErrorModal(data.prepid, data['message']);
+          $scope.openErrorModal(data.prepid, data.data.message);
         });
       };
       setTimeout(() => {
@@ -30,7 +31,8 @@ angular.module('mcmApp').controller('editController',
         $scope.editingInfo = editableDict.editing_info;
         const hide = ['history', '_id', '_rev', 'next', 'reqmgr_name', 'config_id',
           'output_dataset', 'member_of_chain', 'member_of_campaign',
-          'campaigns', 'generated_chains', 'meeting', 'completed_events', 'version'];
+          'campaigns', 'generated_chains', 'meeting', 'completed_events', 'version',
+          'email'];
         for (let attr of hide) {
           delete $scope.editingInfo[attr];
         }
@@ -45,16 +47,21 @@ angular.module('mcmApp').controller('editController',
         $scope.editableObject = editableDict.object;
         // Fragment field
         setTimeout(function () {
+          const oldTextArea = document.querySelector('div.CodeMirror');
+          if (oldTextArea) {
+            oldTextArea.remove();
+          }
           const fragmentTextArea = document.querySelector('textarea.fragment');
           if (fragmentTextArea) {
-            const editor = CodeMirror.fromTextArea(fragmentTextArea,
+            fragmentEditor = CodeMirror.fromTextArea(fragmentTextArea,
               {
                 'readOnly': !$scope.editingInfo['fragment'],
                 'lineNumbers': true,
                 'indentWithTabs': true,
-                'height': 'auto',
+                'height': 'fit-content',
                 'viewportMargin': Infinity,
-                'theme': 'eclipse'
+                'theme': 'eclipse',
+                'value': $scope.editableObject['fragment'],
               });
           }
         }, 300);
@@ -70,9 +77,16 @@ angular.module('mcmApp').controller('editController',
           templateUrl: 'editSequenceModal.html',
           controller: function ($scope, $uibModalInstance, $window, $http, sequence, onSave, attributeType) {
             $scope.sequence = JSON.parse(JSON.stringify(sequence));
+            $scope.sequence.datatier = $scope.sequence.datatier.join(',')
+            $scope.sequence.eventcontent = $scope.sequence.eventcontent.join(',')
+            $scope.sequence.step = $scope.sequence.step.join(',')
             $scope.attributeType = attributeType;
             $scope.save = function () {
-              onSave($scope.sequence);
+              let sequence = $scope.sequence;
+              sequence.datatier = sequence.datatier.split(',').filter(Boolean);
+              sequence.eventcontent = sequence.eventcontent.split(',').filter(Boolean);
+              sequence.step = sequence.step.split(',').filter(Boolean);
+              onSave(sequence);
               $uibModalInstance.close();
             };
             $scope.close = function () {
@@ -96,12 +110,12 @@ angular.module('mcmApp').controller('editController',
           return 'array';
         }
         return type;
-      }
+      };
 
       $scope.deleteEditableObject = function () {
         let prepid = $scope.prepid;
         const action = function () {
-          $http({ method: 'DELETE', url: 'restapi/' + $scope.dbName + '/delete/' + prepid }).success(function (result, status) {
+          $http({ method: 'DELETE', url: 'restapi/' + $scope.database + '/delete/' + prepid }).success(function (result, status) {
             if (result.results) {
               $window.location.href = $scope.database;
             } else {
@@ -116,132 +130,88 @@ angular.module('mcmApp').controller('editController',
         });
       };
 
-      $scope.booleanize_sequence = function (sequence) {
-        _.each(sequence, function (value, key) {
-          if (_.isString(value)) {
-            switch (value.toLowerCase()) {
-              case "true":
-                sequence[key] = true;
-                break;
-              case "false":
-                sequence[key] = false;
-                break;
-              default:
-                break;
-            }
+      $scope.prepareSequencesForCommit = function(sequences) {
+        console.log('prepare for save')
+        console.log(sequences)
+
+        for (let sequence of sequences) {
+          if (sequence.datatier && !Array.isArray(sequence.datatier)) {
+            sequence.datatier = sequence.datatier.split(',').filter(Boolean);
           }
-        });
-      };
+          if (sequence.eventcontent && !Array.isArray(sequence.eventcontent)) {
+            sequence.eventcontent = sequence.eventcontent.split(',').filter(Boolean);
+          }
+          if (sequence.step && !Array.isArray(sequence.step)) {
+            sequence.step = sequence.step.split(',').filter(Boolean);
+          }
+          sequence.nThreads = parseInt(sequence.nThreads);
+          sequence.nStreams = parseInt(sequence.nStreams);
+        }
+        return sequences;
+      }
 
       $scope.commitEdit = function () {
         console.log('Saving...');
         console.log($scope.editableObject);
-        switch ($scope.dbName) {
-          case "requests":
-            _.each($scope.result["sequences"], function (sequence) {
-              $scope.booleanize_sequence(sequence);
-              if (_.isString(sequence["step"])) {
-                sequence["step"] = sequence["step"].split(",");
-              }
-              if (_.isString(sequence["datatier"])) {
-                sequence["datatier"] = sequence["datatier"].split(",");
-              }
-              if (_.isString(sequence["eventcontent"])) {
-                sequence["eventcontent"] = sequence["eventcontent"].split(",");
-              }
-            });
-            _.each($scope.result["time_event"], function (value, key) {
-              $scope.result["time_event"][key] = parseFloat(value);
-            });
-            _.each($scope.result["size_event"], function (value, key) {
-              $scope.result["size_event"][key] = parseFloat(value);
-            });
-            $scope.result["memory"] = parseFloat($scope.result["memory"]);
-            $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function (tok) { return tok.value });
-            break;
+        let editableObject = JSON.parse(JSON.stringify($scope.editableObject));
+        switch ($scope.database) {
           case "campaigns":
-            _.each($scope.result["sequences"], function (sequence) {
-              _.each(sequence, function (subSequence, key) {
-                if (key != "$$hashKey") //ignore angularhs hashkey
-                {
-                  $scope.booleanize_sequence(subSequence);
-                  if (_.isString(subSequence["step"])) {
-                    subSequence["step"] = subSequence["step"].split(",");
-                  }
-                  if (_.isString(subSequence["datatier"])) {
-                    subSequence["datatier"] = subSequence["datatier"].split(",");
-                  }
-                  if (_.isString(subSequence["eventcontent"])) {
-                    subSequence["eventcontent"] = subSequence["eventcontent"].split(",");
-                  }
-                }
-              });
-            });
-            break;
-          case "mccms":
-            $scope.result['tags'] = _.map($("#tokenfield").tokenfield('getTokens'), function (tok) { return tok.value });
+            editableObject['energy'] = parseFloat(editableObject['energy']);
+            editableObject['events_per_lumi']['singlecore'] = parseFloat(editableObject['events_per_lumi']['singlecore']);
+            editableObject['events_per_lumi']['multicore'] = parseFloat(editableObject['events_per_lumi']['multicore']);
+            editableObject['memory'] = parseInt(editableObject['memory']);
+            editableObject['root'] = parseInt(editableObject['root']);
+            for (let sequenceName in editableObject.sequences) {
+              $scope.prepareSequencesForCommit(editableObject.sequences[sequenceName])
+            }
             break;
           case "flows":
-            _.each($scope.result["request_parameters"]["sequences"], function (sequence) {
-              _.each(sequence, function (elem) {
-                if (_.has(elem, "datatier")) {
-                  if (_.isString(elem["datatier"])) {
-                    elem["datatier"] = elem["datatier"].split(",");
-                  }
+            let sequences = editableObject.request_parameters.sequences;
+            if (sequences) {
+              for (let sequence of sequences) {
+                if (sequence.datatier && !Array.isArray(sequence.datatier)) {
+                  sequence.datatier = sequence.datatier.split(',').filter(Boolean);
                 }
-                if (_.has(elem, "eventcontent")) {
-                  if (_.isString(elem["eventcontent"])) {
-                    elem["eventcontent"] = elem["eventcontent"].split(",");
-                  }
+                if (sequence.eventcontent && !Array.isArray(sequence.eventcontent)) {
+                  sequence.eventcontent = sequence.eventcontent.split(',').filter(Boolean);
                 }
-              });
-            });
+                if (sequence.step && !Array.isArray(sequence.step)) {
+                  sequence.step = sequence.step.split(',').filter(Boolean);
+                }
+              }
+            }
+            break;
+          case "chained_campaigns":
+            editableObject['threshold'] = parseInt(editableObject['threshold']);
+            break;
+          case "requests":
+            $scope.prepareSequencesForCommit(editableObject.sequences)
+            editableObject['energy'] = parseFloat(editableObject['energy']);
+            editableObject['events_per_lumi'] = parseInt(editableObject['events_per_lumi']);
+            editableObject['extension'] = parseInt(editableObject['extension']);
+            editableObject['mcdb_id'] = parseInt(editableObject['mcdb_id']);
+            editableObject['memory'] = parseInt(editableObject['memory']);
+            editableObject['priority'] = parseInt(editableObject['priority']);
+            editableObject['size_event'] = editableObject['size_event'].map(x => parseInt(x));
+            editableObject['time_event'] = editableObject['time_event'].map(x => parseInt(x));
+            editableObject['total_events'] = parseInt(editableObject['priority']);
+            editableObject['fragment'] = fragmentEditor.getValue().trim();
             break;
           default:
             break;
         }
         let method = $scope.prepid && $scope.prepid.length ? 'POST' : 'PUT';
-        $http({ 'method': method, url: 'restapi/' + $location.search()["db_name"] + '/update', data: angular.toJson($scope.result) }).success(function (data, status) {
-          $scope.update["success"] = data["results"];
-          $scope.update["fail"] = false;
-          $scope.update["message"] = data["message"];
-          $scope.update["status_code"] = status;
-          if ($scope.update["success"] == false) {
-            $scope.update["fail"] = true;
+        let data = JSON.stringify(editableObject);
+        $http({ 'method': method, url: `restapi/${$scope.database}/update`, 'data': data }).then(function (data) {
+          console.log(data.data)
+          if (data.data.results) {
+            $scope.getObject();
           } else {
-            $scope.getData();
+            $scope.openErrorModal(undefined, data.data.message);
           }
-        }).error(function (data, status) {
-          $scope.update["success"] = false;
-          $scope.update["fail"] = true;
-          $scope.update["status_code"] = status;
+        }, function (data) {
+          $scope.openErrorModal(undefined, data.data.message);
         });
-      };
-
-      $scope.editableFragment = function () {
-        return $scope.not_editable_list.indexOf('Fragment') != -1;
-      };
-
-      $scope.hideSequence = function (roleNumber) {
-        return false;
-      };
-
-      $scope.removeUserPWG = function (elem) {
-        $scope.result["pwg"] = _.without($scope.result["pwg"], elem);
-      };
-
-      $scope.showAddUserPWG = function () {
-        $scope.showSelectPWG = true;
-        var promise = $http.get("restapi/users/get_pwg")
-        promise.then(function (data) {
-          $scope.all_pwgs = data.data.results;
-        });
-      };
-
-      $scope.addUserPWG = function (elem) {
-        if ($scope.result["pwg"].indexOf(elem) == -1) {
-          $scope.result["pwg"].push(elem);
-        }
       };
 
       $scope.addToken = function (tok) {
@@ -259,44 +229,42 @@ angular.module('mcmApp').controller('editController',
           <span ng-if="editingSequenceName != sequenceName">
             {{sequenceName}}
             <a style="margin-left: 4px" ng-if="editable" ng-click="startEditingSequenceName(sequenceName)" title="Edit group name">
-              <i class="icon-wrench"></i>
+              <i class="glyphicon glyphicon-wrench"></i>
             </a>
             <a style="margin-left: 4px" ng-if="editable" ng-click="removeSequenceName(sequenceName)" title="Remove sequence group">
-              <i class="icon-minus-sign"></i>
+              <i class="glyphicon glyphicon-minus-sign"></i>
             </a>
           </span>
           <span ng-if="editingSequenceName == sequenceName">
             <input type="text" style="width: auto;" ng-model="newSequenceName">
             <a style="margin-left: 4px" ng-click="stopEditingSequenceName(sequenceName, newSequenceName)" title="Finish editing">
-              <i class="icon-ok"></i>
+              <i class="glyphicon glyphicon-ok"></i>
             </a>
           </span>
           <ul>
             <li ng-repeat="sequence in sequenceList track by $index">
               <div style="display: flex">
-                <div style="font-size: 0.9em; margin: 2px 0; font-family: monospace; background-color: #f5f5f5; border-radius: 4px; padding: 4px; border: 1px solid rgba(0, 0, 0, 0.15);">
-                  {{sequenceStrings[sequenceName][$index]}}
-                </div>
+                <div class="sequence-box">{{sequenceStrings[sequenceName][$index]}}</div>
                 <div ng-if="editable" style="display: flex; flex-direction: column; margin: auto 0 auto 4px;">
                   <a ng-click="startEditing(sequenceName, $index)" title="Edit" ng-if="editable">
-                    <i class="icon-wrench"></i>
+                    <i class="glyphicon glyphicon-wrench"></i>
                   </a>
                   <a ng-click="removeSequence(sequenceName, $index)" title="Remove" ng-if="editable">
-                    <i class="icon-minus-sign"></i>
+                    <i class="glyphicon glyphicon-minus-sign"></i>
                   </a>
                 </div>
               </div>
               <a ng-click="addSequence(sequenceName)" ng-if="editable && !editingSequenceName && $index == sequenceList.length - 1" title="Add sequence to {{sequenceName}}">
-                <i class="icon-plus"></i>
+                <i class="glyphicon glyphicon-plus"></i>
               </a>
             </li>
           </ul>
           <a ng-click="addSequence(sequenceName)" ng-if="editable && !editingSequenceName && !sequenceList.length" title="Add sequence to {{sequenceName}}">
-            <i class="icon-plus"></i>
+            <i class="glyphicon glyphicon-plus"></i>
           </a>
         </div>
         <a ng-click="addSequenceName()" title="Add new sequence group" ng-if="editable && !editingSequenceName">
-          <i class="icon-plus-sign"></i>
+          <i class="glyphicon glyphicon-plus-sign"></i>
         </a>
       </div>`,
       link: function(scope, element, attr, ctrl){
@@ -399,7 +367,8 @@ angular.module('mcmApp').controller('editController',
       }
     }
   });
-  
+
+
   mcmApp.directive("editRequestSequences", function($http){
     return {
       require: 'ngModel',
@@ -408,25 +377,23 @@ angular.module('mcmApp').controller('editController',
         <ul>
           <li ng-repeat="sequence in sequences track by $index">
             <div style="display: flex">
-              <div style="font-size: 0.9em; margin: 2px 0; font-family: monospace; background-color: #f5f5f5; border-radius: 4px; padding: 4px; border: 1px solid rgba(0, 0, 0, 0.15);">
-                {{sequenceStrings[$index]}}
-              </div>
+              <div class="sequence-box">{{sequenceStrings[$index]}}</div>
               <div ng-if="editable" style="display: flex; flex-direction: column; margin: auto 0 auto 4px;">
                 <a ng-click="startEditing($index)" title="Edit" ng-if="editable">
-                  <i class="icon-wrench"></i>
+                  <i class="glyphicon glyphicon-wrench"></i>
                 </a>
                 <a ng-click="removeSequence($index)" title="Remove" ng-if="editable">
-                  <i class="icon-minus-sign"></i>
+                  <i class="glyphicon glyphicon-minus-sign"></i>
                 </a>
               </div>
             </div>
             <a ng-click="addSequence()" ng-if="editable && $index == sequences.length - 1" title="Add sequence">
-              <i class="icon-plus"></i>
+              <i class="glyphicon glyphicon-plus"></i>
             </a>
           </li>
         </ul>
         <a ng-click="addSequence()" ng-if="editable && !sequences.length" title="Add sequence">
-          <i class="icon-plus"></i>
+          <i class="glyphicon glyphicon-plus"></i>
         </a>
       </div>`,
       link: function(scope, element, attr, ctrl){
@@ -494,8 +461,8 @@ angular.module('mcmApp').controller('editController',
       }
     }
   });
-  
-  
+
+
   mcmApp.directive("editRequestParameters", function () {
     return {
       replace: false,
@@ -536,8 +503,8 @@ angular.module('mcmApp').controller('editController',
       }
     }
   });
-  
-  
+
+
   mcmApp.directive("editGeneratorParameters", function(){
     return {
       replace: false,
@@ -549,7 +516,6 @@ angular.module('mcmApp').controller('editController',
           <tr ng-repeat="attribute in attributes track by $index">
             <td style="text-align: right">
               {{attribute.replaceAll('_', ' ')}}
-              <span ng-if="attribute != 'negative_weights_fraction' && attribute != 'cross_section'">(0.0 - 1.0)</span>
             </td>
             <td>{{generatorParameters[attribute]}}</td>
           </tr>
@@ -558,13 +524,12 @@ angular.module('mcmApp').controller('editController',
           <tr ng-repeat="attribute in attributes track by $index">
             <td style="text-align: right">
               {{attribute.replaceAll('_', ' ')}}
-              <span ng-if="attribute != 'negative_weights_fraction' && attribute != 'cross_section'">(0.0 - 1.0)</span>
             </td>
             <td ng-if="editingAttribute !== attribute">
               {{generatorParameters[attribute]}}
               <span title="Pico barn" ng-if="attribute == 'cross_section'">pb</span>
               <a style="margin-left: 4px" ng-click="startEditing(attribute)" title="Edit">
-                <i class="icon-wrench"></i>
+                <i class="glyphicon glyphicon-wrench"></i>
               </a>
             </td>
             <td ng-if="editingAttribute == attribute">
@@ -573,16 +538,16 @@ angular.module('mcmApp').controller('editController',
                      ng-model="generatorParameters[attribute]">
               <span title="Pico barn" ng-if="attribute == 'cross_section'">pb</span>
               <a style="margin-left: 4px" ng-click="stopEditing()" title="Finish editing">
-                <i class="icon-ok"></i>
+                <i class="glyphicon glyphicon-ok"></i>
               </a>
             </td>
           </tr>
         </table>
         <a ng-click="addParameters()" ng-if="editable && attributes.length == 0" title="Add parameters">
-          <i class="icon-plus"></i>
+          <i class="glyphicon glyphicon-plus"></i>
         </a>
         <a ng-click="removeParameters()" ng-if="editable && attributes.length != 0" title="Delete parameters">
-          <i class="icon-minus-sign"></i>
+          <i class="glyphicon glyphicon-trash"></i>
         </a>
       </div>`,
       link: function(scope, element, attr, ctrl) {
@@ -628,8 +593,8 @@ angular.module('mcmApp').controller('editController',
       }
     }
   });
-  
-  
+
+
   mcmApp.directive('editRequestValidation', function(){
     return {
       require: 'ngModel',
@@ -655,47 +620,8 @@ angular.module('mcmApp').controller('editController',
       }
     }
   });
-  
-  
-  mcmApp.directive('editTags', function(){
-    return {
-      require: 'ngModel',
-      replace: false,
-      restrict: 'E',
-      template: `<div style="display: flex; width: 100%; flex-direction: column">
-        <input id="tokenfield" ng-disabled="!editable" type="text" class="form-control" value=""/>
-        <small ng-if="editable"><i>Type a tag and press ENTER to add it or select one from a list</i></small>
-      </div>`,
-      link: function(scope, element, attr, ctrl){
-        let typeahead = {'typeahead': {'remote': {'url': `restapi/${scope.dbName}/unique_values/?attribute=tags&value=%QUERY&limit=10`,
-                                                  'filter': x=> x.results},
-                                       'limit': 10}};
-        let tokenfield = $("input", element).tokenfield(typeahead);
-        ctrl.$render = function(){
-          scope.tokens = ctrl.$viewValue;
-          tokenfield.tokenfield("setTokens", scope.tokens);
-          scope.editable = scope.$eval(attr.editable);
-          tokenfield.tokenfield("setTokens", ctrl.$viewValue);
-          if (scope.editable) {
-            tokenfield.on('removeToken', function (e) {
-              let token = e.token.value;
-              scope.tokens = scope.tokens.filter(x => x != token);
-              ctrl.$setViewValue(scope.tokens);
-            });
-            tokenfield.on('afterCreateToken', function (e) {
-              let token = e.token.value;
-              scope.tokens.push(token);
-              ctrl.$setViewValue(scope.tokens);
-            });
-          } else {
-            tokenfield.tokenfield('disable');
-          }
-        };
-      }
-    }
-  });
-  
-  
+
+
   mcmApp.directive("editAttributeWithSuggestions", function($http){
     return {
       replace: false,
@@ -705,13 +631,13 @@ angular.module('mcmApp').controller('editController',
       `<input type="text"
               ng-model="value"
               ng-disabled="!editable"
-              typeahead="suggestion for suggestion in loadSuggestions($viewValue)">`,
+              uib-typeahead="suggestion for suggestion in loadSuggestions($viewValue)">`,
       link: function(scope, element, attr, ctrl) {
         ctrl.$render = function(){
           scope.value = ctrl.$viewValue;
           scope.editable = scope.$eval(attr.editable);
           scope.limit = attr.limit ? attr.limit : 20;
-          scope.database = attr.suggestDatabase ? attr.suggestDatabase : scope.dbName;
+          scope.database = attr.suggestDatabase ? attr.suggestDatabase : scope.database;
           scope.suggestAttribute = attr.suggestAttribute;
           scope.cache = {};
         };
@@ -737,8 +663,8 @@ angular.module('mcmApp').controller('editController',
       }
     }
   });
-  
-  
+
+
   mcmApp.directive("editListWithSuggestions", function($http){
     return {
       replace: false,
@@ -756,25 +682,25 @@ angular.module('mcmApp').controller('editController',
             <span ng-if="editingIndex !== $index">
               {{item}}
               <a style="margin-left: 4px" ng-click="startEditing($index)" title="Edit">
-                <i class="icon-wrench"></i>
+                <i class="glyphicon glyphicon-wrench"></i>
               </a>
               <a style="margin-left: 4px" ng-click="listItems.splice($index, 1)" title="Remove">
-                <i class="icon-minus-sign"></i>
+                <i class="glyphicon glyphicon-minus-sign"></i>
               </a>
             </span>
             <span ng-if="editingIndex === $index">
               <input type="text"
                       style="width: auto;"
                       ng-model="listItems[$index]"
-                      typeahead="suggestion for suggestion in loadSuggestions($viewValue)">
+                      uib-typeahead="suggestion for suggestion in loadSuggestions($viewValue)">
               <a style="margin-left: 4px" ng-click="stopEditing($index)" title="Finish editing">
-                <i class="icon-ok"></i>
+                <i class="glyphicon glyphicon-ok"></i>
               </a>
             </span>
           </li>
         </ul>
         <a ng-click="addNew()" ng-if="editable && !editingIndex" title="Add new">
-          <i class="icon-plus"></i>
+          <i class="glyphicon glyphicon-plus"></i>
         </a>
       </div>`,
       link: function(scope, element, attr, ctrl) {
@@ -782,7 +708,7 @@ angular.module('mcmApp').controller('editController',
           scope.listItems = ctrl.$viewValue;
           scope.editable = scope.$eval(attr.editable);
           scope.limit = attr.limit ? attr.limit : 20;
-          scope.database = attr.suggestDatabase ? attr.suggestDatabase : scope.dbName;
+          scope.database = attr.suggestDatabase ? attr.suggestDatabase : scope.database;
           scope.suggestAttribute = attr.suggestAttribute;
           scope.editingIndex = undefined;
           scope.cache = {};
@@ -819,8 +745,8 @@ angular.module('mcmApp').controller('editController',
       }
     }
   });
-  
-  
+
+
   mcmApp.directive("editEventsPerLumi", function(){
     return {
       replace: false,
@@ -857,42 +783,8 @@ angular.module('mcmApp').controller('editController',
       }
     }
   });
-  
-  
-  mcmApp.directive("editTimeEvent", function(){
-    return {
-      replace: false,
-      restrict: 'E',
-      require: 'ngModel',
-      template:
-      `<div style="width: 100%">
-        <ul ng-if="!editable">
-          <li ng-repeat="value in timePerEvent track by $index">
-            Sequence {{$index + 1}}: {{value}} s
-          </li>
-        </ul>
-        <ul ng-if="editable">
-          <li ng-repeat="value in timePerEvent track by $index" style="margin: 4px 0">
-            Sequence {{$index + 1}}: <input type="number" style="width: auto;" ng-model="timePerEvent[$index]"> s
-          </li>
-        </ul>
-      </div>`,
-      link: function(scope, element, attr, ctrl)
-      {
-        ctrl.$render = function(){
-          scope.timePerEvent = ctrl.$viewValue;
-          scope.editable = scope.$eval(attr.editable);
-        };
-        scope.$watch("timePerEvent", function(elem) {
-          if (scope.timePerEvent) {
-            ctrl.$setViewValue(scope.timePerEvent);
-          }
-        });
-      }
-    }
-  });
-  
-  
+
+
   mcmApp.directive('convertToNumber', function() {
     return {
       require: 'ngModel',
@@ -906,42 +798,8 @@ angular.module('mcmApp').controller('editController',
       }
     };
   });
-  
-  
-  mcmApp.directive("editSizeEvent", function(){
-    return {
-      replace: false,
-      restrict: 'E',
-      require: 'ngModel',
-      template:
-      `<div style="width: 100%">
-        <ul ng-if="!editable">
-          <li ng-repeat="value in sizePerEvent track by $index">
-            Sequence {{$index + 1}}: {{value}} kB
-          </li>
-        </ul>
-        <ul ng-if="editable">
-          <li ng-repeat="value in sizePerEvent track by $index" style="margin: 4px 0">
-            Sequence {{$index + 1}}: <input type="number" style="width: auto;" ng-model="sizePerEvent[$index]"> kB
-          </li>
-        </ul>
-      </div>`,
-      link: function(scope, element, attr, ctrl)
-      {
-        ctrl.$render = function(){
-          scope.sizePerEvent = ctrl.$viewValue;
-          scope.editable = scope.$eval(attr.editable);
-        };
-        scope.$watch("sizePerEvent", function(elem) {
-          if (scope.sizePerEvent) {
-            ctrl.$setViewValue(scope.sizePerEvent);
-          }
-        });
-      }
-    }
-  });
-  
-  
+
+
   mcmApp.directive("editMccmRequests", function ($http, $rootScope) {
     return {
       require: 'ngModel',
@@ -952,7 +810,7 @@ angular.module('mcmApp').controller('editController',
         <ul ng-if="!editable">
           <li ng-repeat="elem in requests track by $index">
             <span ng-if="isArray(elem)">
-              {{elem[0]}} <i class="icon-arrow-right"></i> {{elem[1]}}
+              {{elem[0]}} <i class="glyphicon glyphicon-arrow-right"></i> {{elem[1]}}
             </span>
             <span ng-if="!isArray(elem)">
               {{elem}}
@@ -962,34 +820,34 @@ angular.module('mcmApp').controller('editController',
         <ul ng-if="editable">
           <li ng-repeat="elem in requests track by $index">
             <span ng-if="isArray(elem)">
-              {{elem[0]}} <a ng-href="#" ng-click="removeFirstRequest($index)" ng-if="editingIndex === undefined" title="Remove {{elem[0]}}"><i class="icon-minus"></i></a>
-              <i class="icon-arrow-right"></i>
-              <span ng-if="editingIndex !== $index">{{elem[1]}}</span> <a ng-href="#" ng-click="removeSecondRequest($index)" ng-if="editingIndex === undefined" title="Remove {{elem[1]}}"><i class="icon-minus"></i></a>
+              {{elem[0]}} <a ng-href="#" ng-click="removeFirstRequest($index)" ng-if="editingIndex === undefined" title="Remove {{elem[0]}}"><i class="glyphicon glyphicon-minus"></i></a>
+              <i class="glyphicon glyphicon-arrow-right"></i>
+              <span ng-if="editingIndex !== $index">{{elem[1]}}</span> <a ng-href="#" ng-click="removeSecondRequest($index)" ng-if="editingIndex === undefined" title="Remove {{elem[1]}}"><i class="glyphicon glyphicon-minus"></i></a>
               <input type="text"
                      style="width: auto"
                      ng-blur="cancelRange($index)"
                      ng-model="requests[$index][1]"
                      ng-if="editingIndex === $index"
-                     typeahead="suggestion for suggestion in loadSuggestions(elem[0], $viewValue)"
+                     uib-typeahead="suggestion for suggestion in loadSuggestions(elem[0], $viewValue)"
                      typeahead-on-select=selected()>
             </span>
             <span ng-if="!isArray(elem)">
               <span ng-if="editingIndex !== $index">{{elem}}</span>
-              <a ng-href="#" ng-click="removeRequest($index)" ng-if="editingIndex === undefined" title="Remove {{elem}}"><i class="icon-minus"></i></a>
-              <a ng-href="#" ng-click="makeRange($index)" ng-if="editingIndex === undefined" title="Make range"><i class="icon-plus"></i></a>
+              <a ng-href="#" ng-click="removeRequest($index)" ng-if="editingIndex === undefined" title="Remove {{elem}}"><i class="glyphicon glyphicon-minus"></i></a>
+              <a ng-href="#" ng-click="makeRange($index)" ng-if="editingIndex === undefined" title="Make range"><i class="glyphicon glyphicon-plus"></i></a>
               <input type="text"
                      style="width: auto"
                      ng-blur="cancel($index)"
                      ng-model="requests[$index]"
                      ng-if="editingIndex === $index"
-                     typeahead="suggestion for suggestion in loadSuggestions(undefined, $viewValue)"
+                     uib-typeahead="suggestion for suggestion in loadSuggestions(undefined, $viewValue)"
                      typeahead-on-select=selected()>
             </span>
           </li>
         </ul>
-  
+
         <a ng-href="#" ng-click="addNew()" title="Add new request or range" ng-show="editable && editingIndex === undefined">
-          <i class="icon-plus"></i>
+          <i class="glyphicon glyphicon-plus"></i>
         </a>
       </div>`,
       link: function (scope, element, attr, ctrl) {
@@ -1063,7 +921,8 @@ angular.module('mcmApp').controller('editController',
       }
     }
   });
-  
+
+
   mcmApp.directive("editMccmChains", function ($http, $rootScope) {
     return {
       replace: false,
@@ -1081,7 +940,7 @@ angular.module('mcmApp').controller('editController',
             <div ng-if="!addingNew || $index < chains.length - 1">
               {{chain}}
               <a style="margin-left: 4px" ng-click="removeChain($index)" title="Remove">
-                <i class="icon-minus-sign"></i>
+                <i class="glyphicon glyphicon-minus-sign"></i>
               </a>
             </div>
             <div ng-if="addingNew && $index == chains.length - 1">
@@ -1089,13 +948,13 @@ angular.module('mcmApp').controller('editController',
                      placeholder="chain_..."
                      ng-model="chains[$index]"
                      ng-blur="cancel()"
-                     typeahead="suggestion for suggestion in loadSuggestions($viewValue)"
+                     uib-typeahead="suggestion for suggestion in loadSuggestions($viewValue)"
                      typeahead-on-select="addChain($item)">
             </div>
           </li>
         </ul>
         <a ng-href="#" ng-if="editable && !addingNew" ng-click="addNew()">
-          <i class="icon-plus"></i>
+          <i class="glyphicon glyphicon-plus"></i>
         </a>
       </div>`,
       link: function (scope, element, attr, ctrl) {
@@ -1142,4 +1001,76 @@ angular.module('mcmApp').controller('editController',
       }
     }
   });
-  
+
+
+  mcmApp.directive("editListPwgs", function($http){
+    return {
+      replace: false,
+      restrict: 'E',
+      require: 'ngModel',
+      template:
+      `<div>
+        <ul ng-if="!editable">
+          <li ng-repeat="pwg in pwgs track by $index">
+            {{pwg}}
+          </li>
+        </ul>
+        <ul ng-if="editable">
+          <li ng-repeat="pwg in pwgs track by $index">
+            <span ng-if="$index != pwgs.length - 1 || !isEditing">
+              {{pwg}}
+              <a style="margin-left: 4px" ng-click="pwgs.splice($index, 1)" title="Remove">
+                <i class="glyphicon glyphicon-trash"></i>
+              </a>
+            </span>
+            <span ng-if="$index == pwgs.length - 1 && isEditing">
+              <select class="input-mini"
+                      ng-model="pwgs[$index]"
+                      ng-change="selectPwg()"
+                      ng-options="key as key for key in allPwgs"></select>
+            </span>
+          </li>
+        </ul>
+        <a ng-click="addNew()" ng-if="editable && !isEditing" title="Add new">
+          <i class="glyphicon glyphicon-plus"></i>
+        </a>
+      </div>`,
+      link: function(scope, element, attr, ctrl) {
+        ctrl.$render = function(){
+          scope.pwgs = ctrl.$viewValue;
+          scope.allPwgs = scope.pwgs;
+          scope.availablePwgs = [];
+          scope.loadPWGs();
+          scope.editable = scope.$eval(attr.editable);
+          scope.isEditing = false;
+          scope.cache = {};
+        };
+        scope.startEditing = function() {
+          scope.isEditing = true;
+        };
+        scope.selectPwg = function() {
+          if (!scope.pwgs[scope.pwgs.length - 1].length) {
+            scope.pwgs.splice(index, 1);
+          }
+          scope.pwgs.sort();
+          scope.isEditing = false;
+        };
+        scope.addNew = function() {
+          scope.pwgs.push('');
+          scope.startEditing();
+          scope.updateAvailable();
+        };
+        scope.updateAvailable = function() {
+          scope.availablePwgs = scope.allPwgs.filter(x => !scope.pwgs.includes(x));
+        };
+        scope.loadPWGs = function () {
+          let url = 'restapi/settings/get/pwg';
+          return $http.get(url).then(function (data) {
+            scope.allPwgs = data.data.results.value;
+          }, function (data) {
+            scope.allPwgs = [];
+          });
+        };
+      }
+    }
+  });

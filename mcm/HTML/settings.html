@@ -25,7 +25,7 @@
     <span ng-controller="resultsCtrl">
     <div ng-include="'HTML/navbar_template.html'"></div>
     <div style='margin-bottom: 5px' class="container">
-        <select-well ng-if="selectionReady" database="{{dbName}}" selection="defaults"></select-well>
+        <select-well ng-if="selectionReady" database="{{database}}" selection="defaults"></select-well>
     </div>
     <table class="table table-bordered table-stripped">
       <thead>
@@ -35,11 +35,11 @@
               {{column.text}}
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-resize-vertical"></i>
+                <i class="glyphicon glyphicon-resize-vertical"></i>
               </a>
               <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
-                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
+                <i class="glyphicon glyphicon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
+                <i class="glyphicon glyphicon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
               <!-- END OF: SORTING lines -->
             </div>
@@ -47,11 +47,11 @@
               {{column.text}}
               <!-- SORTING lines -->
               <a rel="tooltip" title="Sort" ng-hide="selectedCls(column.db_name)"  ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-resize-vertical"></i>
+                <i class="glyphicon glyphicon-resize-vertical"></i>
               </a>
               <span ng-show="selectedCls(column.db_name)" ng-class="selectedCls(column.db_name)" ng-click="changeSorting(column.db_name)">
-                <i class="icon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
-                <i class="icon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
+                <i class="glyphicon glyphicon-chevron-up" ng-hide="sort.descending" rel="tooltip" title="Ascending"></i>
+                <i class="glyphicon glyphicon-chevron-down" ng-show="sort.descending" rel="tooltip" title="Descending"></i>
               </span>
               <!-- END OF: SORTING lines -->
             </div>
@@ -79,7 +79,10 @@
               <pre>{{settings_info[data.db_name]}}</pre>
             </div>
             <div ng-switch-default>
-              {{settings_info[data.db_name]}}
+              <a ng-href='{{database}}?{{column.db_name}}={{data[column.db_name]}}'
+                 title="Show all {{database.replace('_', ' ')}} where {{column.text}} is {{data[column.db_name]}}">
+                 {{data[column.db_name]}}
+              </a>
             </div>
           </div>
           </td>

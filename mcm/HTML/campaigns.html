@@ -39,18 +39,18 @@
           <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
             <div ng-switch on="column.db_name">
               <div ng-switch-when="prepid">
-                <a ng-href='{{dbName}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                <a ng-href='{{database}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.prepid}}"
                    title="Database entry of {{data.prepid}}"
                    ng-show="user.is_administrator && !isDevMachine();"
                    target="_blank"><i class="glyphicon glyphicon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.prepid}}"
                    title="Database entry of {{data.prepid}}"
                    ng-show="user.is_administrator && isDevMachine();"
                    target="_blank"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
-                <a ng-href='edit?db_name={{dbName}}&prepid={{data.prepid}}' title="Edit {{data.prepid}}" ng-show="user.is_production_manager" target="_self">
+                <a ng-href='edit?db_name={{database}}&prepid={{data.prepid}}' title="Edit {{data.prepid}}" ng-show="user.is_production_manager" target="_self">
                   <i class="glyphicon glyphicon-wrench"></i>
                 </a>
                 <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_production_expert" ng-href="#">
@@ -115,9 +115,9 @@
                 <a ng-href='https://cmsweb.cern.ch/das/request?input={{data[column.db_name]}}' title="Open in DAS" target="_blank">{{data[column.db_name]}}</a>
               </div>
               <div ng-switch-when="root">
-                <i class="icon-ok" ng-if="data[column.db_name]==0" title="Yes"></i>
-                <i class="icon-ok-sign" ng-if="data[column.db_name]==-1" title="Possible"></i>
-                <i class="icon-remove" ng-if="data[column.db_name]==1" title="No"></i>
+                <i class="glyphicon glyphicon-ok" ng-if="data[column.db_name]==0" title="Yes"></i>
+                <i class="glyphicon glyphicon-ok-sign" ng-if="data[column.db_name]==-1" title="Possible"></i>
+                <i class="glyphicon glyphicon-remove" ng-if="data[column.db_name]==1" title="No"></i>
               </div>
               <div ng-switch-when="events_per_lumi">
                 <ul style="margin-bottom: 0px;">
@@ -134,14 +134,14 @@
                   <li ng-repeat="(name,values) in data[column.db_name]">
                     <b>{{name}}:</b>
                     <ul ng-repeat="value in values">
-                      <li>{{value}}</li>
+                      <li>{{sequenceName(data.sequences[name], $index)}}: <i class="glyphicon" ng-class="{'glyphicon-ok' : value, 'glyphicon-remove' : !value}"></i></li>
                     </ul>
                   </li>
                 </ul>
               </div>
               <div ng-switch-default>
-                <a ng-href='campaigns?{{column.db_name}}={{data[column.db_name]}}'
-                   title="Show all campaigns where {{column.text}} is {{data[column.db_name]}}">
+                <a ng-href='{{database}}?{{column.db_name}}={{data[column.db_name]}}'
+                   title="Show all {{database.replace('_', ' ')}} where {{column.text}} is {{data[column.db_name]}}">
                    {{data[column.db_name]}}
                 </a>
               </div>
@@ -153,10 +153,10 @@
     <div class="custom-footer">
       <div>
         <input type="button"
-                class="btn btn-primary"
-                ng-click="openCreateItemModal(database)"
-                value="Create new campaign"
-                ng-show="user.is_production_manager"/>
+               class="btn btn-primary"
+               ng-click="openCreateItemModal(database)"
+               value="Create new campaign"
+               ng-show="user.is_production_manager"/>
       </div>
     </div>
   </div>

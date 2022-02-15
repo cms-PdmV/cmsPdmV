@@ -4,21 +4,24 @@
 <head>
   <title>McM - Edit</title>
   <base href="/mcm/">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <link href="scripts/css/mcm.css" rel="stylesheet" />
-  <link href="scripts/codemirror-3.11/lib/codemirror.css" rel="stylesheet">
-  <link href="scripts/codemirror-3.11/theme/eclipse.css" rel="stylesheet">
-  <link href="scripts/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="scripts/codemirror-3.11/lib/codemirror.css">
+  <link rel="stylesheet" href="scripts/codemirror-3.11/theme/eclipse.css">
+  <link rel="stylesheet" href="scripts/css/bootstrap.min.css">
+  <link rel="stylesheet" href="scripts/css/mcm.css" />
+  <link rel="shortcut icon" type="image/x-icon" href="scripts/img/mcm.png">
+  <script type="text/javascript" src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
   <script type="text/javascript" src="scripts/angular.min.js"></script>
+  <script type="text/javascript" src="scripts/angular-ui.min.js"></script>
+  <script type="text/javascript" src="scripts/jquery.js"></script>
+  <script type="text/javascript" src="scripts/bootstrap.js"></script>
   <script type="text/javascript" src="scripts/ui-bootstrap-tpls-2.5.0.js"></script>
-  <script type="text/javascript">
-    var mcmApp = angular.module('mcmApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
-  </script>
-  <script src="scripts/main_controller.js"></script>
-  <script src="scripts/edit_controller.js"></script>
-  <!-- angularui is needed for codemirror -->
-  <script src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
-  <script src="scripts/angular-ui.min.js"></script>
+  <script type="text/javascript" src="scripts/main_controller.js"></script>
+  <script type="text/javascript" src="scripts/edit_controller.js"></script>
+  
+
   <style type="text/css">
     .bs-docs-sidenav>li>a:hover {
       background-color: #F5F5F5;
@@ -44,22 +47,30 @@
     }
     input {
       margin: 0 !important;
+      padding: 1px 4px;
     }
     input[type="text"] {
-      width: calc(100% - 12px);
-      padding: 4px 6px;
+      width: 100%;
     }
     input[type="number"] {
-      width: calc(50% - 12px);
-      padding: 4px 6px;
+      width: 50%;
       text-align: right;
+    }
+    select {
+      width: 50%;
+      height: 26px;
     }
     .table-cell-wrapper > div {
       display: flex;
     }
     .CodeMirror {
-      height: auto;
-      min-height: 50px;
+      height: fit-content;
+      width: 100%;
+      min-height: 75px;
+    }
+    .CodeMirror > .CodeMirror-scroll,
+    .CodeMirror > .CodeMirror-scroll > .CodeMirror-gutters {
+      min-height: 75px;
     }
     table.generator-parameters td {
       border: none;
@@ -75,7 +86,8 @@
 </head>
 
 <body ng-controller="mainController">
-  <div ng-include="'HTML/navbar_template.html'"></div>
+  <div ng-include="'HTML/navbar.html'"></div>
+  <div ng-include="'HTML/modals.html'"></div>
   <span ng-controller="editController">
     <div class="container">
       <div class="row">
@@ -83,20 +95,20 @@
           <!--  sidebar span -->
           <ul class="nav nav-list bs-docs-sidenav" style="position: sticky; top: 20px">
             <li class="">
-              <a ng-click="saveEditableObject()" title="Save {{prepid}}" ng-href="#">
-                <i class="icon-chevron-right"></i>
-                Commit
+              <a ng-click="commitEdit()" title="Save {{prepid}}" ng-href="#">
+                <i class="glyphicon glyphicon-floppy-disk"></i>
+                Save
               </a>
             </li>
             <li class="">
-              <a ng-href='{{dbName}}?prepid={{prepid}}' title="View {{prepid}}" target="_self">
-                <i class="icon-chevron-right"></i>
+              <a ng-href='{{database}}?prepid={{prepid}}' title="View {{prepid}}" target="_self">
+                <i class="glyphicon glyphicon-eye-open"></i>
                 View
               </a>
             </li>
-            <li ng-show="user.is_production_manager">
+            <li ng-show="user.is_production_manager && database != 'users'">
               <a ng-click="deleteEditableObject()" title="Delete {{prepid}}" ng-href="#">
-                <i class="icon-chevron-right"></i>
+                <i class="glyphicon glyphicon-trash"></i>
                 Delete
               </a>
             </li>
@@ -128,17 +140,18 @@
                   <!-- <small style="font-family: monospace;">VALUE: {{editableObject[attribute]}} EDITABLE: {{editable}}</small> -->
                   <div ng-switch on="attribute" class="table-cell-wrapper">
                     <div ng-switch-when="events_per_lumi">
-                      <div ng-if="dbName == 'campaigns'">
+                      <div ng-if="database == 'campaigns'">
                         <label>Single core</label>
                         <input type="number"
                                ng-model="editableObject[attribute].singlecore"
                                ng-disabled="!editable">
+                        <br>
                         <label>Multi core</label>
                         <input type="number"
                                ng-model="editableObject[attribute].multicore"
                                ng-disabled="!editable">
                       </div>
-                      <div ng-if="dbName == 'requests'" style="width: 100%">
+                      <div ng-if="database == 'requests'" style="width: 100%">
                         <edit-events-per-lumi style="width: 100%" ng-model="editableObject[attribute]" editable="editable"></edit-events-per-lumi>
                       </div>
                     </div>
@@ -158,28 +171,32 @@
                                                        limit="20"></edit-attribute-with-suggestions>
                     </div>
                     <div ng-switch-when="keep_output">
-                      <div ng-if="dbName == 'campaigns'">
+                      <div ng-if="database == 'campaigns'">
                         <div ng-repeat="(name, values) in editableObject[attribute]">
                           {{name}}:
                           <ul>
                             <li ng-repeat="value in values track by $index">
-                              <input type="checkbox" ng-model="values[$index]" ng-disabled="!editable"> Sequence {{$index + 1}}
+                              {{sequenceName(editableObject.sequences[name], $index)}}
+                              <input type="checkbox" ng-model="values[$index]" ng-disabled="!editable">
                             </li>
                           </ul>
                         </div>
                       </div>
-                      <div ng-if="dbName == 'requests'">
-                        <li ng-repeat="value in editableObject[attribute] track by $index">
-                          <input type="checkbox" ng-model="editableObject[attribute][$index]" ng-disabled="!editable"> Sequence {{$index + 1}}
-                        </li>
+                      <div ng-if="database== 'requests'">
+                        <ul>
+                          <li ng-repeat="value in editableObject[attribute] track by $index">
+                            {{sequenceName(editableObject.sequences, $index)}}
+                            <input type="checkbox" ng-model="editableObject[attribute][$index]" ng-disabled="!editable"> 
+                          </li>
+                        </ul>
                       </div>
                     </div>
                     <div ng-switch-when="notes">
                       <textarea style="display: flex; width: 100%;" ng-model="editableObject[attribute]" ng-disabled="!editable"></textarea>
                     </div>
                     <div ng-switch-when="sequences">
-                      <edit-campaign-sequences ng-if="dbName == 'campaigns'" ng-model="editableObject[attribute]" disabled="!editable" campaign="editableObject"></edit-campaign-sequences>
-                      <edit-request-sequences ng-if="dbName == 'requests'" ng-model="editableObject[attribute]" disabled="!editable" request="editableObject"></edit-request-sequences>
+                      <edit-campaign-sequences ng-if="database == 'campaigns'" ng-model="editableObject[attribute]" disabled="!editable" campaign="editableObject"></edit-campaign-sequences>
+                      <edit-request-sequences ng-if="database == 'requests'" ng-model="editableObject[attribute]" disabled="!editable" request="editableObject"></edit-request-sequences>
                     </div>
                     <div ng-switch-when="root">
                       <select ng-model="editableObject[attribute]" ng-disabled="!editable" convert-to-number>
@@ -225,15 +242,11 @@
                                                        limit="20"></edit-attribute-with-suggestions>
                     </div>
                     <div ng-switch-when="interested_pwg">
-                      <edit-list-with-suggestions ng-model="editableObject[attribute]"
-                                                  style="display: flex; width: 100%"
-                                                  editable="editable"
-                                                  suggest-database="requests"
-                                                  suggest-attribute="pwg"
-                                                  limit="20"></edit-list-with-suggestions>
+                      <edit-list-pwgs editable="editable" ng-model="editableObject[attribute]"></edit-list-pwgs>
                     </div>
-                    <div ng-switch-when="fragment" style="max-width: 699px; letter-spacing: -0.25px;">
+                    <div ng-switch-when="fragment">
                       <textarea class="fragment"
+                                style="width: 100%; min-height: 50px;"
                                 ng-model="editableObject[attribute]"></textarea>
                     </div>
                     <div ng-switch-when="extension">
@@ -247,10 +260,30 @@
                              max="100000">
                     </div>
                     <div ng-switch-when="size_event">
-                      <edit-size-event editable="editable" ng-model="editableObject[attribute]"></edit-size-event>
+                      <ul ng-if="!editable">
+                        <li ng-repeat="value in editableObject[attribute] track by $index">
+                          {{sequenceName(editableObject.sequences, $index)}}: {{value}} kB
+                        </li>
+                      </ul>
+                      <ul ng-if="editable">
+                        <li ng-repeat="value in editableObject[attribute] track by $index" style="margin: 4px 0">
+                          {{sequenceName(editableObject.sequences, $index)}}
+                          <input type="number" style="width: auto;" ng-model="editableObject[attribute][$index]"> kB
+                        </li>
+                      </ul>
                     </div>
                     <div ng-switch-when="time_event">
-                      <edit-time-event editable="editable" ng-model="editableObject[attribute]"></edit-time-event>
+                      <ul ng-if="!editable">
+                        <li ng-repeat="value in editableObject[attribute] track by $index">
+                          {{sequenceName(editableObject.sequences, $index)}}: {{value}} s
+                        </li>
+                      </ul>
+                      <ul ng-if="editable">
+                        <li ng-repeat="value in editableObject[attribute] track by $index" style="margin: 4px 0">
+                          {{sequenceName(editableObject.sequences, $index)}}
+                          <input type="number" style="width: auto;" ng-model="editableObject[attribute][$index]"> s
+                        </li>
+                      </ul>
                     </div>
                     <div ng-switch-when="generator_parameters">
                       <edit-generator-parameters editable="editable" ng-model="editableObject[attribute]"></edit-generator-parameters>
@@ -259,14 +292,17 @@
                       <edit-request-validation editable="editable" ng-model="editableObject[attribute]"></edit-request-validation>
                     </div>
                     <div ng-switch-when="tags">
-                      <edit-tags editable="editable" style="display: flex; width: 100%" ng-model="editableObject[attribute]"></edit-tags>
+                      <edit-list-with-suggestions ng-model="editableObject[attribute]"
+                                                  style="display: flex; width: 100%"
+                                                  editable="editable"
+                                                  suggest-attribute="tags"
+                                                  limit="20"></edit-list-with-suggestions>
                     </div>
-
                     <div ng-switch-when="chains">
-                      <edit-mccm-chains editable="editable" ng-model="editableObject[attribute]"></edit-mccm-chains>
+                      <edit-mccm-chains editable="editable" style="width: 100%;" ng-model="editableObject[attribute]"></edit-mccm-chains>
                     </div>
                     <div ng-switch-when="requests">
-                      <edit-mccm-requests editable="editable" ng-model="editableObject[attribute]"></edit-mccm-requests>
+                      <edit-mccm-requests editable="editable" style="width: 100%;" ng-model="editableObject[attribute]"></edit-mccm-requests>
                     </div>
                     <div ng-switch-when="block">
                       <select style="margin-bottom: 0;" ng-model="editableObject[attribute]" ng-disabled="!editable" convert-to-number>
@@ -285,25 +321,29 @@
                               ng-disabled="!editable"
                               ng-options="key as key for key in [1,2,3,4,5,6,7,8,9,10]"></select>
                     </div>
-
-                    <div ng-switch-when="Pwg">
-                      <div ng-switch on="dbName">
+                    <div ng-switch-when="pwg">
+                      <div ng-switch on="database">
                         <div ng-switch-when="users">
-                          <ul ng-repeat="elem in result[column.db_name]">
-                            <li>
-                              {{elem}} <a ng-click="removeUserPWG(elem);"><i class="icon-remove-sign"></i></a>
-                            </li>
-                          </ul>
-                          <a ng-click="showAddUserPWG();"><i class="icon-plus" ng-hide="showSelectPWG"></i></a>
-                          <select ng-model="selectedPWG" ng-change="addUserPWG(selectedPWG);"
-                            ng-options="value for value in all_pwgs" ng-show="showSelectPWG"></select>
+                          <edit-list-pwgs editable="editable" ng-model="editableObject[attribute]"></edit-list-pwgs>
                         </div>
                         <div ng-switch-default>
-                          <textarea type="text" ng-model="result[column.db_name]"
-                            ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea>
+                          <input type="text"
+                                 ng-model="editableObject[attribute]"
+                                 ng-disabled="!editable">
                         </div>
                       </div>
                     </div>
+                    <div ng-switch-when="role">
+                      <select style="margin-bottom: 0;" ng-model="editableObject[attribute]" ng-disabled="!editable || !user.is_production_manager">
+                        <option value="user" ng-selected='editableObject[attribute] == "user"'>User</option>
+                        <option value="mc_contact" ng-selected='editableObject[attribute] == "mc_contact"'>MC contact</option>
+                        <option value="generator_convener" ng-selected='editableObject[attribute] == "generator_convener"'>Generator convener</option>
+                        <option value="production_manager" ng-selected='editableObject[attribute] == "production_manager"'>Production manager</option>
+                        <option ng-if="user.is_production_expert" value="production_expert" ng-selected='editableObject[attribute] == "production_expert"'>Production expert</option>
+                        <option ng-if="user.is_administrator" value="administrator" ng-selected='editableObject[attribute] == "administrator"'>Administrator</option>
+                      </select>
+                    </div>
+
                     <div ng-switch-when="Value">
                       <!-- <textarea type="text" ng-model="result[column.db_name]" style="width: 390px; height: 20px; margin-bottom: 0px;" ng-disabled="not_editable_list.indexOf(column.text)!=-1"></textarea> -->
                       <ng-form name="fieldForm">
@@ -312,23 +352,7 @@
                       </ng-form>
                     </div>
 
-                    <div ng-switch-when="Role">
-                      <select style="margin-bottom: 0;" ng-model="result[column.db_name]"
-                        ng-disabled="!user.is_production_manager">
-                        <option ng-if="user.is_user" value="user" ng-selected='result[column.db_name] == "user"'>User
-                        </option>
-                        <option ng-if="user.is_mc_contact" value="mc_contact"
-                          ng-selected='result[column.db_name] == "mc_contact"'>MC Contact</option>
-                        <option ng-if="user.is_generator_convener" value="generator_convener"
-                          ng-selected='result[column.db_name] == "generator_convener"'>Generator Convener</option>
-                        <option ng-if="user.is_production_manager" value="production_manager"
-                          ng-selected='result[column.db_name] == "production_manager"'>Production Manager</option>
-                        <option ng-if="user.is_production_expert" value="production_expert"
-                          ng-selected='result[column.db_name] == "production_expert"'>Production Expert</option>
-                        <option ng-if="user.is_administrator" value="administrator"
-                          ng-selected='result[column.db_name] == "administrator"'>Administrator</option>
-                      </select>
-                    </div>
+
                     <div ng-switch-default>
                       <input ng-if="attributeType(editableObject[attribute]) == 'boolean'"
                              type="checkbox"

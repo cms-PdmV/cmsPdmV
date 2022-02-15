@@ -39,18 +39,18 @@
           <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
             <div ng-switch on="column.db_name">
               <div ng-switch-when="prepid">
-                <a ng-href='{{dbName}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                <a ng-href='{{database}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.prepid}}"
                    title="Database entry of {{data.prepid}}"
                    ng-show="user.is_administrator && !isDevMachine();"
                    target="_blank"><i class="glyphicon glyphicon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.prepid}}"
                    title="Database entry of {{data.prepid}}"
                    ng-show="user.is_administrator && isDevMachine();"
                    target="_blank"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
-                <a ng-href='edit?db_name={{dbName}}&prepid={{data.prepid}}' title="Edit {{data.prepid}}" ng-show="user.is_production_manager" target="_self">
+                <a ng-href='edit?db_name={{database}}&prepid={{data.prepid}}' title="Edit {{data.prepid}}" ng-show="user.is_production_manager" target="_self">
                   <i class="glyphicon glyphicon-wrench"></i>
                 </a>
                 <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_production_expert" ng-href="#">
@@ -63,10 +63,10 @@
                   <i class="glyphicon glyphicon-star-empty"></i>
                 </a>
                 <a ng-href='public/restapi/{{database}}/get_setup/{{data.prepid}}' title="Get setup command" target="_self" ng-href="#">
-                  <i class="icon-download"></i>
+                  <i class="glyphicon glyphicon-download"></i>
                 </a>
                 <a ng-href='public/restapi/{{database}}/get_test/{{data.prepid}}' title="Get test command" target="_self" ng-href="#">
-                  <i class="icon-ok-circle"></i>
+                  <i class="glyphicon glyphicon-ok-circle"></i>
                 </a>
                 <a ng-click='rewindToRoot(data.prepid)' title="Rewind to root" ng-show="user.is_production_manager" ng-href="#">
                   <i class="glyphicon glyphicon-fast-backward"></i>
@@ -81,7 +81,7 @@
                   <i class="glyphicon glyphicon-align-right"></i>
                 </a>
                 <a ng-click="inspect(data.prepid)" title="Inspect status of this chained request" ng-show="user.is_production_manager" ng-href="#">
-                  <i class="icon-screenshot"></i>
+                  <i class="glyphicon glyphicon-screenshot"></i>
                 </a>
                 <input type="checkbox" ng-click="toggleSelection(data.prepid)" ng-checked="selectedItems.includes(data.prepid)">
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
@@ -113,7 +113,7 @@
                      
                      title="Show chains containing {{chain}}"
                      target="_self"><i class="glyphicon glyphicon-align-left"></i></a>
-                  <a ng-show="$index == data.step"  title="Currently processing"> <i class="icon-asterisk"></i></a>
+                  <a ng-show="$index == data.step"  title="Currently processing"> <i class="glyphicon glyphicon-asterisk"></i></a>
                   <img ng-show="shortView[data.prepid][chain]"
                        ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{shortView[data.prepid][chain][1]}}"
                        title="{{shortView[data.prepid][chain][0]}}" />
@@ -129,9 +129,16 @@
                   title="Show chained campaign {{data[column.db_name]}}" target="_self"><i
                     class="glyphicon glyphicon-align-right"></i></a>
               </div>
+              <div ng-switch-when="validate">
+                <i class="glyphicon" ng-class="{'glyphicon-ok' : data[column.db_name], 'glyphicon-remove' : !data[column.db_name]}"></i>
+              </div>
+              <div ng-switch-when="enabled">
+                <i class="glyphicon" ng-class="{'glyphicon-ok' : data[column.db_name], 'glyphicon-remove' : !data[column.db_name]}"></i>
+              </div>
+
               <div ng-switch-default>
-                <a ng-href='chained_requests?{{column.db_name}}={{data[column.db_name]}}'
-                   title="Show all chained requests where {{column.text}} is {{data[column.db_name]}}">
+                <a ng-href='{{database}}?{{column.db_name}}={{data[column.db_name]}}'
+                   title="Show all {{database.replace('_', ' ')}} where {{column.text}} is {{data[column.db_name]}}">
                    {{data[column.db_name]}}
                 </a>
               </div>
@@ -167,7 +174,7 @@
             <i class="glyphicon glyphicon-align-right"></i>
           </a>
           <a ng-click="inspect('selected')"  title="Inspect selected chained requests" ng-hide="role(3);" ng-href="#">
-            <i class="icon-screenshot"></i>
+            <i class="glyphicon glyphicon-screenshot"></i>
           </a>
           <input type="checkbox" ng-click="toggleAll()"  title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selectedItems.length">
         </div>

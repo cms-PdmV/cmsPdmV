@@ -4,28 +4,32 @@
 <head>
   <title>McM - Users</title>
   <base href="/mcm/">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <link href="scripts/css/mcm.css" rel="stylesheet" />
-  <script type="text/javascript" src="scripts/build/mcm.deps1.js"></script>
-  <script type="text/javascript">
-    var mcmApp = angular.module('mcmApp', ['ui.bootstrap']).config(function ($locationProvider) { $locationProvider.html5Mode(true); });
-  </script>
-  <script src="scripts/main_controller.js"></script>
-  <script src="scripts/users_controller.js"></script>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="scripts/css/bootstrap.min.css">
+  <link rel="stylesheet" href="scripts/css/mcm.css" />
+  <link rel="shortcut icon" type="image/x-icon" href="scripts/img/mcm.png">
+  <script type="text/javascript" src="scripts/angular.min.js"></script>
+  <script type="text/javascript" src="scripts/angular-ui.min.js"></script>
+  <script type="text/javascript" src="scripts/jquery.js"></script>
+  <script type="text/javascript" src="scripts/bootstrap.js"></script>
+  <script type="text/javascript" src="scripts/ui-bootstrap-tpls-2.5.0.js"></script>
+  <script type="text/javascript" src="scripts/main_controller.js"></script>
+  <script type="text/javascript" src="scripts/users_controller.js"></script>
 </head>
 
 <body ng-controller="mainController">
-  <div ng-include="'HTML/navbar_template.html'"></div>
-  <span ng-controller="resultsCtrl">
-    <div style='margin-bottom: 5px' class="container">
-      <select-well ng-if="selectionReady" database="{{dbName}}" selection="columns"></select-well>
+  <div ng-include="'HTML/navbar.html'"></div>
+  <div ng-include="'HTML/modals.html'"></div>
+  <div ng-controller="userController">
+    <div class="container">
+      <column-select update-query="updateQuery" columns="columns"></column-select>
     </div>
     <table class="table table-bordered table-striped table-hover">
       <thead>
         <tr>
-          <th ng-repeat="column in columns"
-              ng-if="column.select"
-              style="white-space: nowrap; text-align: center;">
+          <th ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap; text-align: center;">
             {{column.text}}
           </th>
         </tr>
@@ -35,18 +39,18 @@
           <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
             <div ng-switch on="column.db_name">
               <div ng-switch-when="username">
-                <a ng-href='users?username={{data.username}}' title="Show only {{data.username}}">{{data.username}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/users/{{data[column.db_name]}}"
-                   rel="tooltip"
-                   title="Admin view of {{data[column.db_name]}}"
-                   ng-show="user.is_administrator && !isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/users/{{data[column.db_name]}}"
-                   rel="tooltip"
-                   title="Admin view of {{data[column.db_name]}}"
-                   ng-show="user.is_administrator && isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
+                <a ng-href='{{database}}?username={{data.username}}' target="_self" title="Show only {{data.username}}">{{data.username}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.username}}"
+                   title="Database entry of {{data.username}}"
+                   ng-show="user.is_administrator && !isDevMachine();"
+                   target="_blank"><i class="glyphicon glyphicon-star"></i></a>
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.username}}"
+                   title="Database entry of {{data.username}}"
+                   ng-show="user.is_administrator && isDevMachine();"
+                   target="_blank"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
-                <a ng-href='edit?db_name=users&prepid={{data.username}}' title="Edit details" ng-show="user.is_production_manager" target="_self">
+                <a ng-href='edit?db_name={{database}}&prepid={{data.username}}' title="Edit details" ng-show="user.is_production_manager" target="_self">
                   <i class="glyphicon glyphicon-wrench"></i>
                 </a>
               </div>
@@ -57,7 +61,7 @@
               </div>
               <div ng-switch-when="email">
                 <a ng-href="mailto:{{data[column.db_name]}}" title="Send email to {{data.user_name}}" target="_blank">
-                  {{data[column.db_name].replace('@','SPAMNOT')}}
+                  {{data[column.db_name]}}
                 </a>
               </div>
               <div ng-switch-when="role">
@@ -79,23 +83,23 @@
                 <pre ng-if="data.notes.length" class="notes">{{data.notes}}</pre>
               </div>
               <div ng-switch-default>
-                {{data[column.db_name]}}
+                <a ng-href='{{database}}?{{column.db_name}}={{data[column.db_name]}}'
+                   title="Show all {{database.replace('_', ' ')}} where {{column.text}} is {{data[column.db_name]}}">
+                   {{data[column.db_name]}}
+                </a>
               </div>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
-    <div class="row-fluid custom-footer">
-      <div class="span4">
-        <div class="span4">
-          <input type="button"
-                 class="btn"
-                 ng-click="addMe()"
-                 value="Add me!"
-                 ng-show="user.is_anonymous"
-                 align="left"/>
-        </div>
+    <div class="custom-footer">
+      <div>
+        <input type="button"
+               class="btn btn-primary"
+               ng-click="addMe()"
+               value="Add me!"
+               ng-show="!user.is_user"/>
       </div>
     </div>
   </span>

@@ -39,12 +39,12 @@
           <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
             <div ng-switch on="column.db_name">
               <div ng-switch-when="prepid">
-                <a ng-href='{{dbName}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                <a ng-href='{{database}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.prepid}}"
                    title="Database entry of {{data.prepid}}"
                    ng-show="user.is_administrator && !isDevMachine();"
                    target="_blank"><i class="glyphicon glyphicon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{dbName}}/{{data.prepid}}"
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.prepid}}"
                    title="Database entry of {{data.prepid}}"
                    ng-show="user.is_administrator && isDevMachine();"
                    target="_blank"><i class="glyphicon glyphicon-star"></i></a>
@@ -112,8 +112,8 @@
                 <div custom-history ng-model="data[column.db_name]"></div>
               </div>
               <div ng-switch-default>
-                <a ng-href='flows?{{column.db_name}}={{data[column.db_name]}}'
-                   title="Show all flows where {{column.text}} is {{data[column.db_name]}}">
+                <a ng-href='{{database}}?{{column.db_name}}={{data[column.db_name]}}'
+                   title="Show all {{database.replace('_', ' ')}} where {{column.text}} is {{data[column.db_name]}}">
                    {{data[column.db_name]}}
                 </a>
               </div>

@@ -146,6 +146,10 @@ angular.module('mcmApp').controller('mainController',
         }
       };
 
+      $scope.sequenceName = function(sequences, index) {
+        return sequences[index].datatier.length ? sequences[index].datatier.join(',') : ('Sequence ' + (index + 1));
+      };
+
       $scope.updateQuery = function(params) {
         let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
         urlParams = Object.assign({}, urlParams, params);
@@ -786,48 +790,56 @@ mcmApp.directive("sequenceDisplay", function ($http) {
   return {
     restrict: 'EA',
     template:
-      '<div>' +
-      '  <div ng-hide="showSequences">' +
-      '    <a rel="tooltip" title="Show" ng-click="getCmsDriver();">' +
-      '     <i class="icon-eye-open"></i>' +
-      '    </a>' +
-      '  </div>' +
-      '  <div ng-show="showSequences">' +
-      '    <a rel="tooltip" title="Hide" ng-click="showSequences=false;">' +
-      '     <i class="icon-remove"></i>' +
-      '    </a>' +
-      '    <img ng-show="!driver" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>' +
-      '    <ul ng-if="database == \'campaigns\'">' +
-      '      <li ng-repeat="(sequenceName,sequences) in driver">' +
-      '        <b>{{sequenceName}}</b>' +
-      '        <ul>' +
-      '          <li ng-repeat="sequence in sequences"><div style="width:600px;overflow:auto"><pre>{{sequence}}</pre></div></li>' +
-      '        </ul>' +
-      '      </li>' +
-      '    </ul>' +
-      '    <ul ng-if="database == \'requests\'">' +
-      '      <li ng-repeat="sequence in driver">' +
-      '        <div style="width:600px;overflow:auto"><pre>{{sequence}}</pre></div>' +
-      '      </li>' +
-      '    </ul>' +
-      '  </div>' +
-      '</div>',
+    `<div>
+      <div ng-hide="showSequences">
+        <a title="Show" ng-click="toggleShow();">
+          <i class="glyphicon glyphicon-eye-open"></i>
+        </a>
+      </div>
+      <div ng-show="showSequences">
+        <img ng-show="loading" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+        <ul ng-if="database == 'campaigns'">
+          <li ng-repeat="(sequenceName, sequences) in sequenceStrings">
+            <b>{{sequenceName}}</b>
+            <ul>
+              <li ng-repeat="sequenceString in sequences">
+                <div class="sequence-box" style="width:600px;overflow:auto">{{sequenceString}}</div>
+              </li>
+            </ul>
+          </li>
+        </ul>
+        <ul ng-if="database == 'requests'">
+          <li ng-repeat="sequenceString in sequenceStrings">
+            <div class="sequence-box" style="width:600px;overflow:auto">{{sequenceString}}</div>
+          </li>
+        </ul>
+        <a title="Hide" ng-click="toggleShow();">
+          <i class="glyphicon glyphicon-eye-close"></i>
+        </a>
+      </div>
+    </div>`,
     scope: {
       prepid: '=',
       database: '=',
     },
-    link: function ($scope) {
-      $scope.getCmsDriver = function () {
-        $scope.showSequences = true;
-        if ($scope.driver === undefined) {
-          const promise = $http.get("restapi/" + $scope.database + "/get_cmsDrivers/" + $scope.prepid);
-          promise.then(function (data) {
-            $scope.driver = data.data.results;
-          }, function (data) {
-            alert("Error: ", data.status);
+    link: function (scope) {
+
+      scope.showSequences = false;;
+      scope.sequenceStrings = undefined;
+      scope.loading = false;
+
+      scope.toggleShow = function () {
+        scope.showSequences = !scope.showSequences;
+        if (scope.showSequences && !scope.sequenceStrings) {
+          scope.loading = true;
+          $http.get("restapi/" + scope.database + "/get_cmsDrivers/" + scope.prepid).then(function (data) {
+            scope.sequenceStrings = data.data.results;
+            scope.loading = false;
+          }, function () {
+            scope.loading = false;
           });
         }
-      };
+      }
     }
   }
 });

@@ -56,7 +56,10 @@
                 <a ng-href="requests?prepid={{list_info}}" rel="tooltip" title="View only {{list_info}}" target="_self"> {{list_info}}</a>
               </div>
               <div ng-switch-default>
-                {{list_info[data.db_name]}}
+                <a ng-href='{{database}}?{{column.db_name}}={{data[column.db_name]}}'
+                   title="Show all {{database.replace('_', ' ')}} where {{column.text}} is {{data[column.db_name]}}">
+                   {{data[column.db_name]}}
+                </a>
               </div>
             </div>
             </td>

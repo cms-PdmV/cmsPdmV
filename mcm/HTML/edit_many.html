@@ -60,19 +60,19 @@
             <ul class="nav nav-list bs-docs-sidenav" style="position: sticky; top: 20px">
               <li class="" ng-hide="role(1);">
                 <a ng-click="submit_edit()" ng-href="#">
-                <i class="icon-chevron-right"></i>
+                <i class="glyphicon glyphicon-chevron-right"></i>
                 Commit
                 </a>
               </li>
               <li class="">
-                <a ng-href='{{dbName}}?prepid={{prepid}}' rel="tooltip" title="View {{dbName}} {{prepid}}" target="_self">
-                <i class="icon-chevron-right"></i>
+                <a ng-href='{{database}}?prepid={{prepid}}' rel="tooltip" title="View {{database}} {{prepid}}" target="_self">
+                <i class="glyphicon glyphicon-chevron-right"></i>
                 View
                 </a>
               </li>
               <li class="" ng-hide="role(3);">
                 <a ng-click="delete_edit(result['prepid'])" ng-href="#">
-                <i class="icon-chevron-right"></i>
+                <i class="glyphicon glyphicon-chevron-right"></i>
                 Delete
                 </a>
               </li>
@@ -109,8 +109,8 @@
                   <th>
                     <input type="checkbox" ng-model="edited_fields[column.db_name]" ng-click="toggleNotEditable(column.text)" ng-hide="non_multiple_editable.indexOf(column.text)!=-1">
                     {{column.text}}
-                    <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#{{dbName}}_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}">
-                    <i class="icon-question-sign"></i>
+                    <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcMGlossary#{{database}}_{{column.db_name}}" rel="tooltip" title="Glossary for {{column.text}}">
+                    <i class="glyphicon glyphicon-question-sign"></i>
                     </a>
                   </th>
                   <td>
@@ -148,9 +148,6 @@
                         </div>
                         <div ng-switch-when="Validation">
                           <custom-validation-edit ng-model="result[column.db_name]"></custom-validation-edit>
-                        </div>
-                        <div ng-switch-when="Tags">
-                          <tokenfield  show-autocomplete-on-focus="true" tokens="result[column.db_name]" allow-duplicates="false" before-create="addToken" on-remove="removeToken" type-ahead="{'name':'request_tags', 'prefetch':{'url': 'restapi/tags/get_all',ttl:10,'filter': '(function(data){return data.tags;})'}}"/>
                         </div>
                         <div ng-switch-when="Request parameters">
                           <ng-form name="fieldForm" id="fieldForm">

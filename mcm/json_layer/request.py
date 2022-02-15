@@ -385,17 +385,18 @@ class Request(json_base):
         editable['interested_pwg'] = is_user
         # Depending on status
         if approval_status == 'none-new':
-            editable['dataset_name'] = is_gen_contact
-            editable['total_events'] = is_gen_contact
             editable["keep_output"] = is_gen_contact
             editable["pilot"] = is_gen_contact
+            editable['dataset_name'] = is_gen_contact
+            editable['energy'] = is_gen_contact
             editable['extension'] = is_gen_contact
-            editable['input_dataset'] = is_gen_contact
-            editable['time_event'] = is_gen_contact
-            editable['size_event'] = is_gen_contact
-            editable['generators'] = is_gen_contact
-            editable['generator_parameters'] = is_gen_contact
             editable['fragment'] = is_gen_contact
+            editable['generator_parameters'] = is_gen_contact
+            editable['generators'] = is_gen_contact
+            editable['input_dataset'] = is_gen_contact
+            editable['size_event'] = is_gen_contact
+            editable['time_event'] = is_gen_contact
+            editable['total_events'] = is_gen_contact
         elif approval_status == 'approve-approved':
             editable['dataset_name'] = is_gen_convener
 

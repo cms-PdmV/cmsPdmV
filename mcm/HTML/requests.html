@@ -9,7 +9,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="scripts/css/bootstrap.min.css">
   <link rel="stylesheet" href="scripts/css/mcm.css" />
+  <link rel="stylesheet" href="scripts/codemirror-3.11/lib/codemirror.css">
+  <link rel="stylesheet" href="scripts/codemirror-3.11/theme/eclipse.css">
   <link rel="shortcut icon" type="image/x-icon" href="scripts/img/mcm.png">
+  <script type="text/javascript" src="scripts/codemirror-3.11/lib/codemirror-compressed.js"></script>
   <script type="text/javascript" src="scripts/angular.min.js"></script>
   <script type="text/javascript" src="scripts/angular-ui.min.js"></script>
   <script type="text/javascript" src="scripts/jquery.js"></script>
@@ -45,7 +48,7 @@
                    ng-href='batches?contains={{data.prepid}}'
                    rel="tooltip"
                    title="View batches containing {{data.prepid}}"
-                   target="_self"><i class="icon-tags"></i></a>
+                   target="_self"><i class="glyphicon glyphicon-tags"></i></a>
                 <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/requests/{{data[column.db_name]}}"
                    rel="tooltip"
                    title="Admin view of {{data[column.db_name]}}"
@@ -66,64 +69,64 @@
                   <i class="glyphicon glyphicon-duplicate"></i>
                 </a>
                 <a ng-click="reset([data.prepid])" title="Reset" ng-show="user.is_user" ng-href="#">
-                  <i class="icon-repeat"></i>
+                  <i class="glyphicon glyphicon-repeat"></i>
                 </a>
-                <a ng-click="optionReset([data.prepid])" title="Option Reset" ng-show="user.is_user" ng-href="#">
-                  <i class="icon-share"></i>
+                <a ng-click="optionReset([data.prepid])" title="Option Reset" ng-show="user.is_user && data.status == 'new'" ng-href="#">
+                  <i class="glyphicon glyphicon-share"></i>
                 </a>
                 <a ng-click="nextStatus([data.prepid])" title="Next step" ng-show="data.status != 'done' && user.is_user" ng-href="#">
-                  <i class="icon-chevron-right"></i>
+                  <i class="glyphicon glyphicon-chevron-right"></i>
                 </a>
                 <a ng-href='public/restapi/requests/get/{{data.prepid}}' rel="tooltip" title="Get dictionary" target="_self">
-                  <i class="icon-download-alt"></i>
+                  <i class="glyphicon glyphicon-download-alt"></i>
                 </a>
                 <a ng-href='public/restapi/requests/get_setup/{{data.prepid}}' rel="tooltip" title="Get setup command" target="_self">
-                  <i class="icon-download"></i>
+                  <i class="glyphicon glyphicon-download"></i>
                 </a>
                 <a ng-href='public/restapi/requests/get_test/{{data.prepid}}' rel="tooltip" title="Get test command" target="_self">
-                  <i class="icon-ok-circle"></i>
+                  <i class="glyphicon glyphicon-ok-circle"></i>
                 </a>
                 <a ng-href='restapi/requests/get_upload/{{data.prepid}}' rel="tooltip" title="Get upload command" ng-hide="role(3);" target="_self">
-                  <i class="icon-upload"></i>
+                  <i class="glyphicon glyphicon-upload"></i>
                 </a>
                 <a ng-href='restapi/requests/get_inject/{{data.prepid}}' rel="tooltip" title="Get injection command" ng-hide="role(3);" target="_self">
-                  <i class="icon-italic"></i>
+                  <i class="glyphicon glyphicon-italic"></i>
                 </a>
                 <a ng-click="objectAction('register', data.prepid)" rel="tooltip" title="Register to the request {{data.prepid}}" ng-href="#">
-                  <i class="icon-map-marker"></i>
+                  <i class="glyphicon glyphicon-map-marker"></i>
                 </a>
                 <a ng-click="openNotifyModal(data.prepid)" rel="tooltip" title="Notify" ng-href="#">
-                  <i class="icon-envelope"></i>
+                  <i class="glyphicon glyphicon-envelope"></i>
                 </a>
-                <a ng-click="softReset([data.prepid])" title="Soft Reset" ng-show="user.is_production_manager" ng-href="#">
-                  <i class="icon-step-backward"></i>
+                <a ng-click="softReset([data.prepid])" title="Soft Reset" ng-if="user.is_production_manager && data.approval == 'submit'" ng-href="#">
+                  <i class="glyphicon glyphicon-step-backward"></i>
                 </a>
                 <a ng-href='chained_requests?contains={{data.prepid}}' rel="tooltip" title="View chains containing {{data.prepid}}" target="_self">
                   <i class="glyphicon glyphicon-align-left"></i>
                 </a>
                 <a ng-click="objectAction('inspect', data.prepid)" rel="tooltip" ng-hide="role(3);" title="Inspect status of {{data.prepid}}" ng-href="#">
-                  <i class="icon-screenshot"></i>
+                  <i class="glyphicon glyphicon-screenshot"></i>
                 </a>
                 <a ng-click="objectAction('update_stats', data.prepid)" rel="tooltip" ng-hide="role(4);" title="Update status of {{data.prepid}} in Stats" ng-href="#">
-                  <i class="icon-refresh"></i>
+                  <i class="glyphicon glyphicon-refresh"></i>
                 </a>
                 <a ng-click="forcecompletePrompt(data.prepid)" rel="tooltip" ng-if="data.status == 'submitted'" ng-hide="role(1);" title="Add request to be force completed" ng-href="#">
-                  <i class="icon-gift"></i>
+                  <i class="glyphicon glyphicon-gift"></i>
                 </a>
                 <a ng-href="restapi/requests/gen_log/{{data.prepid}}" rel="tooltip" title="See GEN request checking script logs for {{data.prepid}}" target="_self">
-                  <i class="icon-th"></i>
+                  <i class="glyphicon glyphicon-th"></i>
                 </a>
                 <a ng-href="/pmp/present?r={{data.prepid}}" rel="tooltip" title="View announced statistics for {{data.prepid}}" target="_blank">
-                  <i class="icon-picture"></i>
+                  <i class="glyphicon glyphicon-picture"></i>
                 </a>
                 <a ng-href="/pmp/present?r={{data.prepid}}&m=true" rel="tooltip" title="View growing statistics for {{data.prepid}}" target="_blank">
-                  <i class="icon-film"></i>
+                  <i class="glyphicon glyphicon-film"></i>
                 </a>
                 <a ng-show="data.status == 'done' || data.status == 'submitted'" ng-href="/pmp/historical?r={{data.prepid}}" rel="tooltip" title="View historical statistics for {{data.prepid}}" target="_blank">
                   <i class="glyphicon glyphicon-hourglass"></i>
                 </a>
                 <a ng-if="data.status == 'done' || data.status == 'submitted'" ng-href="{{getLinktoDmytro(data.reqmgr_name)}}" rel="tooltip" title="Computing's monitoring for {{data.prepid}}" target="_blank">
-                  <i class="icon-camera"></i>
+                  <i class="glyphicon glyphicon-camera"></i>
                 </a>
                 <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1">
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
@@ -176,14 +179,11 @@
                 <sequence-display ng-model="data.prepid" database="'requests'" prepid="data.prepid"></sequence-display>
               </div>
               <div ng-switch-when="extension" ng-show="data[column.db_name]" align="center">
-                <i class="icon-ok"></i> Number: {{data[column.db_name]}}
+                <i class="glyphicon glyphicon-ok"></i> Number: {{data[column.db_name]}}
               </div>
               <div ng-switch-when="keep_output" align="center">
-                <ul>
-                  <li ng-repeat="keep in data[column.db_name] track by $index">
-                    <i class="icon-ok-sign" ng-if="keep"></i>
-                    <i class="icon-remove-sign" ng-if="!keep"></i>
-                  </li>
+                <ul ng-repeat="keep in data[column.db_name] track by $index">
+                  <li>{{sequenceName(data.sequences, $index)}}: <i class="glyphicon" ng-class="{'glyphicon-ok' : keep, 'glyphicon-remove' : !keep}"></i></li>
                 </ul>
               </div>
               <div ng-switch-when="config_id">
@@ -193,7 +193,7 @@
                        rel="tooltip"
                        title="View production configuration file {{configid}}"
                        target="_self">
-                       <i class="icon-th"></i>
+                       <i class="glyphicon glyphicon-th"></i>
                     </a>
                   </li>
                   <li ng-if="!isDevMachine();" ng-repeat="configid in data[column.db_name]">
@@ -201,7 +201,7 @@
                        rel="tooltip"
                        title="View production configuration file {{configid}}"
                        target="_self">
-                       <i class="icon-th"></i>
+                       <i class="glyphicon glyphicon-th"></i>
                     </a>
                   </li>
                 </ul>
@@ -238,18 +238,12 @@
               </div>
               <div ng-switch-when="fragment_tag">
                 <div ng-show="data[column.db_name];">
-                  <a ng-href='https://raw.githubusercontent.com/cms-sw/genproductions/{{data["fragment_tag"]}}/python/{{data[column.db_name].replace("Configuration/GenProduction/python/", "").replace("Configuration/GenProduction/","")}}'
-                    target="_self" ng-show='data["fragment_tag"];'>{{data[column.db_name]}}</a>
-                  <a ng-href='https://github.com/cms-sw/genproductions' target="_self"
-                    ng-hide='data["fragment_tag"];'>github repo</a>
-                  <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/{{data[column.db_name]}}?revision={{data["fragment_tag"]}}&content-type=text%2Fplain'
-                    target="_self" ng-show='data["fragment_tag"];'>, old file in cvs</a>
-                  <a ng-href='http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/Configuration/GenProduction/'
-                    target="_self" ng-hide='data["fragment_tag"];'>,cvs repo </a>
+                  <a ng-href='https://raw.githubusercontent.com/cms-sw/genproductions/{{data["fragment_tag"]}}/python/{{data[column.db_name].replace("Configuration/GenProduction/python/", "").replace("Configuration/GenProduction/","")}}' target="_self" ng-show='data["fragment_tag"];'>{{data[column.db_name]}}</a>
+                  <a ng-href='https://github.com/cms-sw/genproductions' target="_self" ng-hide='data["fragment_tag"];'>github repo</a>
                 </div>
               </div>
               <div ng-switch-when="fragment">
-                <div fragment-display ng-model="data.prepid" rawfragment={{data[column.db_name]}}></div>
+                <fragment-display ng-model="data[column.db_name]" prepid="data.prepid"></fragment-display>
               </div>
               <div ng-switch-when="member_of_campaign">
                 <a ng-href='{{getLocation()}}&member_of_campaign={{data[column.db_name]}}' rel="tooltip"
@@ -260,8 +254,8 @@
               </div>
               <div ng-switch-when="validation">
                 <ul>
-                  <li ng-show="data[column.db_name].valid != undefined"><i class="icon-ok"
-                      ng-show="data[column.db_name].valid"></i> <i class="icon-remove"
+                  <li ng-show="data[column.db_name].valid != undefined"><i class="glyphicon glyphicon-ok"
+                      ng-show="data[column.db_name].valid"></i> <i class="glyphicon glyphicon-remove"
                       ng-show="!data[column.db_name].valid"></i></li>
                   <li ng-show="data[column.db_name].content != undefined">Content: {{data[column.db_name].content}}</li>
                   <!-- #PG <li ng-show="data[column.db_name].nEvents != undefined">{{numberWithCommas(data[column.db_name].nEvents)}} events</li> -->
@@ -269,11 +263,11 @@
                     <a ng-show="isDevMachine()"
                       href="https://cmsweb.cern.ch/dqm/relval/start?runnr=1;dataset={{data[column.db_name].dqm}};;sampletype=offline_relval;filter=all;referencepos=overlay;referenceshow=all;referencenorm=True;referenceobj1=other%3A%3A{{data[column.db_name].ref_dqm}}%3AReference%3A;referenceobj2=none;referenceobj3=none;referenceobj4=none;search=;striptype=object;stripruns=;stripaxis=run;stripomit=none;workspace=Everything;size=M;root=Generator;focus=;zoom=no;"
                       rel="tooltip" title="Go to the DQM gui for {{data[column.db_name].dqm}}" target="_blank"><i
-                        class="icon-th-large"></i></a>
+                        class="glyphicon glyphicon-th-large"></i></a>
                     <a ng-show="!isDevMachine()"
                       href="https://cmsweb.cern.ch/dqm/relval/start?runnr=1;dataset={{data[column.db_name].dqm}};;sampletype=offline_relval;filter=all;referencepos=overlay;referenceshow=all;referencenorm=True;referenceobj1=other%3A%3A{{data[column.db_name].ref_dqm}}%3AReference%3A;referenceobj2=none;referenceobj3=none;referenceobj4=none;search=;striptype=object;stripruns=;stripaxis=run;stripomit=none;workspace=Everything;size=M;root=Generator;focus=;zoom=no;"
                       rel="tooltip" title="Go to the DQM gui for {{data[column.db_name].dqm}}" target="_blank"><i
-                        class="icon-th-large"></i></a>
+                        class="glyphicon glyphicon-th-large"></i></a>
                   </li>
                   <li ng-show="data[column.db_name].peak_value_rss">
                     Peak RSS value: {{data[column.db_name].peak_value_rss}}MB
@@ -330,33 +324,36 @@
               <div ng-switch-when="history">
                 <div custom-history ng-model="data[column.db_name]"></div>
               </div>
-              <div ng-switch-when="total_events" align="right">
+              <div ng-switch-when="total_events">
                 {{numberWithCommas(data[column.db_name])}}
               </div>
-              <div ng-switch-when="completed_events" align="right">
+              <div ng-switch-when="completed_events">
                 {{numberWithCommas(data[column.db_name])}}
               </div>
               <div ng-switch-when="reqmgr_name">
                 <reqmgr-Name ng-model="data[column.db_name]" prepid="data.prepid"></reqmgr-Name>
               </div>
-              <div ng-switch-when="memory" align="center">
+              <div ng-switch-when="memory">
                 {{data[column.db_name]}}
                 <span class="label label-info" ng-show="data[column.db_name]" title="Megabytes">MB<span>
               </div>
-              <div ng-switch-when="size_event" align="center">
-                {{data[column.db_name]}}
-                <span class="label label-info" ng-show="data[column.db_name]" title="Kegabytes">kB<span>
+              <div ng-switch-when="size_event">
+                <ul>
+                  <li ng-repeat="value in data[column.db_name] track by $index">
+                    {{sequenceName(data.sequences, $index)}}: {{value}} kB
+                  </li>
+                </ul>
               </div>
-              <div ng-switch-when="time_event" align="center">
-                {{data[column.db_name]}}
-                <span class="label label-info" ng-show="data[column.db_name]" title="seconds">s<span>
-              </div>
-              <div ng-switch-when="filter_efficiency" align="center">
-                {{data["generator_parameters"].slice(-1)[0]["filter_efficiency"]}}
+              <div ng-switch-when="time_event">
+                <ul>
+                  <li ng-repeat="value in data[column.db_name] track by $index">
+                    {{sequenceName(data.sequences, $index)}}: {{value}} s
+                  </li>
+                </ul>
               </div>
               <div ng-switch-when="events_per_lumi">
                 <span ng-show="data[column.db_name] != 0">{{data[column.db_name]}}</span>
-                <span ng-show="data[column.db_name] == 0">Use campaign's value</span>
+                <span ng-show="data[column.db_name] == 0">Use campaign value</span>
               </div>
               <div ng-switch-when="interested_pwg">
                 <ul>
@@ -365,9 +362,17 @@
                   </li>
                 </ul>
               </div>
+              <div ng-switch-when="pilot">
+                <i class="glyphicon" ng-class="{'glyphicon-ok' : data[column.db_name], 'glyphicon-remove' : !data[column.db_name]}"></i>
+              </div>
+              <div ng-switch-when="tags">
+                <a ng-repeat="tag in data[column.db_name]" ng-href="{{database}}?tags={{tag}}">
+                  {{tag}}
+                </a>
+              </div>
               <div ng-switch-default>
-                <a ng-href='requests?{{column.db_name}}={{data[column.db_name]}}'
-                   title="Show all requests where {{column.text}} is {{data[column.db_name]}}">
+                <a ng-href='{{database}}?{{column.db_name}}={{data[column.db_name]}}'
+                   title="Show all {{database.replace('_', ' ')}} where {{column.text}} is {{data[column.db_name]}}">
                    {{data[column.db_name]}}
                 </a>
               </div>
@@ -416,44 +421,44 @@
     <!--     END OF MODAL  -->
 
     <div class="row-fluid custom-footer">
-      <div class="span4">
+      <div>
         <span>
           Multiple selection buttons
           <a ng-href='edit_many?db_name=requests&prepid={{selected_prepids.join()}}' rel="tooltip" title="Edit details" ng-hide="role(1);" target="_self">
             <i class="glyphicon glyphicon-wrench"></i>
           </a>
           <a ng-click="actionPrompt('reset', 'selected')" rel="tooltip" ng-hide="role(1);" title="Reset selected requests" ng-href="#">
-            <i class="icon-repeat"></i>
+            <i class="glyphicon glyphicon-repeat"></i>
           </a>
-          <a ng-click="actionPrompt('option_reset', 'selected')" rel="tooltip" ng-hide="role(1);"  title="Option Reset selected requests" ng-href="#">
-            <i class="icon-share"></i>
+          <a ng-click="actionPrompt('option_reset', 'selected')" rel="tooltip" ng-if="user.is_user"  title="Option Reset selected requests" ng-href="#">
+            <i class="glyphicon glyphicon-share"></i>
           </a>
           <a ng-click="actionPrompt('approve', 'selected')" rel="tooltip" title="Next step for selected requests" ng-hide="role(1);" ng-href="#">
-            <i class="icon-chevron-right"></i>
+            <i class="glyphicon glyphicon-chevron-right"></i>
           </a>
           <a ng-click="objectAction('register', 'selected')" rel="tooltip" title="Register to selected requests" ng-href="#">
-            <i class="icon-map-marker"></i>
+            <i class="glyphicon glyphicon-map-marker"></i>
           </a>
           <a ng-click="openNotifyModal(data.prepid)" rel="tooltip" title="Notify selected prepids" ng-href="#">
-            <i class="icon-envelope"></i>
+            <i class="glyphicon glyphicon-envelope"></i>
           </a>
           <a ng-click="actionPrompt('soft_reset', 'selected')" rel="tooltip" ng-hide="role(3);" title="Soft reset selected requests" ng-href="#">
-            <i class="icon-step-backward"></i>
+            <i class="glyphicon glyphicon-step-backward"></i>
           </a>
           <a ng-click="objectAction('inspect', 'selected')" rel="tooltip" ng-hide="role(3);" title="Inspect status of selected requests" ng-href="#">
-            <i class="icon-screenshot"></i>
+            <i class="glyphicon glyphicon-screenshot"></i>
           </a>
           <a ng-click="objectAction('update_stats', 'selected')" rel="tooltip" ng-hide="role(4);" title="Update status of selected requests in Stats" ng-href="#">
-            <i class="icon-refresh"></i>
+            <i class="glyphicon glyphicon-refresh"></i>
           </a>
           <a ng-click="openOnlySelected();" rel="tooltip" ng-hide="role(1);" title="View only selected prepids" ng-href="#">
-            <i class="icon-th-list"></i>
+            <i class="glyphicon glyphicon-th-list"></i>
           </a>
           <a ng-href="/pmp/present?r={{selected_prepids.join()}}" rel="tooltip" title="View announced statistics for selected prepids" target="_blank">
-            <i class="icon-picture"></i>
+            <i class="glyphicon glyphicon-picture"></i>
           </a>
           <a ng-href="/pmp/present?r={{selected_prepids.join()}}&m=true" rel="tooltip" title="View growing statistics for selected prepids" target="_blank">
-            <i class="icon-film"></i>
+            <i class="glyphicon glyphicon-film"></i>
           </a>
           <a ng-href="/pmp/historical?r={{selected_prepids.join()}}" rel="tooltip" title="View historical statistics for selected prepids" target="_blank">
             <i class="glyphicon glyphicon-hourglass"></i>

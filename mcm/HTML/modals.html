@@ -102,9 +102,9 @@
     <h4>Edit sequence</h4>
   </div>
   <div class="modal-body">
-    <table style="width: 100%">
+    <table style="width: 100%" class="sequence-edit">
       <tr ng-repeat="(attribute, value) in sequence">
-        <td>
+        <td style="text-align: right">
           {{attribute}}
         </td>
         <td style="width: 100%">
@@ -190,3 +190,38 @@
   </div>
 </script>
 <!-- END of MODAL-->
+
+<script type="text/ng-template" id="createTicketModal.html">
+  <div class="modal-header">
+    <h4>Create an MccM Ticket</h4>
+  </div>
+  <div class="modal-body">
+    Choose a PWG:
+    <select ng-options="value for value in vars.pwgs" ng-model="vars.selectedPwg" style="width: 90px; margin-bottom: 0px;"></select>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" ng-click="save()">Create</button>
+    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+  </div>
+</script>
+
+<script type="text/ng-template" id="generateChainsModal.html">
+  <div class="modal-header">
+    <h4>Generate chained requests</h4>
+  </div>
+  <div class="modal-body">
+    Generate chained requests for {{vars.prepid}}
+    <br>
+    <span title="Silently skip already existing chained requests">
+      <input type="checkbox" ng-model="vars.skipExisting"> Ignore existing chained requests
+    </span>
+    <br>
+    <span title="Generate chained requests for all requests and chained campaings even if this leads to duplicated chained requests">
+      <input type="checkbox" ng-model="vars.allowDuplicates"> Allow duplicates
+    </span>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" ng-click="confirm()">Confirm</button>
+    <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+  </div>
+</script>

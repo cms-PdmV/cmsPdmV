@@ -101,7 +101,7 @@ angular.module('mcmApp').controller('requestController',
         if (icons[value]) {
           return icons[value];
         } else {
-          return "icon-question-sign";
+          return "glyphicon glyphicon-question-sign";
         }
       };
 
@@ -118,7 +118,7 @@ angular.module('mcmApp').controller('requestController',
         if (icons[value]) {
           return icons[value];
         } else {
-          return "icon-question-sign";
+          return "glyphicon glyphicon-question-sign";
         }
       };
 
@@ -257,78 +257,6 @@ var NotifyModalInstance = function ($scope, $uibModalInstance) {
   };
 };
 
-mcmApp.directive("generatorParams", function ($http) {
-  return {
-    require: 'ngModel',
-    template:
-      '<div>' +
-      '  <ul ng-repeat="param in all_data" ng-switch on="$index < all_data.length-1">' +
-      '    <li ng-switch-when="true">' +
-      '      <a ng-click="viewOldGenParam($index)" ng-hide="display_list.indexOf($index) != -1"><i class="icon-eye-open"></i></a>' +  //elements to be viewed on-click
-      '      <a ng-click="viewOldGenParam($index)" ng-show="display_list.indexOf($index) != -1"><i class="icon-eye-close"></i></a>' +  //elements to be viewed on-click
-      '      <span ng-show="display_list.indexOf($index) != -1">' + //if index in list of possible views -> then display
-      '        <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">' +
-      '          <dt>{{"version"}}</dt>' +
-      '          <dd class="clearfix">{{param["version"]}}</dd>' +
-      '          <dt>{{"cross section"}}</dt>' +
-      '          <dd class="clearfix">{{param["cross_section"]}}' +
-      '          <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>' +
-      '          </dd>' +
-      '          <dt>{{"filter efficiency"}}</dt>' +
-      '          <dd class="clearfix">{{param["filter_efficiency"]}}</dd>' +
-      '          <dt>{{"filter efficiency error"}}</dt>' +
-      '          <dd class="clearfix">{{param["filter_efficiency_error"]}}</dd>' +
-      '          <dt>{{"match efficiency"}}</dt>' +
-      '          <dd class="clearfix">{{param["match_efficiency"]}}</dd>' +
-      '          <dt>{{"match efficiency error"}}</dt>' +
-      '          <dd class="clearfix">{{param["match_efficiency_error"]}}</dd>' +
-      '          <dt>{{"author username"}}</dt>' +
-      '          <dd class="clearfix">{{param["submission_details"]["author_username"]}}</dd>' +
-      '        </dl>' +
-      '      </span>' +
-      '    </li>' +
-      '    <li ng-switch-when="false">' + //last parameter to be displayed all the time
-      '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;">' +
-      '        <dt>{{"version"}}</dt>' +
-      '        <dd class="clearfix">{{param["version"]}}</dd>' +
-      '        <dt>{{"cross section"}}</dt>' +
-      '        <dd class="clearfix">{{param["cross_section"]}}' +
-      '          <a class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>' +
-      '        </dd>' +
-      '        <dt>{{"filter efficiency"}}</dt>' +
-      '        <dd class="clearfix">{{param["filter_efficiency"]}}</dd>' +
-      '        <dt>{{"filter efficiency error"}}</dt>' +
-      '        <dd class="clearfix">{{param["filter_efficiency_error"]}}</dd>' +
-      '        <dt>{{"match efficiency"}}</dt>' +
-      '        <dd class="clearfix">{{param["match_efficiency"]}}</dd>' +
-      '        <dt>{{"match efficiency error"}}</dt>' +
-      '        <dd class="clearfix">{{param["match_efficiency_error"]}}</dd>' +
-      '        <dt>{{"negative weights fraction"}}</dt>' +
-      '        <dd class="clearfix">{{param["negative_weights_fraction"]}}</dd>' +
-      '        <dt>{{"author username"}}</dt>' +
-      '        <dd class="clearfix">{{param["submission_details"]["author_username"]}}</dd>' +
-      '      </dl>' +
-      '    </li>' +
-      '  </ul>' +
-      '</div>',
-    link: function (scope, element, attrs, ctrl) {
-      ctrl.$render = function () {
-        scope.all_data = ctrl.$viewValue;
-        scope.display_list = [_.size(scope.all_data) - 1];
-        scope.last_param = scope.all_data[_.size(scope.all_data) - 1];
-      };
-      scope.viewOldGenParam = function (index) {
-        if (_.contains(scope.display_list, index)) {
-          scope.display_list = _.without(scope.display_list, index)
-        } else {
-          scope.display_list.push(index);
-        }
-        scope.display_list = _.uniq(scope.display_list);
-      };
-    }
-  };
-});
-
 mcmApp.directive("loadFields", function ($http, $location) {
   return {
     replace: true,
@@ -342,7 +270,7 @@ mcmApp.directive("loadFields", function ($http, $location) {
       '    </span>' +
       '  </form>' +
       '  <button type="button" class="btn btn-small" ng-click="getUrl();">Search</button>' +
-      '  <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="icon-question-sign"></i></a>' +
+      '  <a ng-href="https://twiki.cern.ch/twiki/bin/view/CMS/PdmVMcM#Browsing" rel="tooltip" title="Help on navigation"><i class="glyphicon glyphicon-question-sign"></i></a>' +
       '</div>'
     ,
     link: function (scope, element, attr) {
@@ -413,7 +341,7 @@ mcmApp.directive("customActorList", function ($http) {
     template:
       '<span>' +
       '  <a ng-href="#" ng-click="getActors();" tooltip-html-unsafe="{{actors}}" tooltip-trigger="click" tooltip-placement="bottom">' +
-      '    <i class="icon-user"></i>' +
+      '    <i class="glyphicon glyphicon-user"></i>' +
       '  </a>' +
       '</span>',
     link: function (scope, element, attrs) {
@@ -442,37 +370,48 @@ mcmApp.directive("fragmentDisplay", function ($http) {
   return {
     require: 'ngModel',
     template:
-      '<div ng-show="fragment && fragment.length">' +
-      '  <a ng-show="!show_fragment" rel="tooltip" title="Show fragment" ng-click="showFragment();">' +
-      '    <i class="icon-eye-open"></i>' +
-      '  </a>' +
-      '  <a ng-show="show_fragment" rel="tooltip" title="Hide fragment" ng-click="show_fragment = false;">' +
-      '    <i class="icon-remove"></i>' +
-      '  </a>' +
-      '  <a ng-href="public/restapi/requests/get_fragment/{{prepid}}/0" rel="tooltip" title="Open fragment in new tab" target="_blank">' +
-      '    <i class="icon-fullscreen"></i>' +
-      '  </a>' +
-      '  <div ng-show="show_fragment">' +
-      '    <textarea ui-codemirror="{ theme:\'eclipse\', readOnly:true}" ui-refresh=true ng-model="fragment"></textarea>' +
-      '  </div>' +
-      '</div>',
-    link: function (scope, element, attrs, ctrl) {
+    `<div ng-show="fragment && fragment.length">
+      <a ng-show="!showFragment" title="Show fragment" ng-click="toggleShow();">
+        <i class="glyphicon glyphicon-eye-open"></i>
+      </a>
+      <a ng-show="showFragment" title="Hide fragment" ng-click="toggleShow();">
+        <i class="glyphicon glyphicon-eye-close"></i>
+      </a>
+      <a ng-href="public/restapi/requests/get_fragment/{{prepid}}" title="Open fragment in new tab" target="_blank">
+        <i class="glyphicon glyphicon-fullscreen"></i>
+      </a>
+      <div ng-show="showFragment">
+        <textarea class="fragment" style="width: 100%; min-height: 50px;" ng-model="fragment"></textarea>
+      </div>
+    </div>`,
+    link: function (scope, element, attr, ctrl) {
       ctrl.$render = function () {
-        scope.show_fragment = false;
-        scope.prepid = ctrl.$viewValue;
-        scope.fragment = attrs.rawfragment;
-        scope.refreshedEditor = false;
+        scope.fragment = ctrl.$viewValue;
+        scope.prepid = scope.$eval(attr.prepid);
+        scope.showFragment = false;
+        scope.textarea = element[0].querySelector('textarea.fragment');
+        scope.editor = undefined;
       };
-      scope.showFragment = function () {
-        scope.show_fragment = true;
-        if (!scope.refreshedEditor) {
-          scope.refreshedEditor = true;
+      scope.toggleShow = function () {
+        if (!scope.editor) {
+          scope.editor = CodeMirror.fromTextArea(scope.textarea,
+            {
+              'readOnly': true,
+              'lineNumbers': false,
+              'indentWithTabs': true,
+              'height': 'fit-content',
+              'viewportMargin': Infinity,
+              'theme': 'eclipse',
+              'value': scope.fragment,
+            });
+          scope.editor.setValue(scope.fragment);
+        }
+        scope.showFragment = !scope.showFragment;
+        if (scope.showFragment) {
           setTimeout(() => {
-            const textarea = angular.element(element)[0].querySelector('textarea');
-            const editor = CodeMirror.fromTextArea(textarea);
-            editor.setSize(null, 'auto');
-            editor.refresh();
-          }, 100);
+            scope.editor.setSize(null, 'fit-content');
+            scope.editor.refresh();
+          }, 10);
         }
       };
     }

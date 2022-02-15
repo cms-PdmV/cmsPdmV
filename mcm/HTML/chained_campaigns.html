@@ -97,10 +97,16 @@
               <div ng-switch-when="history">
                 <div custom-history ng-model="data[column.db_name]"></div>
               </div>
+              <div ng-switch-when="check_cmssw_version">
+                <i class="glyphicon" ng-class="{'glyphicon-ok' : data[column.db_name], 'glyphicon-remove' : !data[column.db_name]}"></i>
+              </div>
+              <div ng-switch-when="enabled">
+                <i class="glyphicon" ng-class="{'glyphicon-ok' : data[column.db_name], 'glyphicon-remove' : !data[column.db_name]}"></i>
+              </div>
 
               <div ng-switch-default>
-                <a ng-href='chained_campaigns?{{column.db_name}}={{data[column.db_name]}}'
-                   title="Show all chained campaigns where {{column.text}} is {{data[column.db_name]}}">
+                <a ng-href='{{database}}?{{column.db_name}}={{data[column.db_name]}}'
+                   title="Show all {{database.replace('_', ' ')}} where {{column.text}} is {{data[column.db_name]}}">
                    {{data[column.db_name]}}
                 </a>
               </div>

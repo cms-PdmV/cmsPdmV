@@ -78,7 +78,7 @@ from rest_api.ChainedRequestActions import (ChainedRequestFlow,
                                             #RemoveFromForceFlowList,
                                             #GetUniqueChainedRequestValues,
 from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow, GetEditableFlow
-from rest_api.UserActions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser
+from rest_api.UserActions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser, GetEditableUser
 from rest_api.BatchActions import GetBatch, AnnounceBatch, DeleteBatch
 from rest_api.InvalidationActions import (GetInvalidation,
                                           DeleteInvalidation,
@@ -259,6 +259,7 @@ api.add_resource(GetUserInfo, '/restapi/users/get')
 api.add_resource(UpdateUser, '/restapi/users/update')
 api.add_resource(GetUser, '/restapi/users/get/<string:username>')
 api.add_resource(AddCurrentUser, '/restapi/users/add')
+api.add_resource(GetEditableUser, '/restapi/users/get_editable/<string:prepid>')
 
 # REST Request actions
 api.add_resource(RequestImport, '/restapi/requests/save')

@@ -24,16 +24,16 @@
         <li class="dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">More... <span class="caret"></span></a>
           <ul class="dropdown-menu">
-            <li><a href="#">Priority change</a></li>
-            <li><a href="#">Users</a></li>
-            <li><a href="#">Lists</a></li>
+            <!-- <li><a href="#" target="_self">Priority change</a></li> -->
+            <li><a href="users" target="_self">Users</a></li>
+            <!-- <li ng-if="user.is_production_manager"><a href="lists" target="_self">Lists</a></li> -->
             <li role="separator" class="divider"></li>
-            <li><a href="#">Database</a></li>
-            <li><a href="#">Settings</a></li>
-            <li><a href="#">Documentation</a></li>
+            <!-- <li ng-if="user.is_administrator"><a href="#" target="_self">Database</a></li> -->
+            <!-- <li ng-if="user.is_production_manager"><a href="#" target="_self">Settings</a></li> -->
+            <li><a href="https://cms-pdmv.gitbook.io/project/" target="_blank">Documentation</a></li>
             <li role="separator" class="divider"></li>
-            <li><a href="#">Report an issue</a></li>
-            <li><a href="#">PdmV</a></li>
+            <li><a href="https://github.com/cms-PdmV/cmsPdmV/issues/new" target="_blank">Report an issue</a></li>
+            <li><a href="https://cms-pdmv.cern.ch/home/" target="_blank">PdmV</a></li>
           </ul>
         </li>
       </ul>

@@ -57,10 +57,10 @@ class User():
                 if hasattr(request_context, 'user_info'):
                     self.user_info = request_context.user_info
                 else:
-                    self.user_info = self.get_user_info(request.headers)
+                    self.user_info = self.__get_user_info(request.headers)
                     setattr(request_context, 'user_info', self.user_info)
 
-    def get_user_info(self, headers):
+    def __get_user_info(self, headers):
         """
         Check request headers and parse user information
         Also fetch info from the database and update the database if needed
@@ -94,6 +94,26 @@ class User():
         self.cache.set(username, user_info)
         return user_info
 
+    def get_user_info(self):
+        """
+        Return user info dictionary
+        """
+        return self.user_info
+
+    def get_editing_info(self):
+        """
+        Editing info of the user object
+        """
+        info = {attr: False for attr in self.get_user_info()}
+        user = User()
+        user_role = user.get_role()
+        is_prod_manager = user_role >= Role.PRODUCTION_MANAGER
+        # Some are always editable
+        info['role'] = is_prod_manager
+        info['notes'] = is_prod_manager
+        info['pwg'] = is_prod_manager
+        return info
+
     def update_history(self, action, step=''):
         """
         Add history entry
@@ -104,11 +124,12 @@ class User():
         if step:
             entry['step'] = step
 
+        changer = User()
         # Get current date and time as YYYY-mm-dd-HH-MM
         date_and_time = time.strftime('%Y-%m-%d-%H-%M', time.localtime(time.time()))
-        entry['updater'] = {'author_username': self.get_username(),
-                            'author_name': self.get_user_name(),
-                            'author_email': self.get_email(),
+        entry['updater'] = {'author_username': changer.get_username(),
+                            'author_name': changer.get_user_name(),
+                            'author_email': changer.get_email(),
                             'submission_date': date_and_time}
 
         history.append(entry)
@@ -119,7 +140,7 @@ class User():
         Return a single user if it exists in database
         """
         if cls.cache.has(username):
-            return cls.cache.get(username)
+            return cls(cls.cache.get(username))
 
         user_json = cls.get_database().get(username)
         if not user_json:
@@ -190,6 +211,18 @@ class User():
         Set user role
         """
         self.user_info['role'] = str(role)
+
+    def get(self, attribute):
+        """
+        Get attribute from user info
+        """
+        return self.user_info[attribute]
+
+    def set(self, attribute, value):
+        """
+        Set attribute to user info
+        """
+        self.user_info[attribute] = value
 
     def get_user_pwgs(self):
         """
