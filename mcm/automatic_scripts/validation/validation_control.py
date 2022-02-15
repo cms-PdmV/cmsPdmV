@@ -3,6 +3,7 @@ import json
 import sys
 import os.path
 import os
+import re
 import math
 import random
 import xml.etree.ElementTree as ET
@@ -682,6 +683,7 @@ class ValidationControl():
         self.logger.info(item)
         subject = 'Validation failed for %s' % (validation_name)
         message = 'Hello,\n\nUnfortunatelly %s validation failed.\n%s' % (validation_name, message.decode('utf-8'))
+        message = re.sub(r'[^\x00-\x7f]', '?', message)
         item.notify(subject, message)
 
     def notify_validation_suceeded(self, validation_name):
@@ -707,6 +709,7 @@ class ValidationControl():
                         value = sequence[key]
                         message += '      %s: %s\n' % (key, value)
 
+        message = re.sub(r'[^\x00-\x7f]', '?', message)
         item.notify(subject, message)
 
     def get_events_per_lumi(self, storage_item):
