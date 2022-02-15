@@ -1724,10 +1724,10 @@ class request(json_base):
 
                 connection = ConnectionWrapper(host=cmsweb_url, keep_open=True)
                 for reqmgr_name in reqmgr_names:
-                    self.logger.info('Changing "%s" priority to %s', reqmgr_name, priority)
+                    self.logger.info('Changing "%s" priority to %s', reqmgr_name, new_priority)
                     response = connection.api('PUT',
                                               '/reqmgr2/data/request/%s' % (reqmgr_name),
-                                              {'RequestPriority': priority})
+                                              {'RequestPriority': new_priority})
                     self.logger.debug(response)
 
                 connection.close()
