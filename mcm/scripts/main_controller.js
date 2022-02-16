@@ -154,6 +154,17 @@ angular.module('mcmApp').controller('mainController',
         return sequences[index].datatier.length ? sequences[index].datatier.join(',') : ('Sequence ' + (index + 1));
       };
 
+      $scope.attributeType = function (attribute) {
+        let type = typeof (attribute)
+        if (type != 'object') {
+          return type;
+        }
+        if (Array.isArray(attribute)) {
+          return 'array';
+        }
+        return type;
+      };
+
       $scope.updateQuery = function(params) {
         let urlParams = Object.fromEntries(new URLSearchParams(window.location.search));
         urlParams = Object.assign({}, urlParams, params);

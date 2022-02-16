@@ -26,12 +26,12 @@
           <ul class="dropdown-menu">
             <!-- <li><a href="#" target="_self">Priority change</a></li> -->
             <li><a href="users" target="_self">Users</a></li>
-            <!-- <li ng-if="user.is_production_manager"><a href="lists" target="_self">Lists</a></li> -->
+            <li ng-if="user.is_production_manager"><a href="settings" target="_self">Settings</a></li>
+            <li role="separator" class="divider" ng-if="user.is_administrator"></li>
+            <li ng-if="user.is_administrator"><a href="https://cms-pdmv.cern.ch/mcm/admin/_utils/" target="_self">Database</a></li>
+            <li ng-if="user.is_administrator"><a href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/" target="_self">Development DEV</a></li>
             <li role="separator" class="divider"></li>
-            <!-- <li ng-if="user.is_administrator"><a href="#" target="_self">Database</a></li> -->
-            <!-- <li ng-if="user.is_production_manager"><a href="#" target="_self">Settings</a></li> -->
             <li><a href="https://cms-pdmv.gitbook.io/project/" target="_blank">Documentation</a></li>
-            <li role="separator" class="divider"></li>
             <li><a href="https://github.com/cms-PdmV/cmsPdmV/issues/new" target="_blank">Report an issue</a></li>
             <li><a href="https://cms-pdmv.cern.ch/home/" target="_blank">PdmV</a></li>
           </ul>
