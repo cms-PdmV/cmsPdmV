@@ -56,7 +56,7 @@ class CreateMccm(RESTResource):
             prepid = mccm_db.get_next_prepid(prepid_part, [meeting_date_full, pwg])
             mccm.set_attribute('prepid', prepid)
             mccm.set_attribute('_id', prepid)
-            mccm.update_history({'action': 'created'})
+            mccm.update_history('created')
             if mccm_db.save(mccm.json()):
                 return {'results': True,
                         'prepid': prepid}

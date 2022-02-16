@@ -102,8 +102,8 @@ class json_base:
           "prepid": False,
           "notes": True,
           "some_list": False,
-          "another_list": { # <- This dict will be applied when checking
-                            #    each element of "another_list"
+          "another_list": { # <- This dict will be applied to each item of
+                            #    "another_list", index cannot be specified
               "list_item_attribute_1": False,
               "list_item_attribute_2": True
           }
@@ -121,6 +121,7 @@ class json_base:
         """
         Iterate through all attributes and validate the value
         """
+        pass
 
     @classmethod
     def get_database(cls):

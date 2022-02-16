@@ -80,21 +80,6 @@ class MccM(json_base):
         today = today + datetime.timedelta(days=meeting_day - today.weekday(), weeks=weeks)
         return today
 
-    def get_editable(self):
-        editable = {}
-        schema = self._json_base__schema
-        if self.get_attribute('status') == 'new':
-            not_editable = {"status", "prepid", "meeting", "pwg",
-                            "approval", "message_id", "generated_chains"}
-            for key in schema:
-                editable[key] = bool(key not in not_editable)
-
-        else:
-            for key in schema:
-                editable[key] = False
-
-        return editable
-
     @staticmethod
     def get_mccm_by_generated_chain(chain_id):
         mccms_db = Database('mccms')

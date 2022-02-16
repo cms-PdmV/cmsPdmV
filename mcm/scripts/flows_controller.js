@@ -15,7 +15,7 @@ angular.module('mcmApp').controller('flowController',
         $scope.objectAction(undefined,
           [prepid],
           {method: 'POST',
-           url: 'restapi/' + $scope.database + '/approve',
+           url: 'restapi/' + $scope.database + '/type',
            data: {'prepid': prepid}});
       };
     }

@@ -33,7 +33,7 @@ class Flow(json_base):
 
         return super().validate()
 
-    def toggle_approval(self):
+    def toggle_type(self):
         approval_steps = ('none', 'together', 'after_done')
         approval = self.get_attribute('approval')
         index = approval_steps.index(approval) if approval in approval_steps else 0

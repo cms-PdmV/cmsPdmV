@@ -799,7 +799,7 @@ mcmApp.directive("sequenceDisplay", function ($http) {
         scope.showSequences = !scope.showSequences;
         if (scope.showSequences && !scope.sequenceStrings) {
           scope.loading = true;
-          $http.get("restapi/" + scope.database + "/get_cmsDrivers/" + scope.prepid).then(function (data) {
+          $http.get("restapi/" + scope.database + "/get_drivers/" + scope.prepid).then(function (data) {
             scope.sequenceStrings = data.data.results;
             scope.loading = false;
           }, function () {

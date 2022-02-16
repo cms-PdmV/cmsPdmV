@@ -1,5 +1,24 @@
 from rest_api.ControlActions import Search, CacheClear
-from rest_api.RestAPIMethod import RESTResource
+from rest_api.campaign_actions import (CreateCampaign,
+                                       GetCampaign,
+                                       UpdateCampaign,
+                                       DeleteCampaign,
+                                       CloneCampaign,
+                                       GetEditableCampaign,
+                                       ToggleCampaignStatus,
+                                       GetCmsDriverForCampaign,
+                                       GetUniqueCampaignValues,
+                                       GetDefaultCampaignSequence,
+                                       InspectCampaign)
+
+from rest_api.flow_actions import (CreateFlow,
+                                   GetFlow,
+                                   UpdateFlow,
+                                   DeleteFlow,
+                                   CloneFlow,
+                                   GetEditableFlow,
+                                   ToggleFlowType)
+
 from rest_api.RequestActions import (RequestImport,
                                      RequestClone,
                                      RequestDelete,
@@ -38,16 +57,7 @@ from rest_api.RequestActions import (RequestImport,
                                      #RequestsPriorityChange,
                                      #UpdateEventsFromWorkflow,
                                      GENLogOutput)
-from rest_api.CampaignActions import (CreateCampaign,
-                                      DeleteCampaign,
-                                      UpdateCampaign,
-                                      GetCampaign,
-                                      GetEditableCampaign,
-                                      ToggleCampaignStatus,
-                                      GetCmsDriverForCampaign,
-                                      GetUniqueCampaignValues,
-                                      GetDefaultCampaignSequence,
-                                      InspectCampaigns)
+
 from rest_api.ChainedCampaignActions import (CreateChainedCampaign,
                                              DeleteChainedCampaign,
                                              GetChainedCampaign,
@@ -77,7 +87,6 @@ from rest_api.ChainedRequestActions import (ChainedRequestFlow,
                                             #ToForceFlowList,
                                             #RemoveFromForceFlowList,
                                             #GetUniqueChainedRequestValues,
-from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow, GetEditableFlow
 from rest_api.UserActions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser, GetEditableUser
 from rest_api.BatchActions import GetBatch, AnnounceBatch, DeleteBatch
 from rest_api.InvalidationActions import (GetInvalidation,
@@ -221,7 +230,32 @@ def setup_api_docs(flask_app):
 
     flask_app.add_url_rule('/restapi', None, _api_documentation)
     flask_app.add_url_rule('/restapi/<path:api_path>', None, _api_documentation)
-#
+
+# REST Campaign Actions
+api.add_resource(CreateCampaign, '/restapi/campaigns/save')
+api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:prepid>')
+api.add_resource(UpdateCampaign, '/restapi/campaigns/update')
+api.add_resource(DeleteCampaign, '/restapi/campaigns/delete/<string:prepid>')
+api.add_resource(CloneCampaign, '/restapi/campaigns/clone')
+api.add_resource(GetEditableCampaign, '/restapi/campaigns/get_editable/<string:prepid>')
+api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status')
+api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_drivers/<string:prepid>')
+api.add_resource(GetUniqueCampaignValues, '/restapi/campaigns/unique_values')
+api.add_resource(GetDefaultCampaignSequence, '/restapi/campaigns/get_default_sequence')
+api.add_resource(InspectCampaign, '/restapi/campaigns/inspect/<string:prepid>')
+
+
+# REST Flow Actions
+api.add_resource(CreateFlow, '/restapi/flows/save')
+api.add_resource(GetFlow, '/restapi/flows/get/<string:prepid>')
+api.add_resource(UpdateFlow, '/restapi/flows/update')
+api.add_resource(DeleteFlow, '/restapi/flows/delete/<string:prepid>')
+api.add_resource(CloneFlow, '/restapi/flows/clone')
+api.add_resource(GetEditableFlow, '/restapi/flows/get_editable/<string:prepid>')
+api.add_resource(ToggleFlowType, '/restapi/flows/type')
+
+
+
 # create a restriction-free urls, with limited capabilities
 # api.add_resource(
 #     GetFragmentForRequest,
@@ -319,17 +353,7 @@ api.add_resource(GetUniqueRequestValues, '/restapi/requests/unique_values')
 # api.add_resource(RequestsPriorityChange, '/restapi/requests/priority_change')
 api.add_resource(GENLogOutput, '/restapi/requests/gen_log/<string:request_id>')
 
-# REST Campaign Actions
-api.add_resource(CreateCampaign, '/restapi/campaigns/save')
-api.add_resource(UpdateCampaign, '/restapi/campaigns/update')
-api.add_resource(DeleteCampaign, '/restapi/campaigns/delete/<string:prepid>')
-api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:prepid>')
-api.add_resource(GetEditableCampaign, '/restapi/campaigns/get_editable/<string:prepid>')
-api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status')
-api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_cmsDrivers/<string:prepid>')
-api.add_resource(GetUniqueCampaignValues, '/restapi/campaigns/unique_values')
-api.add_resource(GetDefaultCampaignSequence, '/restapi/campaigns/get_default_sequence')
-api.add_resource(InspectCampaigns, '/restapi/campaigns/inspect/<string:prepid>')
+
 
 # REST Chained Campaign Actions
 api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
@@ -371,14 +395,7 @@ api.add_resource(GetEditableChainedRequest, '/restapi/chained_requests/get_edita
 # api.add_resource(ChainedRequestsPriorityChange, '/restapi/chained_requests/priority_change')
 # api.add_resource(ChainsFromTicket, '/restapi/chained_requests/from_ticket')
 # api.add_resource(GetUniqueChainedRequestValues, '/restapi/chained_requests/unique_values/<string:field_name>')
-# REST Flow Actions
-api.add_resource(GetFlow, '/restapi/flows/get/<string:prepid>')
-api.add_resource(CreateFlow, '/restapi/flows/save')
-api.add_resource(UpdateFlow, '/restapi/flows/update')
-api.add_resource(DeleteFlow, '/restapi/flows/delete/<string:prepid>')
-api.add_resource(ApproveFlow, '/restapi/flows/approve')
-api.add_resource(CloneFlow, '/restapi/flows/clone')
-api.add_resource(GetEditableFlow, '/restapi/flows/get_editable/<string:prepid>')
+
 
 # REST Batches Actions
 api.add_resource(GetBatch, '/restapi/batches/get/<string:prepid>')

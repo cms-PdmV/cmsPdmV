@@ -2,19 +2,22 @@ import time
 import traceback
 import flask
 from couchdb_layer.mcm_database import database as Database
-from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
+from rest_api.RestAPIMethod import (CloneRESTResource, CreateRESTResource,
+                                    GetRESTResource,
+                                    UpdateRESTResource,
+                                    DeleteRESTResource,
+                                    GetEditableRESTResource,
+                                    GetUniqueValuesRESTResource,
+                                    RESTResource)
 from json_layer.campaign import Campaign
 from json_layer.request import Request
 from json_layer.sequence import Sequence
 from json_layer.chained_campaign import ChainedCampaign
 from json_layer.user import Role
-from tools.exceptions import (BadAttributeException,
-                              CouldNotSaveException,
-                              InvalidActionException,
-                              NotFoundException)
+from tools.exceptions import InvalidActionException, NotFoundException
 
 
-class CreateCampaign(RESTResource):
+class CreateCampaign(CreateRESTResource):
     """
     Endpoint for creating new campaign
     """
@@ -26,31 +29,18 @@ class CreateCampaign(RESTResource):
         Create a campaign with the provided content
         Required attribute - a unique prepid
         """
-        campaign = Campaign(data)
-        prepid = campaign.get_attribute('prepid')
-        if not prepid:
-            raise BadAttributeException('Missing "prepid" attribute')
+        return self.create_object(data, Campaign)
 
-        if Campaign.fetch(prepid):
-            raise BadAttributeException(f'Campaign "{prepid}" already exists')
-
-        self.logger.info('Creating new campaign "%s"', prepid)
-        # Validate
-        campaign.validate()
+    def before_create(self, obj):
         # Ensure schema of sequences
-        sequences = campaign.get('sequences')
+        sequences = obj.get('sequences')
         sequences = {name: [Sequence(s).json() for s in seqs] for name, seqs in sequences.items()}
-        campaign.set_attribute('sequences', sequences)
-        campaign.set_attribute('_id', prepid)
-        campaign.update_history('created')
+        obj.set_attribute('sequences', sequences)
 
-        # Save to DB
-        self.logger.info('Saving new campaign "%s"', prepid)
-        if not campaign.save():
-            raise CouldNotSaveException(prepid)
-
-        root = campaign.get_attribute('root')
-        # If campaign is maybe root or root, create dedicated chained campaign
+    def after_create(self, obj):
+        prepid = obj.get('prepid')
+        root = obj.get_attribute('root')
+        # If campaign is maybe root (-1) or root (0), create chained campaign
         if root in (-1, 0):
             self.logger.info('Creating a new chained campaign for "%s" campaign', prepid)
             chained_campaign = ChainedCampaign({'prepid': f'chain_{prepid}',
@@ -58,10 +48,8 @@ class CreateCampaign(RESTResource):
                                                 'campaigns': [[prepid, None]]})
             chained_campaign.save()
 
-        return {'results': True, 'prepid': prepid}
 
-
-class UpdateCampaign(RESTResource):
+class UpdateCampaign(UpdateRESTResource):
     """
     Endpoint for updating a campaign
     """
@@ -73,45 +61,18 @@ class UpdateCampaign(RESTResource):
         Update a campaign with the provided content
         Required attributes - prepid and revision
         """
-        prepid = data.get('prepid', data.get('_id'))
-        if not prepid:
-            raise BadAttributeException('Missing "prepid" attribute')
+        return self.update_object(data, Campaign)
 
-        old_campaign = Campaign.fetch(prepid)
-        if not old_campaign:
-            raise NotFoundException(prepid)
-
-        self.logger.info('Updating campaign "%s"', prepid)
-        new_campaign = Campaign(data)
-        if new_campaign.get('_rev') != old_campaign.get('_rev'):
-            raise BadAttributeException('Provided revision does not match revision in database')
-
-        # Validate
-        new_campaign.validate()
+    def before_update(self, old_obj, new_obj):
         # Ensure schema of sequences
-        sequences = new_campaign.get('sequences')
+        sequences = new_obj.get('sequences')
         sequences = {name: [Sequence(s).json() for s in seqs] for name, seqs in sequences.items()}
-        new_campaign.set_attribute('sequences', sequences)
-        # Difference
-        difference = self.get_obj_diff(old_campaign.json(),
-                                       new_campaign.json(),
-                                       ('history', '_rev'))
-        if not difference:
-            self.logger.info('No updates for %s', prepid)
-            return {'results': True, 'prepid': prepid}
+        new_obj.set_attribute('sequences', sequences)
 
-        difference = ', '.join(difference)
-        self.logger.info('Update difference for %s: %s', prepid, difference)
-        new_campaign.set('history', old_campaign.get('history'))
-        new_campaign.update_history('update', difference)
-
-        # Save to DB
-        self.logger.info('Saving updated campaign "%s"', prepid)
-        if not new_campaign.save():
-            raise CouldNotSaveException(prepid)
-
-        root = new_campaign.get_attribute('root')
-        # If campaign is maybe root (-1) or root (0), create dedicated chained campaign
+    def after_update(self, old_obj, new_obj, changes):
+        prepid = new_obj.get('prepid')
+        root = new_obj.get_attribute('root')
+        # If campaign is maybe root (-1) or root (0), create chained campaign
         if root in (-1, 0):
             chained_campaign_db = ChainedCampaign.get_database()
             chained_campaign_id = f'chain_{prepid}'
@@ -122,13 +83,18 @@ class UpdateCampaign(RESTResource):
                                                     'campaigns': [[prepid, None]]})
                 chained_campaign.save()
 
-        return {'results': True, 'prepid': prepid}
-
 
 class DeleteCampaign(DeleteRESTResource):
     """
     Endpoint for deleting a campaign
     """
+
+    @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
+    def delete(self, prepid):
+        """
+        Delete a campaign
+        """
+        return self.delete_object(prepid, Campaign)
 
     def delete_check(self, obj):
         prepid = obj.get('prepid')
@@ -158,9 +124,11 @@ class DeleteCampaign(DeleteRESTResource):
             request_id = requests[0].get('_id')
             raise InvalidActionException(f'Request {request_id} is member of {prepid}')
 
+    def after_delete(self, obj):
         # Get all campaigns that contain this campaign as "next"
+        prepid = obj.get('prepid')
         campaign_db = Campaign.get_database()
-        campaigns_with_next = campaign_db.query_view('next', prepid,  page_num=-1)
+        campaigns_with_next = campaign_db.query_view('next', prepid, page_num=-1)
         for campaign_next in campaigns_with_next:
             if prepid in campaign_next['next']:
                 campaign_next['next'].remove(prepid)
@@ -168,45 +136,37 @@ class DeleteCampaign(DeleteRESTResource):
 
         return super().delete_check(obj)
 
-    @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
-    def delete(self, prepid):
-        """
-        Delete a campaign
-        """
-        return self.delete_object(prepid, Campaign)
 
-
-class GetCampaign(RESTResource):
+class GetCampaign(GetRESTResource):
     """
     Endpoing for retrieving a campaign
     """
-
-    def get(self, prepid):
-        """
-        Retrieve the campaign for given id
-        """
-        campaign = Campaign.fetch(prepid)
-        if not campaign:
-            raise NotFoundException(prepid)
-
-        return {'results': campaign.json()}
+    object_class = Campaign
 
 
-class GetEditableCampaign(RESTResource):
+class GetEditableCampaign(GetEditableRESTResource):
     """
     Endpoing for retrieving a campaign and it's editing info
     """
+    object_class = Campaign
 
-    def get(self, prepid):
-        """
-        Retrieve the campaign and it's editing info for given id
-        """
-        campaign = Campaign.fetch(prepid)
-        if not campaign:
-            raise NotFoundException(prepid)
 
-        return {'results': {'object': campaign.json(),
-                            'editing_info': campaign.get_editing_info()}}
+class GetUniqueCampaignValues(GetUniqueValuesRESTResource):
+    """
+    Endpoint for getting unique values of campaign attributes
+    """
+    object_class = Campaign
+
+
+class CloneCampaign(CloneRESTResource):
+
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
+    @RESTResource.request_with_json
+    def put(self, data):
+        """
+        Make a clone of a campaign
+        """
+        return self.clone_object(data, Campaign)
 
 
 class ToggleCampaignStatus(RESTResource):
@@ -242,27 +202,6 @@ class GetCmsDriverForCampaign(RESTResource):
         return {'results': campaign.get_cmsdrivers()}
 
 
-class GetUniqueCampaignValues(RESTResource):
-    """
-    Endpoint for getting unique values of campaign attributes
-    """
-
-    def get(self):
-        """
-        Get unique values of certain attribute
-        """
-        args = flask.request.args.to_dict()
-        attribute = args.get('attribute')
-        value = args.get('value')
-        if not attribute or not value:
-            return {'results': []}
-
-        limit = int(args.get('limit', 10))
-        limit = min(100, max(1, limit))
-        campaign_db = Campaign.get_database()
-        return {'results': campaign_db.query_unique(attribute, value, limit)}
-
-
 class GetDefaultCampaignSequence(RESTResource):
     """
     Endpoint for getting an empty campaign sequence
@@ -275,7 +214,7 @@ class GetDefaultCampaignSequence(RESTResource):
         return {'results': Sequence.schema()}
 
 
-class InspectCampaigns(RESTResource):
+class InspectCampaign(RESTResource):
     """
     Endpoing for inspecting all requests in the campaign
     """
