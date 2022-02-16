@@ -44,8 +44,16 @@ table.sequence-edit td {
     white-space: pre-wrap;
 }
 
+table {
+    background-color: white;
+}
+
 td {
     vertical-align: middle !important;
+}
+
+th {
+    background-color: white;
 }
 
 img {

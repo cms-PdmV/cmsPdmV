@@ -9,6 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="scripts/css/bootstrap.min.css">
   <link rel="stylesheet" href="scripts/css/mcm.css" />
+  <link rel="stylesheet" href="scripts/css/pdmv-development-ribbon.css">
   <link rel="shortcut icon" type="image/x-icon" href="scripts/img/mcm.png">
   <script type="text/javascript" src="scripts/angular.min.js"></script>
   <script type="text/javascript" src="scripts/angular-ui.min.js"></script>
@@ -24,7 +25,7 @@
   <div ng-include="'HTML/modals.html'"></div>
   <div ng-controller="mccmController">
     <div class="container">
-      <column-select update-query="updateQuery" columns="columns"></column-select>
+      <column-select update-query="updateQuery" columns="columns" ng-if="!initialGetData && result.length"></column-select>
     </div>
     <table class="table table-bordered table-striped table-hover">
       <thead>
@@ -64,7 +65,7 @@
                   <i class="glyphicon glyphicon-folder-open"></i>
                 </a>
                 <a ng-href="chained_requests?from_ticket={{data.prepid}}" title="Show generated chained requests of {{data.prepid}}" target="_self">
-                  <i class="glyphicon glyphicon-align-left"></i>
+                  <i class="glyphicon glyphicon-indent-left"></i>
                 </a>
                 <a ng-click="checkApproved(data.prepid)" title="Check approval of requests" ng-show="user.is_mc_contact" ng-href="#">
                   <i class="glyphicon glyphicon-eye-open"></i>
@@ -83,7 +84,7 @@
                   <div ng-repeat="elem in data[column.db_name]">
                     <li ng-hide="isArray(elem);">
                       <a ng-href='requests?prepid={{elem}}' title="View request {{elem}}" target="_self">{{elem}}</a>
-                      <a ng-href='chained_requests?contains={{elem}}' title="View chains from {{elem}}" target="_self"><i class="glyphicon glyphicon-align-left"></i></a>
+                      <a ng-href='chained_requests?contains={{elem}}' title="View chains from {{elem}}" target="_self"><i class="glyphicon glyphicon-indent-left"></i></a>
                     </li>
                     <li ng-show="isArray(elem);">
                       <a ng-href='requests?range={{elem[0]}},{{elem[1]}}' title="View range of requests" target="_self">{{elem[0]}} <i class="glyphicon glyphicon-arrow-right"></i> {{ elem[1]}}</a>

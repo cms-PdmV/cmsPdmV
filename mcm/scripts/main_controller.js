@@ -7,6 +7,7 @@ angular.module('mcmApp').controller('mainController',
       $scope.columns = undefined;
       $scope.actionMessage = {};
       $scope.user = {};
+      $scope.initialGetData = true;
 
       let urlParams = $location.search();
       let limit = parseInt(urlParams['limit']);
@@ -16,20 +17,25 @@ angular.module('mcmApp').controller('mainController',
       $scope.page = page && page >= 0 ? page : 0;
 
       $scope.updatePageLimit = function() {
-        $scope.updateQuery({'page': $scope.page != 0 ? $scope.page : undefined,
-                            'limit': $scope.limit != 20 ? $scope.limit : undefined});
-      }
+        setTimeout(() => {
+          $scope.updateQuery({'page': $scope.page != 0 ? $scope.page : undefined,
+                             'limit': $scope.limit != 20 ? $scope.limit : undefined});
+        }, 0);
+      };
       $scope.changeLimit = function (limit) {
         $scope.limit = limit;
         $scope.updatePageLimit();
+        $scope.getData($scope.database);
       };
       $scope.nextPage = function() {
         $scope.page = $scope.page + 1;
         $scope.updatePageLimit();
+        $scope.getData($scope.database);
       };
       $scope.previousPage = function() {
         $scope.page = Math.max(0, $scope.page - 1);
         $scope.updatePageLimit();
+        $scope.getData($scope.database);
       }
 
       // Get user details
@@ -131,6 +137,7 @@ angular.module('mcmApp').controller('mainController',
           const body = document.getElementsByTagName('body');
           for (let elem of body) {
             // elem.style.backgroundImage = 'url(HTML/draft.png)';
+            elem.classList.add('dev-ribbon');
           }
         }
         return isDev;
@@ -240,16 +247,17 @@ angular.module('mcmApp').controller('mainController',
       };
 
       $scope.getData = function () {
+        $scope.initialGetData = false;
         if ($scope.file_was_uploaded) {
           $scope.upload($scope.uploaded_file);
         } else {
           if (!$scope.database) {
             return;
           }
-          let query = [`search?db_name=${$scope.database}`];
-          const search = $location.search();
+          let query = [`search?db_name=${$scope.database}&page=${$scope.page}&limit=${$scope.limit}`];
+          let search = $location.search();
           for (let key in search) {
-            if (key != 'shown') {
+            if (key != 'shown' && key != 'page' && key != 'limit') {
               query.push(`${key}=${search[key]}`)
             }
           }
@@ -281,13 +289,16 @@ angular.module('mcmApp').controller('mainController',
 
       $scope.$watch(function () {
         let query = $location.search();
-        delete query['shown'];
-        let queryString = JSON.stringify(query, Object.keys(query).sort());
-        console.log(queryString);
+        let queryString = Object.keys(query).filter(k => !['shown', 'limit', 'page'].includes(k)).sort().map(k => `${k}=${query[k]}`).join('&');
         return queryString;
       },
         function () {
-          console.log('Get data because location changed')
+          let query = $location.search();
+          let queryString = Object.keys(query).filter(k => !['shown', 'limit', 'page'].includes(k)).sort().map(k => `${k}=${query[k]}`).join('&');
+          if (!$scope.initialGetData) {
+            $scope.page = 0;
+          }
+          $scope.updatePageLimit();
           $scope.getData($scope.database);
         }
       );

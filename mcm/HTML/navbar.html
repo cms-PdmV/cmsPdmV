@@ -17,10 +17,10 @@
         <li><a ng-class="{'active': database == 'flows'}" ng-href='flows' target="_self">Flows <i class="glyphicon glyphicon-magnet"></i></a></li>
         <li><a ng-class="{'active': database == 'chained_campaigns'}" ng-href='chained_campaigns' target="_self">Chained campaigns <i class="glyphicon glyphicon-align-right"></i></a></li>
         <li><a ng-class="{'active': database == 'requests'}" ng-href='requests' target="_self">Requests <i class="glyphicon glyphicon-folder-open"></i></a></li>
-        <li><a ng-class="{'active': database == 'chained_requests'}" ng-href='chained_requests' target="_self">Chained requests <i class="glyphicon glyphicon-align-left"></i></a></li>
-        <li><a ng-class="{'active': database == 'batches'}" ng-href='batches' target="_self" ng-if="user.is_production_manager">Batches <i class="glyphicon glyphicon-tags"></i></a></li>
-        <li><a ng-class="{'active': database == 'invalidations'}" ng-href='invalidations' target="_self" ng-if="user.is_production_manager">Invalidations <i class="glyphicon glyphicon-exclamation-sign"></i></a></li>
-        <li><a ng-class="{'active': database == 'mccms'}" ng-href='mccms' target="_self">MccM tickets <i class="glyphicon glyphicon-tasks"></i></a></li>
+        <li><a ng-class="{'active': database == 'chained_requests'}" ng-href='chained_requests' target="_self">Chained requests <i class="glyphicon glyphicon-indent-left"></i></a></li>
+        <li><a ng-class="{'active': database == 'batches'}" ng-href='batches?status=new' target="_self" ng-if="user.is_production_manager">Batches <i class="glyphicon glyphicon-tags"></i></a></li>
+        <li><a ng-class="{'active': database == 'invalidations'}" ng-href='invalidations?status=new' target="_self" ng-if="user.is_production_manager">Invalidations <i class="glyphicon glyphicon-exclamation-sign"></i></a></li>
+        <li><a ng-class="{'active': database == 'mccms'}" ng-href='mccms?status=new' target="_self">MccM tickets <i class="glyphicon glyphicon-tasks"></i></a></li>
         <li class="dropdown">
           <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">More... <span class="caret"></span></a>
           <ul class="dropdown-menu">

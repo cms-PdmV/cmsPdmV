@@ -9,6 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="scripts/css/bootstrap.min.css">
   <link rel="stylesheet" href="scripts/css/mcm.css" />
+  <link rel="stylesheet" href="scripts/css/pdmv-development-ribbon.css">
   <link rel="shortcut icon" type="image/x-icon" href="scripts/img/mcm.png">
   <script type="text/javascript" src="scripts/angular.min.js"></script>
   <script type="text/javascript" src="scripts/angular-ui.min.js"></script>
@@ -24,7 +25,7 @@
   <div ng-include="'HTML/modals.html'"></div>
   <div ng-controller="chainedRequestController">
     <div class="container">
-      <column-select update-query="updateQuery" columns="columns"></column-select>
+      <column-select update-query="updateQuery" columns="columns" ng-if="!initialGetData && result.length"></column-select>
     </div>
     <table class="table table-bordered table-striped table-hover">
       <thead>
@@ -104,10 +105,10 @@
                   </a>
                   <a ng-show="$index==0"
                      ng-href='chained_requests?root_request={{data[column.db_name][0]}}&page=0'
-                     title="Show chained request starting with {{data[column.db_name][0]}}"><i class='glyphicon glyphicon-align-left'></i></a>
+                     title="Show chained request starting with {{data[column.db_name][0]}}"><i class='glyphicon glyphicon-indent-left'></i></a>
                   <a ng-hide="$index==0"
                      ng-href='chained_requests?contains={{chain}}'
-                     title="Show chains containing {{chain}}"><i class="glyphicon glyphicon-align-left"></i></a>
+                     title="Show chains containing {{chain}}"><i class="glyphicon glyphicon-indent-left"></i></a>
                   <i ng-show="$index == data.step" class="glyphicon glyphicon-asterisk"></i>
                   <img ng-show="shortView[data.prepid][chain]"
                        ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{shortView[data.prepid][chain][1]}}"
@@ -119,7 +120,7 @@
               <div ng-switch-when="member_of_campaign">
                 <a ng-href='chained_requests?member_of_campaign={{data[column.db_name]}}&page=0'
                    title="View chained requests for {{data[column.db_name]}}">{{data[column.db_name]}}<i
-                   class="glyphicon glyphicon-align-left"></i></a>
+                   class="glyphicon glyphicon-indent-left"></i></a>
                 <a ng-href='chained_campaigns?prepid={{data[column.db_name]}}&page=0'
                    title="Show chained campaign {{data[column.db_name]}}"><i
                    class="glyphicon glyphicon-align-right"></i></a>

@@ -101,17 +101,6 @@ angular.module('mcmApp').controller('editController',
         })
       };
 
-      $scope.attributeType = function (attribute) {
-        let type = typeof (attribute)
-        if (type != 'object') {
-          return type;
-        }
-        if (Array.isArray(attribute)) {
-          return 'array';
-        }
-        return type;
-      };
-
       $scope.deleteEditableObject = function () {
         let prepid = $scope.prepid;
         const action = function () {

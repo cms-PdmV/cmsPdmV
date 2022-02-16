@@ -9,6 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="scripts/css/bootstrap.min.css">
   <link rel="stylesheet" href="scripts/css/mcm.css" />
+  <link rel="stylesheet" href="scripts/css/pdmv-development-ribbon.css">
   <link rel="stylesheet" href="scripts/codemirror-3.11/lib/codemirror.css">
   <link rel="stylesheet" href="scripts/codemirror-3.11/theme/eclipse.css">
   <link rel="shortcut icon" type="image/x-icon" href="scripts/img/mcm.png">
@@ -27,7 +28,7 @@
   <div ng-include="'HTML/modals.html'"></div>
   <div ng-controller="requestController">
     <div class="container">
-      <column-select update-query="updateQuery" columns="columns"></column-select>
+      <column-select update-query="updateQuery" columns="columns" ng-if="!initialGetData && result.length"></column-select>
     </div>
     <table class="table table-bordered table-striped table-hover">
       <thead>
@@ -93,7 +94,7 @@
                   <i class="glyphicon glyphicon-step-backward"></i>
                 </a>
                 <a ng-href='chained_requests?contains={{data.prepid}}' title="View chains containing {{data.prepid}}" target="_self">
-                  <i class="glyphicon glyphicon-align-left"></i>
+                  <i class="glyphicon glyphicon-indent-left"></i>
                 </a>
                 <!-- <a ng-click="objectAction('inspect', data.prepid)" title="Inspect status of {{data.prepid}}" ng-show="user.is_production_manager" ng-href="#">
                   <i class="glyphicon glyphicon-screenshot"></i>
@@ -105,10 +106,10 @@
                   <i class="glyphicon glyphicon-th"></i>
                 </a>
                 <a ng-href="/pmp/present?r={{data.prepid}}" title="View announced statistics for {{data.prepid}}" ng-show="data.status == 'done' || data.status == 'submitted'" target="_blank">
-                  <i class="glyphicon glyphicon-picture"></i>
+                  <i class="glyphicon glyphicon-stats"></i>
                 </a>
                 <a ng-href="/pmp/historical?r={{data.prepid}}" title="View historical statistics for {{data.prepid}}" ng-show="data.status == 'done' || data.status == 'submitted'" target="_blank">
-                  <i class="glyphicon glyphicon-hourglass"></i>
+                  <i class="glyphicon glyphicon-signal"></i>
                 </a>
                 <a ng-href="{{getLinktoDmytro(data.reqmgr_name)}}" title="Computing's monitoring for {{data.prepid}}" ng-show="data.status == 'done' || data.status == 'submitted'" target="_blank">
                   <i class="glyphicon glyphicon-camera"></i>
@@ -135,7 +136,7 @@
               <div ng-switch-when="dataset_name">
                 <a ng-href='requests?dataset_name={{data[column.db_name]}}' title="Show requests for {{data[column.db_name]}}">{{data[column.db_name]}}</a>
                 <a ng-href='chained_requests?dataset_name={{data[column.db_name]}}' title="Show chained requests for {{data[column.db_name]}}" target="_self">
-                  <i class="glyphicon glyphicon-align-left"></i>
+                  <i class="glyphicon glyphicon-indent-left"></i>
                 </a>
               </div>
               <div ng-switch-when="notes">
@@ -192,7 +193,7 @@
               <div ng-switch-when="member_of_chain">
                 <ul>
                   <li ng-repeat="chain in data[column.db_name] | orderBy: 'toString()'">
-                    <a ng-href='chained_requests?prepid={{chain}}' title="Show {{chain}}" target="_self">{{chain}}<i class="glyphicon glyphicon-align-left"></i></a>
+                    <a ng-href='chained_requests?prepid={{chain}}' title="Show {{chain}}" target="_self">{{chain}}<i class="glyphicon glyphicon-indent-left"></i></a>
                     <a ng-href='requests?member_of_chain={{chain}}'title="View requests in {{chain}}"><i class="glyphicon glyphicon-folder-open"></i></a>
                   </li>
                 </ul>
@@ -379,13 +380,10 @@
             <i class="glyphicon glyphicon-th-list"></i>
           </a>
           <a ng-href="/pmp/present?r={{selected_prepids.join()}}"  title="View announced statistics for selected prepids" target="_blank">
-            <i class="glyphicon glyphicon-picture"></i>
-          </a>
-          <a ng-href="/pmp/present?r={{selected_prepids.join()}}&m=true"  title="View growing statistics for selected prepids" target="_blank">
-            <i class="glyphicon glyphicon-film"></i>
+            <i class="glyphicon glyphicon-stats"></i>
           </a>
           <a ng-href="/pmp/historical?r={{selected_prepids.join()}}"  title="View historical statistics for selected prepids" target="_blank">
-            <i class="glyphicon glyphicon-hourglass"></i>
+            <i class="glyphicon glyphicon-signal"></i>
           </a>
           <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" title="Toggle select all" ng-checked="result.length == selected_prepids.length">
         </span>
