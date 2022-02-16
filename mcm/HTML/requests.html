@@ -145,7 +145,7 @@
               <div ng-switch-when="sequences">
                 <sequence-display ng-model="data.prepid" database="'requests'" prepid="data.prepid"></sequence-display>
               </div>
-              <div ng-switch-when="keep_output" align="center">
+              <div ng-switch-when="keep_output">
                 <ul ng-repeat="keep in data[column.db_name] track by $index">
                   <li>{{sequenceName(data.sequences, $index)}}: <i class="glyphicon" ng-class="{'glyphicon-ok' : keep, 'glyphicon-remove' : !keep}"></i></li>
                 </ul>

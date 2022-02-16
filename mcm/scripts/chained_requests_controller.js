@@ -4,7 +4,7 @@ angular.module('mcmApp').controller('chainedRequestController',
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
         { text: 'Actions', select: true, db_name: '' },
-        { text: 'Approval', select: true, db_name: 'approval' },
+        { text: 'Enabled', select: true, db_name: 'enabled' },
         { text: 'Chain', select: true, db_name: 'chain' },
       ];
 
