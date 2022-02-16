@@ -20,7 +20,6 @@
   <script type="text/javascript" src="scripts/ui-bootstrap-tpls-2.5.0.js"></script>
   <script type="text/javascript" src="scripts/main_controller.js"></script>
   <script type="text/javascript" src="scripts/edit_controller.js"></script>
-  
 
   <style type="text/css">
     .bs-docs-sidenav>li>a:hover {
@@ -186,7 +185,7 @@
                         <ul>
                           <li ng-repeat="value in editableObject[attribute] track by $index">
                             {{sequenceName(editableObject.sequences, $index)}}
-                            <input type="checkbox" ng-model="editableObject[attribute][$index]" ng-disabled="!editable"> 
+                            <input type="checkbox" ng-model="editableObject[attribute][$index]" ng-disabled="!editable">
                           </li>
                         </ul>
                       </div>

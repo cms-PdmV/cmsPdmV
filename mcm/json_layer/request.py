@@ -213,8 +213,8 @@ class Request(json_base):
             cores = seq.get('nThreads')
             cores = int(cores) if cores else 1
             memory_per_core = memory / cores
-            if not (1000 < memory_per_core < 4000):
-                raise Exception('Allowed memory 1-4GB/core, found %.2fMB' % (memory_per_core))
+            if not (500 <= memory_per_core <= 4000):
+                raise Exception('Allowed memory 500-4000MB/core, found %.1fMB' % (memory_per_core))
 
         # Number of time per event values:
         if len(self.get_attribute('time_event')) != len(sequences):

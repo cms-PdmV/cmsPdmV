@@ -53,13 +53,13 @@
                    target="_blank"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
-                <a ng-href='edit?db_name=requests&prepid={{data.prepid}}'  title="Edit details" ng-if="(data.status == 'new' && user.is_mc_contact) || user.is_generator_convener" target="_self">
+                <a ng-href='edit?db_name=requests&prepid={{data.prepid}}'  title="Edit details" ng-if="user.is_mc_contact" target="_self">
                   <i class="glyphicon glyphicon-wrench"></i>
                 </a>
                 <a ng-click='deleteObject(data.prepid)'  title="Delete request" ng-show="data.status == 'new' && user.is_mc_contact" ng-href="#">
                   <i class="glyphicon glyphicon-trash"></i>
                 </a>
-                <a ng-click="openCloneRequestModal(data)" title="Clone request" ng-show="user.is_mc_contact" ng-href="#">
+                <a ng-click="openCloneRequestModal(data)" title="Clone request" ng-show="user.is_mc_contact && data.flown_with == ''" ng-href="#">
                   <i class="glyphicon glyphicon-duplicate"></i>
                 </a>
                 <a ng-click="reset([data.prepid])" title="Reset" ng-show="user.is_mc_contact" ng-href="#">

@@ -1,6 +1,6 @@
 angular.module('mcmApp').controller('requestController',
-  ['$scope', '$http', '$window',
-    function requestController($scope, $http, $window) {
+  ['$scope', '$http', '$window', '$uibModal',
+    function requestController($scope, $http, $window, $uibModal) {
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
         { text: 'Actions', select: true, db_name: '' },
@@ -176,7 +176,7 @@ angular.module('mcmApp').controller('requestController',
             $scope.allCampaigns = [];
             $scope.allPWGs = pwgs;
             $scope.vars.pwg = $scope.allPWGs[0];
-            $http.get("search?db_name=campaigns&status=started&page=-1&include_fields=prepid").then(function (data) {
+            $http.get("search?db_name=campaigns&status=started&page=-1&include_fields=prepid&root=0,-1").then(function (data) {
               $scope.allCampaigns = data.data.results.map(x => x.prepid);
               $scope.vars.campaign = $scope.allCampaigns[0];
             });
@@ -185,14 +185,14 @@ angular.module('mcmApp').controller('requestController',
               let clone = Object.assign({}, request);
               clone["member_of_campaign"] = $scope.vars["campaign"];
               clone["pwg"] = $scope.vars["pwg"];
-              $http({ method: 'PUT', url: 'restapi/requests/clone/', data: clone }).success(function (data, status) {
-                if (data.results) {
-                  $window.location.href = 'edit?db_name=requests&query=' + data.prepid;
+              $http({ method: 'PUT', url: 'restapi/requests/clone/', data: clone }).then(function (data) {
+                if (data.data.results) {
+                  $window.location.href = 'edit?db_name=requests&prepid=' + data.data.prepid;
                 } else {
-                  errorModal(data.prepid, data['message']);
+                  errorModal(data.data.prepid, data.data.message);
                 }
-              }).error(function (data, status) {
-                errorModal(data.prepid, data['message']);
+              }, function (data) {
+                errorModal(data.data.prepid, data.data.message);
               });
               $uibModalInstance.close();
             };

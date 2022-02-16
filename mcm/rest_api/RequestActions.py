@@ -60,9 +60,9 @@ class RequestImport(RESTResource):
         prepid = request.get('prepid')
         request.set_attribute('history', [])
         if cloned_from:
-            request.update_history({'action': 'clone', 'step': cloned_from})
+            request.update_history('clone', cloned_from)
         else:
-            request.update_history({'action': 'created'})
+            request.update_history('created')
 
         # Add PWG as interested one
         if pwg not in request.get_attribute('interested_pwg'):
@@ -193,7 +193,7 @@ class RequestUpdate(RESTResource):
             if not difference:
                 return {'results': True}
 
-            new_request.update_history({'action': 'update', 'step': ', '.join(difference)})
+            new_request.update_history('update', ', '.join(difference))
             if not request_db.update(new_request.json()):
                 self.logger.error('Could not save %s to database', prepid)
                 return {'results': False,
@@ -744,7 +744,7 @@ class NotifyUser(RESTResource):
             req.notify(subject, message, accumulate=True)
 
             # update history with "notification"
-            req.update_history({'action': 'notify', 'step': message})
+            req.update_history('notify', message)
             if not rdb.save(req.json()):
                 results.append({"prepid": pid, "results": False,
                         "message": "Could not save %s" % pid})
@@ -791,7 +791,7 @@ class RegisterUser(RESTResource):
                 "results": False,
                 'message': "%s already in the list of people for notification of %s" % (current_user, pid)}
 
-        request_in_db.update_history({'action': 'register', 'step': current_user})
+        request_in_db.update_history('register', current_user)
         rdb.save(request_in_db.json())
         return {"prepid": pid, "results": True, 'message': 'You (%s) are registered to %s' % (current_user, pid)}
 
