@@ -269,10 +269,14 @@ angular.module('mcmApp').controller('mainController',
       };
 
       $scope.$watch(function () {
-        var loc_dict = $location.search();
-        return "page" + loc_dict["page"] + "limit" + loc_dict["limit"];
+        let query = $location.search();
+        delete query['shown'];
+        let queryString = JSON.stringify(query, Object.keys(query).sort());
+        console.log(queryString);
+        return queryString;
       },
         function () {
+          console.log('Get data because location changed')
           $scope.getData($scope.database);
         }
       );

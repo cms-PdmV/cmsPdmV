@@ -39,7 +39,7 @@
           <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
             <div ng-switch on="column.db_name">
               <div ng-switch-when="username">
-                <a ng-href='{{database}}?username={{data.username}}' target="_self" title="Show only {{data.username}}">{{data.username}}</a>
+                <a ng-href='{{database}}?username={{data.username}}' title="Show only {{data.username}}">{{data.username}}</a>
                 <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.username}}"
                    title="Database entry of {{data.username}}"
                    ng-show="user.is_administrator && !isDevMachine();"
@@ -55,7 +55,7 @@
                 </a>
               </div>
               <div ng-switch-when="role">
-                <a ng-href='users?role={{data[column.db_name]}}' title="View users with {{data[column.db_name]}} role" target="_self">
+                <a ng-href='users?role={{data[column.db_name]}}' title="View users with {{data[column.db_name]}} role">
                   {{data[column.db_name].join()}}
                 </a>
               </div>
@@ -65,14 +65,14 @@
                 </a>
               </div>
               <div ng-switch-when="role">
-                <a ng-href='users?role={{data[column.db_name]}}' title="View users with role {{data[column.db_name]}}" target="_self">
+                <a ng-href='users?role={{data[column.db_name]}}' title="View users with role {{data[column.db_name]}}">
                   {{data[column.db_name].replace('_', ' ')}}
                 </a>
               </div>
               <div ng-switch-when="pwg">
                 <ul>
                   <li ng-repeat="pwg in data[column.db_name]">
-                    <a ng-href='users?pwg={{pwg}}' title="View users in {{pwg}}" target="_self">{{pwg}}</a>
+                    <a ng-href='users?pwg={{pwg}}' title="View users in {{pwg}}">{{pwg}}</a>
                   </li>
                 </ul>
               </div>

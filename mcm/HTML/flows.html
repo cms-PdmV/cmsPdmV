@@ -50,22 +50,22 @@
                    target="_blank"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
-                <a ng-href='edit?db_name=flows&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-show="user.is_production_manager;" target="_self">
+                <a ng-href='edit?db_name=flows&prepid={{data.prepid}}' title="Edit details" ng-show="user.is_production_manager;" target="_self">
                   <i class="glyphicon glyphicon-wrench"></i>
                 </a>
-                <a ng-click='deleteObject(data.prepid)' rel="tooltip" title="Delete flow" ng-show="user.is_production_manager;" ng-href="#">
+                <a ng-click='deleteObject(data.prepid)' title="Delete flow" ng-show="user.is_production_manager;" ng-href="#">
                   <i class="glyphicon glyphicon-trash"></i>
                 </a>
                 <a ng-click="openCloneItemModal('flows', data.prepid)" title="Clone flow" ng-show="user.is_production_manager;" ng-href="#">
                   <i class="glyphicon glyphicon-duplicate"></i>
                 </a>
-                <a ng-click="nextApproval(data.prepid)" rel="tooltip" title="Next approval" ng-show="user.is_production_manager;" ng-href="#">
+                <a ng-click="nextApproval(data.prepid)" title="Next approval" ng-show="user.is_production_manager;" ng-href="#">
                   <i class="glyphicon glyphicon-flag"></i>
                 </a>
-                <a ng-href='chained_campaigns?contains={{data.prepid}}' rel="tooltip" title="Show chained campaigns using {{data.prepid}}">
+                <a ng-href='chained_campaigns?contains={{data.prepid}}' title="Show chained campaigns using {{data.prepid}}" target="_self">
                   <i class="glyphicon glyphicon-align-right"></i>
                 </a>
-                <a ng-href='requests?flown_with={{data.prepid}}' rel="tooltip" title="Show requests created with {{data.prepid}}">
+                <a ng-href='requests?flown_with={{data.prepid}}' title="Show requests created with {{data.prepid}}" target="_self">
                   <i class="glyphicon glyphicon-folder-open"></i>
                 </a>
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
@@ -75,14 +75,14 @@
               <div ng-switch-when="allowed_campaigns">
                 <ul>
                   <li ng-repeat="campaign_id in data[column.db_name]">
-                    <a ng-href='flows?allowed_campaigns={{campaign_id}}' rel="tooltip" title="View flows starting from {{campaign_id}}">{{campaign_id}}<i class="glyphicon glyphicon-magnet"></i></a>
-                    <a ng-href='campaigns?prepid={{campaign_id}}' rel="tooltip" title="View details of the campaign"><i class="glyphicon glyphicon-book"></i></a>
+                    <a ng-href='flows?allowed_campaigns={{campaign_id}}' title="View flows starting from {{campaign_id}}">{{campaign_id}}<i class="glyphicon glyphicon-magnet"></i></a>
+                    <a ng-href='campaigns?prepid={{campaign_id}}' title="View details of the campaign" target="_self"><i class="glyphicon glyphicon-book"></i></a>
                   </li>
                 </ul>
               </div>
               <div ng-switch-when="next_campaign">
-                <a ng-href='flows?next_campaign={{data[column.db_name]}}' rel="tooltip" title="View flows going into {{data[column.db_name]}}">{{data[column.db_name]}}<i class="glyphicon glyphicon-magnet"></i></a>
-                <a ng-href='campaigns?prepid={{data[column.db_name]}}' rel="tooltip" title="View details of the campaign"><i class="glyphicon glyphicon-book"></i></a>
+                <a ng-href='flows?next_campaign={{data[column.db_name]}}' title="View flows going into {{data[column.db_name]}}">{{data[column.db_name]}}<i class="glyphicon glyphicon-magnet"></i></a>
+                <a ng-href='campaigns?prepid={{data[column.db_name]}}' title="View details of the campaign" target="_self"><i class="glyphicon glyphicon-book"></i></a>
               </div>
               <div ng-switch-when="notes">
                 <pre ng-if="data.notes.length" class="notes">{{data.notes}}</pre>
@@ -131,7 +131,7 @@
                 ng-show="user.is_production_manager"/>
       </div>
     </div>
-  </span>
+  </div>
 </body>
 
 </html>

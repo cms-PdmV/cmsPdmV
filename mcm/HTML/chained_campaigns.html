@@ -39,25 +39,24 @@
           <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
             <div ng-switch on="column.db_name">
               <div ng-switch-when="prepid">
-                <a ng-href='chained_campaigns?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/chained_campaigns/{{data[column.db_name]}}"
-                   rel="tooltip"
-                   title="Admin view of {{data[column.db_name]}}"
-                   ng-show="user.is_administrator && !isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/chained_campaigns/{{data[column.db_name]}}"
-                   rel="tooltip"
-                   title="Admin view of {{data[column.db_name]}}"
-                   ng-show="user.is_administrator && isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
+                <a ng-href='{{database}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.prepid}}"
+                   title="Database entry of {{data.prepid}}"
+                   ng-show="user.is_administrator && !isDevMachine();"
+                   target="_blank"><i class="glyphicon glyphicon-star"></i></a>
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.prepid}}"
+                   title="Database entry of {{data.prepid}}"
+                   ng-show="user.is_administrator && isDevMachine();"
+                   target="_blank"><i class="glyphicon glyphicon-star"></i></a>
               </div>
-
               <div ng-switch-when="">
-                <a ng-href='edit?db_name=chained_campaigns&prepid={{data.prepid}}' rel="tooltip" title="Edit details" ng-show="user.is_production_manager" target="_self">
+                <a ng-href='edit?db_name=chained_campaigns&prepid={{data.prepid}}' title="Edit details" ng-show="user.is_production_manager" target="_self">
                   <i class="glyphicon glyphicon-wrench"></i>
                 </a>
-                <a ng-click='deleteObject(data.prepid)' rel="tooltip" title="Delete chained campaign" ng-show="user.is_production_manager" ng-href="#">
+                <a ng-click='deleteObject(data.prepid)' title="Delete chained campaign" ng-show="user.is_production_manager" ng-href="#">
                   <i class="glyphicon glyphicon-trash"></i>
                 </a>
-                <a ng-href='chained_requests?member_of_campaign={{data.prepid}}' rel="tooltip" title="Show chained requests in {{data.prepid}}" target="_self">
+                <a ng-href='chained_requests?member_of_campaign={{data.prepid}}' title="Show chained requests in {{data.prepid}}" target="_self">
                   <i class="glyphicon glyphicon-align-left"></i>
                 </a>
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
@@ -73,21 +72,15 @@
                     <div ng-switch on="isArray(element)">
                       <div ng-switch-when="true" ng-switch on="element[1]!=null;">
                         <div ng-switch-when="true">
-                          <a ng-href='chained_campaigns?contains={{element[1]}}' rel="tooltip" title="View chained campaigns using {{element[1]}}" target="_self">{{element[1]}}<i class="glyphicon glyphicon-align-right"></i></a>
-                          <a ng-href='flows?prepid={{element[1]}}' rel="tooltip" title="View details of {{element[1]}}" target="_self"><i class="glyphicon glyphicon-magnet"></i></a>
+                          <a ng-href='chained_campaigns?contains={{element[1]}}' title="View chained campaigns using {{element[1]}}">{{element[1]}}<i class="glyphicon glyphicon-align-right"></i></a>
+                          <a ng-href='flows?prepid={{element[1]}}' title="View details of {{element[1]}}" target="_self"><i class="glyphicon glyphicon-magnet"></i></a>
                           <a><i class="glyphicon glyphicon-arrow-right"></i></a>
-                          <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="glyphicon glyphicon-align-right"></i></a>
-                          <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="glyphicon glyphicon-book"></i></a>
+                          <a ng-href='chained_campaigns?contains={{element[0]}}' title="View chained campaigns using {{element[0]}}">{{element[0]}}<i class="glyphicon glyphicon-align-right"></i></a>
+                          <a ng-href='campaigns?prepid={{element[0]}}' title="View details of {{element[0]}}" target="_self"><i class="glyphicon glyphicon-book"></i></a>
                         </div>
                         <div ng-switch-when="false">
-                          <a ng-href='chained_campaigns?contains={{element[0]}}' rel="tooltip" title="View chained campaigns using {{element[0]}}" target="_self">{{element[0]}}<i class="glyphicon glyphicon-align-right"></i></a>
-                          <a ng-href='campaigns?prepid={{element[0]}}' rel="tooltip" title="View details of {{element[0]}}" target="_self"><i class="glyphicon glyphicon-book"></i></a>
-                        </div>
-                        <div ng-switch-default>
-                          <a>
-                            <i class="glyphicon glyphicon-arrow-right"></i>
-                          </a>
-                          {{element}}
+                          <a ng-href='chained_campaigns?contains={{element[0]}}' title="View chained campaigns using {{element[0]}}">{{element[0]}}<i class="glyphicon glyphicon-align-right"></i></a>
+                          <a ng-href='campaigns?prepid={{element[0]}}' title="View details of {{element[0]}}" target="_self"><i class="glyphicon glyphicon-book"></i></a>
                         </div>
                       </div>
                     </div>
@@ -123,7 +116,7 @@
                 ng-show="user.is_production_manager"/>
       </div>
     </div>
-  </span>
+  </div>
 </body>
 
 </html>

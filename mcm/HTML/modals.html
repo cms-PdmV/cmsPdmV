@@ -225,3 +225,41 @@
     <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
   </div>
 </script>
+
+<!-- Notify MODAL-->
+<script type="text/ng-template" id="notifyModal.html"> <!--hidden modal template-->
+  <div class="modal-header">
+    <h4>Text to notify</h4>
+  </div>
+  <!--end of modal header-->
+  <div class="modal-body">
+    <textarea ng-model="data.text" style="width:500px"></textarea>
+  </div>
+  <!--end of modal body-->
+  <div class="modal-footer">
+    <button class="btn btn-success" ng-click="notify()" ng-disabled="data.text.length == 0">Notify</button>
+    <button class="btn btn-warning cancel" ng-click="close()">Close</button>
+  </div>
+  <!--end of modal footer-->
+</script>
+<!-- END of Notify MODAL-->
+
+<!--     Clone MODAL -->
+<script type="text/ng-template" id="cloneRequestModal.html"> <!--hidden modal template-->
+  <div class="modal-header">
+    <h4>Clone request {{request.prepid}}</h4>
+  </div>
+  <div class="modal-body">
+    <select ng-model="vars.pwg">
+      <option ng-repeat="elem in allPWGs" ng-selected="elem == vars.pwg">{{elem}}</option>
+    </select>
+    <select ng-model="vars.campaign">
+      <option ng-repeat="elem in allCampaigns" ng-selected="elem == vars.campaign">{{elem}}</option>
+    </select>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" ng-click="clone()">Clone</button>
+    <button class="btn btn-warning cancel" ng-click="close()">Close</button>
+  </div>
+</script>
+<!--     END OF MODAL  -->

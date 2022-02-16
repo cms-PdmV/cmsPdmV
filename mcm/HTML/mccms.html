@@ -86,7 +86,7 @@
                       <a ng-href='chained_requests?contains={{elem}}' title="View chains from {{elem}}" target="_self"><i class="glyphicon glyphicon-align-left"></i></a>
                     </li>
                     <li ng-show="isArray(elem);">
-                      <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' title="View range of requests" target="_self">{{elem[0]}} <i class="glyphicon glyphicon-arrow-right"></i> {{ elem[1]}}</a>
+                      <a ng-href='requests?range={{elem[0]}},{{elem[1]}}' title="View range of requests" target="_self">{{elem[0]}} <i class="glyphicon glyphicon-arrow-right"></i> {{ elem[1]}}</a>
                     </li>
                   </div>
                 </ul>
@@ -109,9 +109,6 @@
                   <ul ng-repeat="request in requests track by $index">
                     <li>
                       <a href="requests?prepid={{request}}" target="_self">{{request}}</a>
-                      <a ng-click="approve_gen_request(request)" ng-href='#' rel="tooltip" title="Next step">
-                        <i class="glyphicon glyphicon-chevron-right"></i>
-                      </a>
                     </li>
                   </ul>
                 </ul>
@@ -121,9 +118,7 @@
                   ng-show="is_generated_chains_empty(data.generated_chains)" value="Show chains" align="left" />
               </div>
               <div ng-switch-when="tags">
-                <a ng-repeat="tag in data[column.db_name]" ng-href="{{database}}?tags={{tag}}">
-                  {{tag}}
-                </a>
+                <a ng-repeat="tag in data[column.db_name]" ng-href="mccms?tags={{tag}}">{{tag}}</a>
               </div>
               <div ng-switch-default>
                 <a ng-href='{{database}}?{{column.db_name}}={{data[column.db_name]}}'

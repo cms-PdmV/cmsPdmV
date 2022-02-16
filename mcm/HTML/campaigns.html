@@ -100,7 +100,7 @@
               <div ng-switch-when="next">
                 <ul style="margin-bottom: 0px;">
                   <li ng-repeat="campaign in data[column.db_name]">
-                    <a ng-href='campaigns?prepid={{campaign}}' title="View details of the campaign" target="_self">{{campaign}}<i class="glyphicon glyphicon-book"></i></a>
+                    <a ng-href='campaigns?prepid={{campaign}}' title="View details of the campaign">{{campaign}}<i class="glyphicon glyphicon-book"></i></a>
                     <a ng-href='flows?next_campaign={{campaign}}' title="View flows going into {{campaign}}" target="_self"> <i class="glyphicon glyphicon-magnet"></i></a>
                   </li>
                 </ul>
@@ -133,7 +133,7 @@
                 <ul>
                   <li ng-repeat="(name,values) in data[column.db_name]">
                     <b>{{name}}:</b>
-                    <ul ng-repeat="value in values">
+                    <ul ng-repeat="value in values track by $index">
                       <li>{{sequenceName(data.sequences[name], $index)}}: <i class="glyphicon" ng-class="{'glyphicon-ok' : value, 'glyphicon-remove' : !value}"></i></li>
                     </ul>
                   </li>

@@ -9,5 +9,7 @@ angular.module('mcmApp').controller('invalidationController',
         { text: 'Prepid', select: true, db_name: 'prepid' },
       ];
       $scope.setDatabaseInfo('invalidations', $scope.columns);
+      $scope.selectedItems = [];
+
     }
   ]);

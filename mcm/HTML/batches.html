@@ -41,17 +41,19 @@
               <div ng-switch-when="prepid">
                 <a ng-href='{{database}}?prepid={{data.prepid}}' title="Show only {{data.prepid}}">{{data.prepid}}</a>
                 <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.prepid}}"
-                  title="Database entry of {{data.prepid}}" ng-show="user.is_administrator && !isDevMachine();"
-                  target="_blank"><i class="glyphicon glyphicon-star"></i></a>
+                   title="Database entry of {{data.prepid}}"
+                   ng-show="user.is_administrator && !isDevMachine();"
+                   target="_blank"><i class="glyphicon glyphicon-star"></i></a>
                 <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data.prepid}}"
-                  title="Database entry of {{data.prepid}}" ng-show="user.is_administrator && isDevMachine();"
-                  target="_blank"><i class="glyphicon glyphicon-star"></i></a>
+                   title="Database entry of {{data.prepid}}"
+                   ng-show="user.is_administrator && isDevMachine();"
+                   target="_blank"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
                 <a ng-click='deleteObject(data.prepid)' title="Delete {{data.prepid}}" ng-show="user.is_production_expert" ng-href="#">
                   <i class="glyphicon glyphicon-trash"></i>
                 </a>
-                <a ng-click='announce([data.prepid])' title="Announce the batch" ng-show="data.status == 'new' && user.is_production_manager;" ng-href="#">
+                <a ng-click='announce(data.prepid)' title="Announce the batch" ng-show="data.status == 'new' && user.is_production_manager;" ng-href="#">
                   <i class="glyphicon glyphicon-envelope"></i>
                 </a>
                 <a title="View all requests" ng-href="requests?prepid={{generateAllRequests(data.requests)}}" target="_self">
@@ -74,7 +76,7 @@
                       {{workflowRequest[1]}}
                     </a>
                     <br>
-                    <a ng-href='requests?prepid={{workflowRequest[0]}}' title="Open {{workflowRequest[0]}}">
+                    <a ng-href='requests?prepid={{workflowRequest[0]}}' title="Open {{workflowRequest[0]}}" target="_self">
                       {{workflowRequest[0]}}
                     </a>
                   </li>
@@ -95,7 +97,7 @@
       <div>
       </div>
     </div>
-  </span>
+  </div>
 </body>
 
 </html>

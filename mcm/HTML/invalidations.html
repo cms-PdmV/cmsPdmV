@@ -39,58 +39,34 @@
           <td ng-repeat="column in columns" ng-if="column.select" style="white-space: nowrap;">
             <div ng-switch on="column.db_name">
               <div ng-switch-when="object">
-                <a ng-href='{{database}}?object={{data.object}}' title="Show only {{data.object}}">{{data.object}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data[column.db_name]}}"
-                  rel="tooltip" title="Admin view of {{data[column.db_name]}}"
-                  ng-show="user.is_administrator && !isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data[column.db_name]}}"
-                  rel="tooltip" title="Admin view of {{data[column.db_name]}}"
-                  ng-show="user.is_administrator && isDevMachine();"><i class="glyphicon glyphicon-star"></i></a>
+                <a ng-href='{{database}}?object={{data._id}}' title="Show only {{data._id}}">{{data._id}}</a>
+                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data._id}}"
+                   title="Database entry of {{data._id}}"
+                   ng-show="user.is_administrator && !isDevMachine();"
+                   target="_blank"><i class="glyphicon glyphicon-star"></i></a>
+                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/{{database}}/{{data._id}}"
+                   title="Database entry of {{data._id}}"
+                   ng-show="user.is_administrator && isDevMachine();"
+                   target="_blank"><i class="glyphicon glyphicon-star"></i></a>
               </div>
               <div ng-switch-when="">
-                <a rel="tooltip" title="Remove invalidation" ng-click="delete(invalidations_info['_id']);"
-                  ng-hide="role(4);" ng-href="#">
+                <a ng-click='deleteObject(data._id)' title="Delete invalidation" ng-show="user.is_production_manager && data.status == 'new'" ng-href="#">
                   <i class="glyphicon glyphicon-trash"></i>
                 </a>
-                <a rel="tooltip" title="Edit invalidation"
-                  ng-href="edit?db_name=invalidations&prepid={{objectToId(invalidations_info['object'])}}"
-                  ng-hide="role(2);" target="_self">
-                  <i class="glyphicon glyphicon-wrench"></i>
+                <a ng-click='announce(data._id)' title="Announce invalidation" ng-show="user.is_production_manager && data.status == 'new'" ng-href="#">
+                  <i class="glyphicon glyphicon-volume-up"></i>
                 </a>
-                <a rel="tooltip" title="Clear invalidation" ng-click="do_action(invalidations_info['_id'], 'clear');"
-                  ng-hide="role(3);" ng-href="#">
-                  <i class="glyphicon glyphicon-fire"></i>
+                <a ng-click='unannounce(data._id)' title="Move invalidation back to new" ng-show="user.is_production_manager && data.status == 'announced'" ng-href="#">
+                  <i class="glyphicon glyphicon-volume-off"></i>
                 </a>
-                <a rel="tooltip" title="Announce invalidation"
-                  ng-click="do_action(invalidations_info['_id'], 'announce');" ng-hide="role(3);" ng-href="#">
-                  <i class="glyphicon glyphicon-bullhorn"></i>
-                </a>
-                <a rel="tooltip" title="Hold invalidation"
-                  ng-click="do_action(invalidations_info['_id'], 'new_to_hold');" ng-hide="role(3);"
-                  ng-if="invalidations_info['status'] == 'new'" ng-href="#">
-                  <i class="glyphicon glyphicon-time"></i>
-                </a>
-                <a rel="tooltip" title="Move hold invalidation back to new"
-                  ng-click="do_action(invalidations_info['_id'], 'hold_to_new');" ng-hide="role(3);"
-                  ng-if="invalidations_info['status'] == 'hold'" ng-href="#">
-                  <i class="glyphicon glyphicon-hand-left"></i>
-                </a>
-                <input type="checkbox" ng-click="add_to_selected_list(invalidations_info['_id'])"
-                  ng-checked="selected_objects.indexOf(invalidations_info['_id']) != -1">
+                <input type="checkbox" ng-click="toggleSelection(data.prepid)" ng-checked="selectedItems.includes(data.prepid)">
+                <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
+                <img ng-show="actionMessage[data.prepid] == 'loading'" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
+                <span ng-show="actionMessage[data.prepid] != 'OK' && actionMessage[data.prepid] != 'loading'" style="color: red">{{actionMessage[data.prepid]}}</span>
               </div>
-              <div ng-switch-when="Type">
-                <a ng-href='invalidations?type={{invalidations_info[data.db_name]}}' rel="tooltip"
-                  title="View invalidations with type {{invalidations_info[data.db_name]}}" target="_self">
-                  {{invalidations_info[data.db_name]}}</a>
-              </div>
-              <div ng-switch-when="Status">
-                <a ng-href='invalidations?status={{invalidations_info[data.db_name]}}' rel="tooltip"
-                  title="View invalidations with status {{invalidations_info[data.db_name]}}" target="_self">
-                  {{invalidations_info[data.db_name]}}</a>
-              </div>
-              <div ng-switch-when="Prepid">
-                <a ng-href='requests?prepid={{invalidations_info[data.db_name]}}' target="_self"
-                  ng-hfre="#">{{invalidations_info[data.db_name]}}</a>
+              <div ng-switch-when="prepid">
+                <a ng-href='invalidations?prepid={{data[column.db_name]}}' title="Show all invalidations for {{data[column.db_name]}}">{{data[column.db_name]}}</a>
+                <a ng-href='requests?prepid={{data.prepid}}' title="Show {{data[column.db_name]}}" target="_self"><i class="glyphicon glyphicon-folder-open"></i></a>
               </div>
               <div ng-switch-default>
                 <a ng-href='{{database}}?{{column.db_name}}={{data[column.db_name]}}'
@@ -107,28 +83,21 @@
       <div>
         <span>
           Multiple selection buttons
-          <a ng-click="do_action(selected_objects, 'clear');" rel="tooltip" ng-hide="role(3);"
-            title="Clear selected invalidations" ng-href="#">
-            <i class="glyphicon glyphicon-fire"></i>
+          <a ng-click="deleteObject('selected')" title="Delete selected invalidations" ng-show="user.is_production_manager" ng-href="#">
+            <i class="glyphicon glyphicon-trash"></i>
           </a>
-          <a ng-click="do_action(selected_objects, 'announce');" rel="tooltip" ng-hide="role(3);"
-            title="Announce selected invalidations" ng-href="#">
-            <i class="glyphicon glyphicon-bullhorn"></i>
+          <a ng-click="announce('selected')" title="Announce selected invalidations" ng-show="user.is_production_manager" ng-href="#">
+            <i class="glyphicon glyphicon-volume-up"></i>
           </a>
-          <a ng-click="do_action(selected_objects, 'new_to_hold');" rel="tooltip" ng-hide="role(3);"
-            title="Hold selected invalidations" ng-href="#">
-            <i class="glyphicon glyphicon-time"></i>
+          <a ng-click="unannounce('selected')" title="Move selected invalidations back to new" ng-show="user.is_production_manager" ng-href="#">
+            <i class="glyphicon glyphicon-volume-off"></i>
           </a>
-          <a ng-click="do_action(selected_objects, 'hold_to_new');" rel="tooltip" ng-hide="role(3);"
-            title="Move selected HOLD invalidations to new" ng-href="#">
-            <i class="glyphicon glyphicon-hand-left"></i>
-          </a>
-          <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" rel="tooltip" title="Toggle select all"
+          <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" title="Toggle select all"
             style="margin-bottom: 8px;" ng-checked="result.length == selected_objects.length">
         </span>
       </div>
     </div>
-  </span>
+  </div>
 </body>
 
 </html>

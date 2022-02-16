@@ -62,10 +62,10 @@
                 <a ng-click='validate(data.prepid)' title="Validate the chain" ng-show="user.is_user" ng-href="#">
                   <i class="glyphicon glyphicon-star-empty"></i>
                 </a>
-                <a ng-href='public/restapi/{{database}}/get_setup/{{data.prepid}}' title="Get setup command" target="_self" ng-href="#">
+                <a ng-href='public/restapi/{{database}}/get_setup/{{data.prepid}}' title="Get setup command" target="_self">
                   <i class="glyphicon glyphicon-download"></i>
                 </a>
-                <a ng-href='public/restapi/{{database}}/get_test/{{data.prepid}}' title="Get test command" target="_self" ng-href="#">
+                <a ng-href='public/restapi/{{database}}/get_test/{{data.prepid}}' title="Get test command" target="_self">
                   <i class="glyphicon glyphicon-ok-circle"></i>
                 </a>
                 <a ng-click='rewindToRoot(data.prepid)' title="Rewind to root" ng-show="user.is_production_manager" ng-href="#">
@@ -92,11 +92,10 @@
                 <div custom-history ng-model="data[column.db_name]"></div>
               </div>
               <div ng-switch-when="chain">
-                <a ng-href='requests?member_of_chain={{data.prepid}}'  title="Show requests of this chain" target="_self"><i class="glyphicon glyphicon-folder-open"></i></a>
+                <a ng-href='requests?member_of_chain={{data.prepid}}' title="Show requests of this chain" target="_self"><i class="glyphicon glyphicon-folder-open"></i></a>
                 <span ng-repeat="chain in data[column.db_name]">
                   <a ng-show="$index==0"
                      ng-href='mccms?contains={{chain}}'
-
                      title="Show MccM tickets for {{chain}}"
                      target="_self"><i class="glyphicon glyphicon-tasks"></i></a>
                   <a ng-href='requests?prepid={{chain}}&page=0'  title="Show request {{chain}}" target="_self">
@@ -105,15 +104,11 @@
                   </a>
                   <a ng-show="$index==0"
                      ng-href='chained_requests?root_request={{data[column.db_name][0]}}&page=0'
-
-                     title="Show chained request starting with {{data[column.db_name][0]}}"
-                     target="_self"><i class='glyphicon glyphicon-align-left'></i></a>
+                     title="Show chained request starting with {{data[column.db_name][0]}}"><i class='glyphicon glyphicon-align-left'></i></a>
                   <a ng-hide="$index==0"
                      ng-href='chained_requests?contains={{chain}}'
-
-                     title="Show chains containing {{chain}}"
-                     target="_self"><i class="glyphicon glyphicon-align-left"></i></a>
-                  <a ng-show="$index == data.step"  title="Currently processing"> <i class="glyphicon glyphicon-asterisk"></i></a>
+                     title="Show chains containing {{chain}}"><i class="glyphicon glyphicon-align-left"></i></a>
+                  <i ng-show="$index == data.step" class="glyphicon glyphicon-asterisk"></i>
                   <img ng-show="shortView[data.prepid][chain]"
                        ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/{{shortView[data.prepid][chain][1]}}"
                        title="{{shortView[data.prepid][chain][0]}}" />
@@ -123,11 +118,11 @@
               </div>
               <div ng-switch-when="member_of_campaign">
                 <a ng-href='chained_requests?member_of_campaign={{data[column.db_name]}}&page=0'
-                  title="View chained requests for {{data[column.db_name]}}" target="_self">{{data[column.db_name]}}<i
-                    class="glyphicon glyphicon-align-left"></i></a>
+                   title="View chained requests for {{data[column.db_name]}}">{{data[column.db_name]}}<i
+                   class="glyphicon glyphicon-align-left"></i></a>
                 <a ng-href='chained_campaigns?prepid={{data[column.db_name]}}&page=0'
-                  title="Show chained campaign {{data[column.db_name]}}" target="_self"><i
-                    class="glyphicon glyphicon-align-right"></i></a>
+                   title="Show chained campaign {{data[column.db_name]}}"><i
+                   class="glyphicon glyphicon-align-right"></i></a>
               </div>
               <div ng-switch-when="validate">
                 <i class="glyphicon" ng-class="{'glyphicon-ok' : data[column.db_name], 'glyphicon-remove' : !data[column.db_name]}"></i>
@@ -157,31 +152,30 @@
                 ng-show="user.is_production_manager"/>
         <div>
           Multiple selection buttons
-          <a ng-click="loadShortView('selected')"  title="Load short view for selected requests" ng-href="#">
+          <a ng-click="loadShortView('selected')" title="Load short view for selected requests" ng-href="#">
             <i class="glyphicon glyphicon-eye-open"></i>
           </a>
-          <a ng-click="rewind('selected')"
-            title="Rewind chained request to root" ng-hide="role(3);" ng-href="#">
+          <a ng-click="rewindToRoot('selected')" title="Rewind chained request to root" ng-show="user.is_production_manager" ng-href="#">
             <i class="glyphicon glyphicon-fast-backward"></i>
           </a>
-          <a ng-click="rewind('selected')"  title="Rewind selected chained requests" ng-hide="role(3);" ng-href="#">
+          <a ng-click="rewind('selected')"  title="Rewind selected chained requests" ng-show="user.is_production_manager" ng-href="#">
             <i class="glyphicon glyphicon-backward"></i>
           </a>
-          <a ng-click="flow('selected')"  ng-hide="role(3);" title="Flow selected requests" ng-href="#">
+          <a ng-click="flow('selected')" title="Flow selected requests" ng-show="user.is_production_manager" ng-href="#">
             <i class="glyphicon glyphicon-forward"></i>
           </a>
-          <a ng-click="openReserveChainModal('selected')"  title="Reserve selected chains" ng-hide="role(3);" ng-href="#">
+          <a ng-click="openReserveChainModal('selected')" title="Reserve selected chains" ng-show="user.is_production_manager" ng-href="#">
             <i class="glyphicon glyphicon-align-right"></i>
           </a>
-          <a ng-click="inspect('selected')"  title="Inspect selected chained requests" ng-hide="role(3);" ng-href="#">
+          <a ng-click="inspect('selected')" title="Inspect selected chained requests" ng-show="user.is_production_manager" ng-href="#">
             <i class="glyphicon glyphicon-screenshot"></i>
           </a>
-          <input type="checkbox" ng-click="toggleAll()"  title="Toggle select all" style="margin-bottom: 8px;" ng-checked="result.length == selectedItems.length">
+          <input type="checkbox" ng-click="toggleAll()" title="Toggle select all" ng-checked="result.length == selectedItems.length">
         </div>
       </div>
     </div>
 
-  </span>
+  </div>
 </body>
 
 </html>
