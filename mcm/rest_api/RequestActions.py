@@ -1,27 +1,20 @@
-from copy import deepcopy
 import flask
 import traceback
 import time
 
-from flask import app
 from flask.globals import request
-import json
 from collections import defaultdict
-import re
 
 from couchdb_layer.mcm_database import database as Database
-from rest_api.RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import DeleteRESTResource, GetEditableRESTResource, GetRESTResource, GetUniqueValuesRESTResource, RESTResource, UpdateRESTResource
 from json_layer.request import Request
-from json_layer.sequence import Sequence
 from json_layer.campaign import Campaign
 from json_layer.user import Role, User
 from json_layer.chained_request import ChainedRequest
-from tools.exceptions import NotFoundException
+from tools.exceptions import InvalidActionException
 from tools.locator import locator
-from tools.communicator import Communicator
 from tools.locker import locker
-from tools.settings import Settings
-from tools.handlers import RequestInjector, submit_pool
+from tools.handlers import RequestInjector
 from tools.utils import clean_split, expand_range
 
 
@@ -125,119 +118,53 @@ class RequestClone(RequestImport):
         return self.import_request(new_request, cloned_from=prepid)
 
 
-class RequestUpdate(RESTResource):
+class UpdateRequest(UpdateRESTResource):
+    """
+    Endpoint for updating a request
+    """
 
     @RESTResource.ensure_role(Role.USER)
     @RESTResource.request_with_json
     def post(self, data):
         """
-        Updating an existing request with an updated dictionary
+        Update a request with the provided content
+        Required attributes - prepid and revision
         """
-        rev = data.get('_rev')
-        if not rev:
-            return {'results': False,
-                    'message': 'Missing revision "_rev" in submitted data'}
+        return self.update_object(data, Request)
 
-        prepid = data.get('prepid', data.get('_id'))
-        if not prepid:
-            return {'results': False,
-                    'message': 'Missing prepid ("prepid") in submitted data'}
-
-        data['prepid'] = prepid
-        data['_id'] = prepid
-        request_db = Database('requests')
-        with locker.lock('create-request-%s' % (prepid)):
-            old_request = Request.fetch(prepid)
-            if not old_request:
-                return {"results": False,
-                        'message': 'Request "%s" does not exist' % (prepid)}
-
-            if rev != old_request.get('_rev'):
-                    return {'results': False,
-                            'message': 'Provided revision does not match revision in database'}
-
-            # Create new request data
-            request_json = deepcopy(old_request.json())
-            for to_pop in ('prepid', '_id', 'history'):
-                data.pop(to_pop, None)
-
-            request_json.update(data)
-            new_request = Request(request_json)
-            # Check edited values
-            editing_info = old_request.get_editing_info()
-            for (key, editable) in editing_info.items():
-                if editable or key == 'sequences':
-                    # Do not check attributes that can be edited
-                    continue
-
-                old_value = old_request.get_attribute(key)
-                new_value = new_request.get_attribute(key)
-                if old_value != new_value:
-                    self.logger.error('Editing "%s" of %s is not allowed: %s -> %s',
-                                      key, prepid, old_value, new_value)
-                    return {"results": False,
-                            'message': 'Editing "%s" of %s is not allowed' % (key, prepid)}
-
-            # Special check for validation multiplier
-            new_multiplier = old_request.get_attribute('validation').get('time_multiplier', 1)
-            old_multiplier = new_request.get_attribute('validation').get('time_multiplier', 1)
-            if new_multiplier != old_multiplier and new_multiplier > 2:
-                if User().get_role() < Role.PRODUCTION_MANAGER:
-                    return {"results": False,
-                            'message': 'Only production managers can set validation to >16h'}
-
-            self.logger.info('Updating request %s' % (prepid))
-            difference = self.get_obj_diff(old_request.json(),
-                                           new_request.json(),
-                                           ('history', '_rev'))
-            if not difference:
-                return {'results': True}
-
-            new_request.update_history('update', ', '.join(difference))
-            if not request_db.update(new_request.json()):
-                self.logger.error('Could not save %s to database', prepid)
-                return {'results': False,
-                        'message': 'Could not save %s to database' % (prepid)}
-
-        return {"results": True}
+    def before_update(self, old_obj, new_obj):
+        # Special check for validation multiplier
+        new_multiplier = old_obj.get('validation').get('time_multiplier', 1)
+        old_multiplier = new_obj.get('validation').get('time_multiplier', 1)
+        if new_multiplier != old_multiplier and new_multiplier > 2:
+            if User().get_role() < Role.PRODUCTION_MANAGER:
+                raise InvalidActionException('Only production managers can set validation to >16h')
 
 
-class RequestDelete(RESTResource):
+class RequestDelete(DeleteRESTResource):
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
     def delete(self, prepid):
         """
-        Simply delete a request
+        Delete a campaign
         """
-        request_db = Database('requests')
-        request_json = request_db.get(prepid)
-        approval = request_json['approval']
-        status = request_json['status']
-        if approval != 'none' or status != 'new':
-            return {'results': False,
-                    'prepid': prepid,
-                    'message': 'Cannot delete "%s-%s" request, must be "none-new"' % (approval,
-                                                                                      status)}
+        return self.delete_object(prepid, Request)
 
-        chained_request_ids = request_json['member_of_chain']
+    def delete_check(self, obj):
+        approval_status = obj.get_approval_status()
+        if approval_status != 'none-new':
+            raise InvalidActionException(f'Cannot delete "{approval_status}", must be "none-new"')
+
+        chained_request_ids = obj.get('member_of_chain')
         if chained_request_ids:
             # If request is a member of chain, only prod managers can delete it
-            user = User()
-            user_role = user.get_role()
-            self.logger.info('User %s (%s) is trying to delete %s',
-                            user.get_username(),
-                            user_role,
-                            prepid)
-            if user_role < Role.PRODUCTION_MANAGER:
-                return {"results": False,
-                        "prepid": prepid,
-                        "message": 'Only production managers and administrators can delete '
-                                   'requests that are member of chained requests'}
+            if User().get_role() < Role.PRODUCTION_MANAGER:
+                raise InvalidActionException('Only production managers can delete request '
+                                             'that is a member of a chained request')
 
-        chained_request_db = Database('chained_requests')
+        prepid = obj.get('prepid')
+        chained_request_db = ChainedRequest.get_database()
         chained_requests = chained_request_db.bulk_get(chained_request_ids)
-        chained_requests_with_request = []
-        chained_requests_to_delete = []
         for chained_request in chained_requests:
             if not chained_request:
                 # Don't care about this in deletion
@@ -249,81 +176,65 @@ class RequestDelete(RESTResource):
                 continue
 
             chained_request_id = chained_request['prepid']
-            if chained_request.get('action_parameters', {}).get('flag', False):
-                return {'results': False,
-                        'prepid': prepid,
-                        'message': 'Request is a member of a valid chained request %s' % (chained_request_id)}
+            if chained_request.get('enabled'):
+                # All chains must be disabled
+                raise InvalidActionException(f'Member of enabled chained request {chained_request_id}')
 
             if prepid != chain[-1]:
-                return {'results': False,
-                        'prepid': prepid,
-                        'message': 'Request must be a last request in all its chained requests'}
+                # Must be last request in chain
+                raise InvalidActionException(f'Must be the last request in {chained_request_id}')
 
             if chained_request['step'] >= chain.index(prepid):
                 # Request is the current step in the chain
-                return {'results': False,
-                        'prepid': prepid,
-                        'message': "Request is the current step of chained request %s" % (chained_request_id)}
+                raise InvalidActionException(f'{chained_request_id} step is at or after {prepid}')
 
+    def before_delete(self, obj):
+        prepid = obj.get('prepid')
+        chained_request_db = ChainedRequest.get_database()
+        chained_requests = chained_request_db.bulk_get(obj.get('member_of_chain'))
+        for chained_request_dict in chained_requests:
+            if not chained_request_dict:
+                # Don't care about this in deletion
+                continue
+
+            chain = chained_request_dict['chain']
+            if prepid not in chain:
+                # Don't care about this in deletion
+                continue
+
+            chained_request_id = chained_request_dict['prepid']
             if prepid == chain[0]:
                 # Request is root - delete it together with the chained request
-                chained_requests_to_delete.append(chained_request_id)
+                chained_request_db.delete(chained_request_id)
             else:
                 # Request is not root - just pop it off the chained request
-                chained_requests_with_request.append(chained_request)
+                chained_request = ChainedRequest(chained_request_dict)
+                chain.remove(prepid)
+                chained_request.update_history('remove request', prepid)
+                chained_request.reload()
 
-        for chained_request_json in chained_requests_with_request:
-            # Chained requests that should have request at the end of the chain
-            chained_request = ChainedRequest(chained_request_json)
-            chain = chained_request.get_attribute('chain')
-            chain.remove(prepid)
-            chained_request.set_attribute('chain', chain)
-            chained_request.update_history('remove request', prepid)
-            chained_request.reload()
-
-        for chained_request_id in chained_requests_to_delete:
-            chained_request_db.delete(chained_request_id)
-
-        # Delete from DB
-        if not request_db.delete(prepid):
-            self.logger.error('Could not delete %s from database', prepid)
-            return {'results': False,
-                    'message': 'Could not delete %s from database' % (prepid)}
-
-        return {'results': True}
+        return super().before_delete(obj)
 
 
-class GetRequest(RESTResource):
+class GetRequest(GetRESTResource):
     """
     Endpoing for retrieving a request
     """
-
-    def get(self, prepid):
-        """
-        Retrieve the request for given id
-        """
-        request = Request.fetch(prepid)
-        if not request:
-            raise NotFoundException(prepid)
-
-        return {'results': request.json()}
+    object_class = Request
 
 
-class GetEditableRequest(RESTResource):
+class GetEditableRequest(GetEditableRESTResource):
     """
     Endpoing for retrieving a request and it's editing info
     """
+    object_class = Request
 
-    def get(self, prepid):
-        """
-        Retrieve the request and it's editing info for given id
-        """
-        request = Request.fetch(prepid)
-        if not request:
-            raise NotFoundException(prepid)
 
-        return {'results': {'object': request.json(),
-                            'editing_info': request.get_editing_info()}}
+class GetUniqueRequestValues(GetUniqueValuesRESTResource):
+    """
+    Endpoint for getting unique values of request attributes
+    """
+    object_class = Request
 
 
 class RequestOptionReset(RESTResource):
@@ -1190,27 +1101,6 @@ class GetInjectCommand(RESTResource):
             return {"results": False, 'message': 'Error: request with id {0} does not exist'.format(request_id)}
         req = request(db.get(request_id))
         return RequestInjector(prepid=request_id).make_injection_command(req)
-
-
-class GetUniqueRequestValues(RESTResource):
-    """
-    Endpoint for getting unique values of request attributes
-    """
-
-    def get(self):
-        """
-        Get unique values of certain attribute
-        """
-        args = flask.request.args.to_dict()
-        attribute = args.get('attribute')
-        value = args.get('value')
-        if not attribute or not value:
-            return {'results': []}
-
-        limit = int(args.get('limit', 10))
-        limit = min(100, max(1, limit))
-        request_db = Request.get_database()
-        return {'results': request_db.query_unique(attribute, value, limit)}
 
 
 class RequestsPriorityChange(RESTResource):

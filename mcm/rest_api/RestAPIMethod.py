@@ -422,14 +422,14 @@ class DeleteRESTResource(RESTResource):
                     'prepid': prepid,
                     'message': str(ex)}
 
-        self.before_delete()
+        self.before_delete(object)
         if not database.delete(prepid):
             self.logger.error('Could not delete %s from database', prepid)
             return {'results': False,
                     'prepid': prepid,
                     'message': 'Could not delete %s from database' % (prepid)}
 
-        self.after_delete()
+        self.after_delete(object)
         return {'results': True, 'prepid': prepid}
 
 

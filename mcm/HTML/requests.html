@@ -114,7 +114,7 @@
                 <a ng-href="{{getLinktoDmytro(data.reqmgr_name)}}" title="Computing's monitoring for {{data.prepid}}" ng-show="data.status == 'done' || data.status == 'submitted'" target="_blank">
                   <i class="glyphicon glyphicon-camera"></i>
                 </a>
-                <input type="checkbox" ng-click="add_to_selected_list(data.prepid)" ng-checked="selected_prepids.indexOf(data.prepid) != -1">
+                <input type="checkbox" ng-click="toggleSelection(data.prepid)" ng-checked="selectedItems.includes(data.prepid)">
                 <span ng-show="actionMessage[data.prepid] == 'OK'" style="color: green">{{actionMessage[data.prepid]}}</span>
                 <img ng-show="actionMessage[data.prepid] == 'loading'" ng-src="https://twiki.cern.ch/twiki/pub/TWiki/TWikiDocGraphics/processing-bg.gif"/>
                 <span ng-show="actionMessage[data.prepid] != 'OK' && actionMessage[data.prepid] != 'loading'" style="color: red">{{actionMessage[data.prepid]}}</span>
@@ -385,7 +385,7 @@
           <a ng-href="/pmp/historical?r={{selected_prepids.join()}}"  title="View historical statistics for selected prepids" target="_blank">
             <i class="glyphicon glyphicon-signal"></i>
           </a>
-          <input type="checkbox" value="ToggleAll" ng-click="toggleAll()" title="Toggle select all" ng-checked="result.length == selected_prepids.length">
+          <input type="checkbox" ng-click="toggleAll()" title="Toggle select all" ng-checked="result.length == selectedItems.length">
         </span>
       </div>
 

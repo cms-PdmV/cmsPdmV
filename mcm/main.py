@@ -41,7 +41,7 @@ from rest_api.RequestActions import (RequestImport,
                                      RequestClone,
                                      RequestDelete,
                                      GetRequest,
-                                     RequestUpdate,
+                                     UpdateRequest,
                                      GetEditableRequest,
                                      RequestOptionReset,
                                      RequestNextStatus,
@@ -318,7 +318,7 @@ api.add_resource(GetStatusAndApproval, '/public/restapi/requests/get_status_and_
 # REST Request actions
 api.add_resource(RequestImport, '/restapi/requests/save')
 api.add_resource(RequestClone, '/restapi/requests/clone')
-api.add_resource(RequestUpdate, '/restapi/requests/update')
+api.add_resource(UpdateRequest, '/restapi/requests/update')
 api.add_resource(RequestDelete, '/restapi/requests/delete/<string:prepid>')
 api.add_resource(GetRequest,
                  '/restapi/requests/get/<string:prepid>',

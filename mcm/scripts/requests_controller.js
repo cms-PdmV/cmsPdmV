@@ -1,6 +1,6 @@
 angular.module('mcmApp').controller('requestController',
-  ['$scope', '$http', '$window', '$uibModal',
-    function requestController($scope, $http, $window, $uibModal) {
+['$scope', '$http', '$window', '$uibModal',
+function requestController($scope, $http, $window, $uibModal) {
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
         { text: 'Actions', select: true, db_name: '' },
@@ -12,6 +12,7 @@ angular.module('mcmApp').controller('requestController',
       ];
 
       $scope.setDatabaseInfo('requests', $scope.columns);
+      $scope.selectedItems = [];
       $scope.file_was_uploaded = false;
       $scope.tabsettings = {
         "view": {
@@ -32,7 +33,7 @@ angular.module('mcmApp').controller('requestController',
       };
 
       $scope.reset = function(prepid) {
-        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid;
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
         let message = 'Are you sure you want to reset ' + $scope.promptPrepid(prepids) + '?';
         $scope.objectAction(message,
                             prepids,
@@ -42,7 +43,7 @@ angular.module('mcmApp').controller('requestController',
       }
 
       $scope.softReset = function(prepid) {
-        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid;
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
         let message = 'Are you sure you want to soft reset ' + $scope.promptPrepid(prepids) + '?';
         $scope.objectAction(message,
                             prepids,
@@ -52,7 +53,7 @@ angular.module('mcmApp').controller('requestController',
       }
 
       $scope.optionReset = function(prepid) {
-        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid;
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
         let message = 'Are you sure you want to option reset ' + $scope.promptPrepid(prepids) + '?';
         $scope.objectAction(message,
                             prepids,
@@ -62,7 +63,7 @@ angular.module('mcmApp').controller('requestController',
       }
 
       $scope.nextStatus = function(prepid) {
-        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid;
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
         let message = 'Are you sure you want to move ' + $scope.promptPrepid(prepids) + ' to next status?';
         $scope.objectAction(message,
                             prepids,
@@ -72,7 +73,7 @@ angular.module('mcmApp').controller('requestController',
       };
 
       $scope.forcecomplete = function(prepid) {
-        let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid;
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
         let message = 'Are you sure you want to add ' + $scope.promptPrepid(prepids) + ' to force complete list?';
         $scope.objectAction(message,
                             prepids,
@@ -81,12 +82,19 @@ angular.module('mcmApp').controller('requestController',
                              data: {'prepid': prepids}})
       };
 
-      $scope.selected_prepids = [];
-      $scope.add_to_selected_list = function (prepid) {
-        if (_.contains($scope.selected_prepids, prepid)) {
-          $scope.selected_prepids = _.without($scope.selected_prepids, prepid);
+      $scope.toggleSelection = function (prepid) {
+        if ($scope.selectedItems.includes(prepid)) {
+          $scope.selectedItems = $scope.selectedItems.filter(x => x != prepid);
         } else {
-          $scope.selected_prepids.push(prepid);
+          $scope.selectedItems.push(prepid);
+        }
+      };
+
+      $scope.toggleAll = function () {
+        if ($scope.selectedItems.length != $scope.result.length) {
+          $scope.selectedItems = $scope.result.map(x => x.prepid);
+        } else {
+          $scope.selectedItems = [];
         }
       };
 
@@ -119,17 +127,6 @@ angular.module('mcmApp').controller('requestController',
           return icons[value];
         } else {
           return "glyphicon glyphicon-question-sign";
-        }
-      };
-
-      $scope.toggleAll = function () {
-        if ($scope.selected_prepids.length != $scope.result.length) {
-          _.each($scope.result, function (v) {
-            $scope.selected_prepids.push(v.prepid);
-          });
-          $scope.selected_prepids = _.uniq($scope.selected_prepids);
-        } else {
-          $scope.selected_prepids = [];
         }
       };
 
