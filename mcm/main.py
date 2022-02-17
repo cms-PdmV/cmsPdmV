@@ -19,6 +19,24 @@ from rest_api.flow_actions import (CreateFlow,
                                    GetEditableFlow,
                                    ToggleFlowType)
 
+from rest_api.chained_campaign_actions import (CreateChainedCampaign,
+                                               GetChainedCampaign,
+                                               UpdateChainedCampaign,
+                                               DeleteChainedCampaign,
+                                               GetEditableChainedCampaign)
+
+from rest_api.batch_actions import GetBatch, DeleteBatch, AnnounceBatch
+
+from rest_api.chained_request_actions import (GetChainedRequest,
+                                              UpdateChainedRequest,
+                                              DeleteChainedRequest,
+                                              GetEditableChainedRequest,
+                                              ChainedRequestFlow,
+                                              ChainedRequestRewind,
+                                              ChainedRequestRewindToRoot,
+                                              SoftResetChainedRequest,
+                                              InspectChainedRequest)
+
 from rest_api.RequestActions import (RequestImport,
                                      RequestClone,
                                      RequestDelete,
@@ -58,37 +76,9 @@ from rest_api.RequestActions import (RequestImport,
                                      #UpdateEventsFromWorkflow,
                                      GENLogOutput)
 
-from rest_api.ChainedCampaignActions import (CreateChainedCampaign,
-                                             DeleteChainedCampaign,
-                                             GetChainedCampaign,
-                                             UpdateChainedCampaign,
-                                             GetEditableChainedCampaign)
-from rest_api.ChainedRequestActions import (ChainedRequestFlow,
-                                            ChainedRequestRewind,
-                                            ChainedRequestRewindToRoot,
-                                            UpdateChainedRequest,
-                                            DeleteChainedRequest,
-                                            GetChainedRequest,
-                                            GetEditableChainedRequest)
-                                            #ForceChainReqToDone,
-                                            #ForceStatusDoneToProcessing,
-                                            #CreateChainedRequest,
-                                            #ChainsFromTicket,
-                                            #ChainedRequestsPriorityChange,
-                                            #UpdateChainedRequest,
-                                            #ApproveChainedRequest,
-                                            #InspectChain,
-                                            #SearchableChainedRequest,
-                                            #TestChainedRequest,
-                                            #GetSetupForChains,
-                                            #TaskChainDict,
-                                            #InjectChainedRequest,
-                                            #SoftResetChainedRequest,
-                                            #ToForceFlowList,
-                                            #RemoveFromForceFlowList,
-                                            #GetUniqueChainedRequestValues,
+
+
 from rest_api.UserActions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser, GetEditableUser
-from rest_api.BatchActions import GetBatch, AnnounceBatch, DeleteBatch
 from rest_api.InvalidationActions import (GetInvalidation,
                                           DeleteInvalidation,
                                           AnnounceInvalidation,
@@ -231,6 +221,7 @@ def setup_api_docs(flask_app):
     flask_app.add_url_rule('/restapi', None, _api_documentation)
     flask_app.add_url_rule('/restapi/<path:api_path>', None, _api_documentation)
 
+
 # REST Campaign Actions
 api.add_resource(CreateCampaign, '/restapi/campaigns/save')
 api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:prepid>')
@@ -254,6 +245,41 @@ api.add_resource(CloneFlow, '/restapi/flows/clone')
 api.add_resource(GetEditableFlow, '/restapi/flows/get_editable/<string:prepid>')
 api.add_resource(ToggleFlowType, '/restapi/flows/type')
 
+
+# REST Chained campaign Actions
+api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
+api.add_resource(GetChainedCampaign, '/restapi/chained_campaigns/get/<string:prepid>')
+api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
+api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:prepid>')
+api.add_resource(GetEditableChainedCampaign,
+                 '/restapi/chained_campaigns/get_editable/<string:prepid>')
+
+
+# REST Batches Actions
+api.add_resource(GetBatch, '/restapi/batches/get/<string:prepid>')
+api.add_resource(DeleteBatch, '/restapi/batches/delete/<string:prepid>')
+api.add_resource(AnnounceBatch, '/restapi/batches/announce')
+
+
+# REST Chained Request Actions
+api.add_resource(GetChainedRequest, '/restapi/chained_requests/get/<string:prepid>')
+api.add_resource(UpdateChainedRequest, '/restapi/chained_requests/update')
+api.add_resource(DeleteChainedRequest, '/restapi/chained_requests/delete/<string:prepid>')
+api.add_resource(GetEditableChainedRequest,
+                 '/restapi/chained_requests/get_editable/<string:prepid>')
+api.add_resource(ChainedRequestFlow, '/restapi/chained_requests/flow')
+api.add_resource(ChainedRequestRewind, '/restapi/chained_requests/rewind')
+api.add_resource(ChainedRequestRewindToRoot, '/restapi/chained_requests/rewind_to_root')
+api.add_resource(SoftResetChainedRequest, '/restapi/chained_requests/soft_reset')
+api.add_resource(InspectChainedRequest, '/restapi/chained_requests/inspect')
+
+
+# REST User actions
+api.add_resource(AddCurrentUser, '/restapi/users/add')
+api.add_resource(GetUserInfo, '/restapi/users/get')
+api.add_resource(UpdateUser, '/restapi/users/update')
+api.add_resource(GetEditableUser, '/restapi/users/get_editable/<string:prepid>')
+api.add_resource(GetUser, '/restapi/users/get/<string:username>')
 
 
 # create a restriction-free urls, with limited capabilities
@@ -288,12 +314,6 @@ api.add_resource(GetStatusAndApproval, '/public/restapi/requests/get_status_and_
 #     '/public/restapi/chained_requests/get_valid/<string:chained_request_id>')
 # api.add_resource(TaskChainDict, '/public/restapi/chained_requests/get_dict/<string:chained_request_id>')
 # api.add_resource(TaskChainRequestDict, '/public/restapi/requests/get_dict/<string:request_id>')
-# REST User actions
-api.add_resource(GetUserInfo, '/restapi/users/get')
-api.add_resource(UpdateUser, '/restapi/users/update')
-api.add_resource(GetUser, '/restapi/users/get/<string:username>')
-api.add_resource(AddCurrentUser, '/restapi/users/add')
-api.add_resource(GetEditableUser, '/restapi/users/get_editable/<string:prepid>')
 
 # REST Request actions
 api.add_resource(RequestImport, '/restapi/requests/save')
@@ -354,53 +374,6 @@ api.add_resource(GetUniqueRequestValues, '/restapi/requests/unique_values')
 api.add_resource(GENLogOutput, '/restapi/requests/gen_log/<string:request_id>')
 
 
-
-# REST Chained Campaign Actions
-api.add_resource(CreateChainedCampaign, '/restapi/chained_campaigns/save')
-api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:prepid>')
-api.add_resource(GetChainedCampaign, '/restapi/chained_campaigns/get/<string:prepid>')
-api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
-api.add_resource(GetEditableChainedCampaign, '/restapi/chained_campaigns/get_editable/<string:prepid>')
-
-# REST Chained Request Actions
-# api.add_resource(CreateChainedRequest, '/restapi/chained_requests/save')
-api.add_resource(UpdateChainedRequest, '/restapi/chained_requests/update')
-api.add_resource(DeleteChainedRequest, '/restapi/chained_requests/delete/<string:prepid>')
-api.add_resource(GetChainedRequest, '/restapi/chained_requests/get/<string:prepid>')
-api.add_resource(ChainedRequestFlow, '/restapi/chained_requests/flow')
-api.add_resource(ChainedRequestRewind, '/restapi/chained_requests/rewind')
-api.add_resource(ChainedRequestRewindToRoot, '/restapi/chained_requests/rewind_to_root')
-api.add_resource(GetEditableChainedRequest, '/restapi/chained_requests/get_editable/<string:prepid>')
-# api.add_resource(
-#     ApproveChainedRequest,
-#     '/restapi/chained_requests/approve/<string:chained_request_id>',
-#     '/restapi/chained_requests/approve/<string:chained_request_id>/<int:step>')
-# api.add_resource(InspectChain, '/restapi/chained_requests/inspect/<string:chained_request_id>')
-# api.add_resource(
-#     SearchableChainedRequest,
-#     '/restapi/chained_requests/searchable',
-#     '/restapi/chained_requests/searchable/<string:action>')
-# api.add_resource(
-#     InjectChainedRequest,
-#     '/restapi/chained_requests/inject/<string:chained_request_id>',
-#     '/restapi/chained_requests/get_inject/<string:chained_request_id>')
-# api.add_resource(SoftResetChainedRequest, '/restapi/chained_requests/soft_reset/<string:chained_request_id>')
-# api.add_resource(TestChainedRequest,
-#                  '/restapi/chained_requests/test/<string:chained_request_id>',
-#                  '/restapi/chained_requests/validate/<string:chained_request_id>')
-# api.add_resource(ForceChainReqToDone, '/restapi/chained_requests/force_done/<string:chained_request_ids>')
-# api.add_resource(ForceStatusDoneToProcessing, '/restapi/chained_requests/back_forcedone/<string:chained_request_ids>')
-# api.add_resource(ToForceFlowList, '/restapi/chained_requests/force_flow/<string:chained_request_ids>')
-# api.add_resource(RemoveFromForceFlowList, '/restapi/chained_requests/remove_force_flow/<string:chained_request_ids>')
-# api.add_resource(ChainedRequestsPriorityChange, '/restapi/chained_requests/priority_change')
-# api.add_resource(ChainsFromTicket, '/restapi/chained_requests/from_ticket')
-# api.add_resource(GetUniqueChainedRequestValues, '/restapi/chained_requests/unique_values/<string:field_name>')
-
-
-# REST Batches Actions
-api.add_resource(GetBatch, '/restapi/batches/get/<string:prepid>')
-api.add_resource(AnnounceBatch, '/restapi/batches/announce')
-api.add_resource(DeleteBatch, '/restapi/batches/delete/<string:prepid>')
 
 # REST invalidation Actions
 api.add_resource(GetInvalidation, '/restapi/invalidations/get/<string:prepid>')

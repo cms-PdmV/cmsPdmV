@@ -208,7 +208,6 @@ class DeleteFlow(FlowRESTResource, DeleteRESTResource):
             raise Exception('Request(s) %s are flown with %s, delete them first' % (request_ids,
                                                                                     flow_id))
         self.flow = obj
-        return super().delete_check(obj)
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def delete(self, prepid):

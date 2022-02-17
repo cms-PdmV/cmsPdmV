@@ -1,60 +1,24 @@
-#!/usr/bin/env python
-
 import flask
-
 from json import dumps, loads
-from couchdb_layer.mcm_database import database as Database
 from json_layer.user import Role
-from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
+from rest_api.RestAPIMethod import DeleteRESTResource, GetEditableRESTResource, GetRESTResource, RESTResource, UpdateRESTResource
 from json_layer.chained_request import ChainedRequest
 from json_layer.request import Request
-from json_layer.mccm import MccM
+from tools.exceptions import CouldNotSaveException, InvalidActionException
 from tools.locker import locker
 from tools.priority import block_to_priority
 
 
-class UpdateChainedRequest(RESTResource):
+class UpdateChainedRequest(UpdateRESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     @RESTResource.request_with_json
     def post(self, data):
         """
-        Update a chained request with the provided json content
+        Update a chained request campaign with the provided content
+        Required attributes - prepid and revision
         """
-        prepid = data.get('prepid', data.get('_id'))
-        if not prepid:
-            return {'results': False,
-                    'message': 'Missing prepid in submitted data'}
-
-        old_chained_request = ChainedRequest.fetch(prepid)
-        if old_chained_request is None:
-            return {"results": False,
-                    'message': 'Object "%s" does not exist' % (prepid)}
-
-        new_chained_request = ChainedRequest(data)
-        if new_chained_request.get('_rev') != old_chained_request.get('_rev'):
-            return {'results': False,
-                    'message': 'Provided revision does not match revision in database'}
-
-        # Validate
-        new_chained_request.validate()
-        # Difference
-        difference = self.get_obj_diff(old_chained_request.json(),
-                                       new_chained_request.json(),
-                                       ('history', '_rev'))
-        if not difference:
-            return {'results': True}
-
-        difference = ', '.join(difference)
-        new_chained_request.set('history', old_chained_request.get('history'))
-        new_chained_request.update_history('update', difference)
-
-        # Save to DB
-        if not new_chained_request.save():
-            return {'results': False,
-                    'message': 'Could not save %s to the database' % (prepid)}
-
-        return {'results': True, 'prepid': prepid}
+        return self.update_object(data, ChainedRequest)
 
 
 class DeleteChainedRequest(DeleteRESTResource):
@@ -70,7 +34,7 @@ class DeleteChainedRequest(DeleteRESTResource):
             request = Request.fetch(request_prepid)
             request_chains = request.get('member_of_chain')
             if prepid not in request_chains:
-                raise Exception('Request %s is not member of chained request' % (request_prepid))
+                raise Exception(f'Request {request_prepid} is not member of chained request')
 
             request_chains.remove(prepid)
             request.set('member_of_chain', request_chains)
@@ -80,10 +44,10 @@ class DeleteChainedRequest(DeleteRESTResource):
                     approval = request.get('approval')
                     if approval == 'submit':
                         # Root request that is submitted or done, must be reset first
-                        raise Exception('Root request %s, will not be chained anymore' % (request_prepid))
+                        raise InvalidActionException(f'Request {request_prepid}, will not be chained anymore')
                 else:
                     # Not root request can't exist without a chain
-                    raise Exception('Non-root request %s will not be chained anymore' % (request_prepid))
+                    raise InvalidActionException(f'Request {request_prepid} will not be chained anymore')
 
             request.update_history('leave', prepid)
             requests.append(request)
@@ -91,9 +55,8 @@ class DeleteChainedRequest(DeleteRESTResource):
         # Save all requests
         for request in requests:
             if not request.save():
-                raise Exception('Could not update request %s' % (request.get('prepid')))
-
-        return super().delete_check(obj)
+                request_prepid = request.get('prepid')
+                raise CouldNotSaveException(request_prepid)
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     def delete(self, prepid):
@@ -103,37 +66,18 @@ class DeleteChainedRequest(DeleteRESTResource):
         return self.delete_object(prepid, ChainedRequest)
 
 
-class GetChainedRequest(RESTResource):
+class GetChainedRequest(GetRESTResource):
     """
     Endpoing for retrieving a chained request
     """
-
-    def get(self, prepid):
-        """
-        Retrieve the chained request for given id
-        """
-        chained_request = ChainedRequest.fetch(prepid)
-        if not chained_request:
-            raise NotFoundException(prepid)
-
-        return {'results': chained_request.json()}
+    object_class = ChainedRequest
 
 
-class GetEditableChainedRequest(RESTResource):
+class GetEditableChainedRequest(GetEditableRESTResource):
     """
     Endpoing for retrieving a chained request and it's editing info
     """
-
-    def get(self, prepid):
-        """
-        Retrieve the chained request and it's editing info for given id
-        """
-        chained_request = ChainedRequest.fetch(prepid)
-        if not chained_request:
-            raise NotFoundException(prepid)
-
-        return {'results': {'object': chained_request.json(),
-                            'editing_info': chained_request.get_editing_info()}}
+    object_class = ChainedRequest
 
 
 class UniqueChainsRESTResource(RESTResource):
@@ -167,11 +111,11 @@ class ChainedRequestFlow(UniqueChainsRESTResource):
         """
         Flow chained requests
         """
-        def rewind(chained_request):
+        def flow(chained_request):
             chained_request.flow()
 
         prepid = self.get_unique_chained_requests(data['prepid'])
-        return self.do_multiple_items(prepid, ChainedRequest, rewind)
+        return self.do_multiple_items(prepid, ChainedRequest, flow)
 
 
 class ChainedRequestRewind(UniqueChainsRESTResource):
@@ -197,124 +141,49 @@ class ChainedRequestRewindToRoot(ChainedRequestRewind):
         """
         Rewind chained requests to root
         """
-        def rewind(chained_request):
+        def rewind_to_root(chained_request):
             for _ in range(chained_request.get('step')):
                 chained_request.rewind()
 
         prepid = self.get_unique_chained_requests(data['prepid'])
-        return self.do_multiple_items(prepid, ChainedRequest, rewind)
+        return self.do_multiple_items(prepid, ChainedRequest, rewind_to_root)
 
 
-class ApproveChainedRequest(RESTResource):
-
-    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def get(self, chained_request_id, step=-1):
-        """
-        move the chained request approval to the next step
-        """
-        return self.multiple_approve(chained_request_id, step)
-
-    def multiple_approve(self, rid, val=-1):
-        if ',' in rid:
-            rlist = rid.rsplit(',')
-            res = []
-            for r in rlist:
-                res.append(self.approve(r, val))
-            return res
-        else:
-            return self.approve(rid, val)
-
-    def approve(self, rid, val=-1):
-        db = database('chained_requests')
-        if not db.document_exists(rid):
-            return {"prepid": rid, "results": 'Error: The given chained_request id does not exist.'}
-        creq = chained_request(json_input=db.get(rid))
-        try:
-            creq.approve(val)
-        except Exception as ex:
-            return {"prepid": rid, "results": False, 'message': str(ex)}
-
-        saved = db.update(creq.json())
-        if saved:
-            return {"prepid": rid, "results": True}
-        else:
-            return {
-                "prepid": rid,
-                "results": False,
-                'message': 'unable to save the updated chained request'}
-
-
-class InspectChain(RESTResource):
+class SoftResetChainedRequest(UniqueChainsRESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def get(self, chained_request_id):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
-        Inspect a chained request for next action
+        Soft reset chained requests
         """
-        return self.multiple_inspect(chained_request_id)
+        def soft_reset(chained_request):
+            step = chained_request.get('step')
+            for request_id in reversed(chained_request[:step + 1]):
+                request = Request.fetch(request_id)
+                if request.get_approval_status() != 'submit-approved':
+                    break
 
-    def multiple_inspect(self, crid):
-        crlist = crid.rsplit(',')
-        res = []
-        crdb = database('chained_requests')
-        for cr in crlist:
-            if crdb.document_exists(cr):
-                mcm_cr = chained_request(crdb.get(cr))
-                res.append(mcm_cr.inspect())
-            else:
-                res.append({"prepid": cr, "results": False, 'message': '%s does not exist' % cr})
+                request.reset(soft=True)
+                request.reload(save=True)
+                chained_request.set('step', chained_request.get('step') - 1)
 
-        if len(res) > 1:
-            return res
-        else:
-            return res[0]
+        prepid = self.get_unique_chained_requests(data['prepid'])
+        return self.do_multiple_items(prepid, ChainedRequest, soft_reset)
 
 
-class SearchableChainedRequest(RESTResource):
+class InspectChainedRequest(RESTResource):
 
-    @RESTResource.ensure_role(Role.USER)
-    def get(self, action=''):
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
+    @RESTResource.request_with_json
+    def post(self, data):
         """
-        Return a document containing several usable values that can be searched and the value can be find. /do will trigger reloading of that document from all requests
+        Inspect reset chained requests
         """
-        rdb = database('chained_requests')
-        if action == 'do':
-            all_requests = rdb.get_all()
-            searchable = {}
-            for request in all_requests:
-                for key in ["prepid", "approval", "status", "pwg", "step",
-                            "last_status", "member_of_campaign", "dataset_name"]:
-                    if key not in searchable:
-                        searchable[key] = set([])
-                    if not key in request:
-                        # that should make things break down, and due to schema evolution missed-migration
-                        continue
-                    if type(request[key]) == list:
-                        for item in request[key]:
-                            searchable[key].add(str(item))
-                    else:
-                        searchable[key].add(str(request[key]))
+        def inspect(chained_request):
+            chained_request.inspect()
 
-            # unique it
-            for key in searchable:
-                searchable[key] = list(searchable[key])
-                searchable[key].sort()
-
-            # store that value
-            search = database('searchable')
-            if search.document_exists('chained_requests'):
-                search.delete('chained_requests')
-            searchable.update({'_id': 'chained_requests'})
-            search.save(searchable)
-            searchable.pop('_id')
-            return searchable
-        else:
-            # just retrieve that value
-            search = database('searchable')
-            searchable = search.get('chained_requests')
-            searchable.pop('_id')
-            searchable.pop('_rev')
-            return searchable
+        return self.do_multiple_items(data['prepid'], ChainedRequest, inspect)
 
 
 class TestChainedRequest(RESTResource):
@@ -375,104 +244,6 @@ class TestChainedRequest(RESTResource):
             "results": True,
             "message": "run test will start soon",
             "prepid": chained_request_id}
-
-
-class SoftResetChainedRequest(RESTResource):
-
-    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def get(self, chained_request_id):
-        """
-        Does a soft reset to all relevant request in the chain
-        """
-        crdb = database('chained_requests')
-        rdb = database('requests')
-
-        mcm_cr = chained_request(crdb.get(chained_request_id))
-        for rid in reversed(mcm_cr.get_attribute('chain')[:mcm_cr.get_attribute('step') + 1]):
-            # from the current one to the first one REVERSED
-            mcm_r = request(rdb.get(rid))
-            try:
-                mcm_r.reset(hard=False)
-            except Exception as e:
-                return {'prepid': chained_request_id, 'results': False, 'message': str(e)}
-
-            mcm_r.reload()
-            mcm_cr = chained_request(crdb.get(chained_request_id))
-            mcm_cr.set_attribute('step', max(0, mcm_cr.get_attribute('chain').index(rid) - 1))
-            mcm_cr.reload()
-
-        return {'prepid': chained_request_id, 'results': True}
-
-
-class InjectChainedRequest(RESTResource):
-
-    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
-    def get(self, chained_request_id):
-        """
-        Provides the injection command and does the injection.
-        """
-        from tools.handlers import ChainRequestInjector, submit_pool
-        self.mode = 'show' if 'get_inject' in flask.request.path else 'inject'
-
-        _q_lock = locker.thread_lock(chained_request_id)
-        if not locker.thread_acquire(chained_request_id, blocking=False):
-            return {"prepid": chained_request_id, "results": False,
-                    "message": "The request {0} request is being handled already".format(
-                        chained_request_id)}
-
-        thread = ChainRequestInjector(prepid=chained_request_id, lock=locker.lock(chained_request_id), queue_lock=_q_lock,
-                check_approval=False)
-        if self.mode == 'show':
-            self.representations = {'text/plain': self.output_text}
-            return thread.make_command()
-        else:
-            submit_pool.add_task(thread.internal_run)
-            return {
-                "results": True,
-                "message": "chain submission for %s will be forked unless same request is being handled already" % chained_request_id,
-                "prepid": chained_request_id}
-
-
-class ChainsFromTicket(RESTResource):
-
-    @RESTResource.ensure_role(Role.USER)
-    def get(self):
-        """
-        Get all the generated chains from a ticket
-        """
-        self.parser = reqparse.RequestParser()
-        self.parser.add_argument('ticket', type=str, required=True)
-        self.parser.add_argument('page', type=int, default=0)
-        self.parser.add_argument('limit', type=int, default=20)
-        kwargs = self.parser.parse_args()
-        page = kwargs['page']
-        limit = kwargs['limit']
-        if page < 0:
-            page = 0
-            limit = 999999
-
-        ticket_prepid = kwargs['ticket']
-        chained_requests_db = database('chained_requests')
-        mccms_db = database('mccms')
-        result = mccms_db.search({'prepid': ticket_prepid}, page=-1)
-        if len(result) == 0:
-            self.logger.warning("Mccm prepid %s doesn't exit in db" % ticket_prepid)
-            return {}
-        self.logger.info("Getting generated chains from ticket %s" % ticket_prepid)
-        generated_chains = list(result[0]['generated_chains'].iterkeys())
-        generated_chains.sort()
-        start = page * limit
-        if start > len(generated_chains):
-            return []
-        end = start + limit
-        end = end if end <= len(generated_chains) else len(generated_chains)
-        chained_request_list = []
-        while start < end:
-            fetch_till = start + 20
-            fetch_till = end if fetch_till > end else fetch_till
-            chained_request_list += chained_requests_db.search({'prepid': generated_chains[start:fetch_till]})
-            start += 20
-        return chained_request_list
 
 
 class TaskChainDict(RESTResource):
@@ -776,41 +547,6 @@ class ForceStatusDoneToProcessing(RESTResource):
             return {'prepid': prepid, 'message': ret, 'results': False}
 
 
-class ToForceFlowList(RESTResource):
-
-    @RESTResource.ensure_role(Role.MC_CONTACT)
-    def get(self, chained_request_ids):
-        """
-        Add selected prepid's to global force complete list for later action
-        """
-        if ',' in chained_request_ids:
-            rlist = chained_request_ids.rsplit(',')
-        else:
-            rlist = [chained_request_ids]
-        res = []
-        __updated = False
-
-        forceflow_list = self.ldb.get("list_of_forceflow")
-        # TO-DO check if prepid exists!
-        # TO-DO check the status of chain_req!
-        for el in rlist:
-            if el not in forceflow_list["value"]:
-                forceflow_list["value"].append(el)
-                chain_req = chained_request(self.cdb.get(el))
-                chain_req.update_history({'action': 'add_to_forceflow'})
-                self.cdb.save(chain_req.json())
-                res.append({"prepid": el, 'results': True, 'message': 'OK'})
-                __updated = True
-            else:
-                res.append({"prepid": el, 'results': False, 'message': 'Chained request already in forceflow list'})
-
-        # TO-DO check the update return value
-        if __updated:
-            self.ldb.update(forceflow_list)
-
-        return res
-
-
 class ChainedRequestsPriorityChange(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
@@ -834,43 +570,3 @@ class ChainedRequestsPriorityChange(RESTResource):
         return {
             'results': True if len(fails) == 0 else False,
             'message': fails}
-
-
-class RemoveFromForceFlowList(RESTResource):
-
-    @RESTResource.ensure_role(Role.MC_CONTACT)
-    def delete(self, chained_request_ids):
-        """
-        Remove selected prepid's from global force_complete list
-        """
-        if ',' in chained_request_ids:
-            rlist = chained_request_ids.rsplit(',')
-        else:
-            rlist = [chained_request_ids]
-        res = []
-
-        forceflow_list = self.ldb.get("list_of_forceflow")
-        for el in rlist:
-            if el not in forceflow_list["value"]:
-                res.append({"prepid": el, 'results': False, 'message': 'Not in forceflow list'})
-            else:
-                forceflow_list["value"].remove(el)
-                res.append({"prepid": el, 'results': True, 'message': 'OK'})
-
-        # TO-DO check the update return value
-        ret = self.ldb.update(forceflow_list)
-
-        return res
-
-
-class GetUniqueChainedRequestValues(RESTResource):
-
-    def get(self, field_name):
-        """
-        Get unique values for navigation by field_name
-        """
-        args = flask.request.args.to_dict()
-        db = database('requests')
-        return {'results': db.query_unique(field_name,
-                                           args.get('key', ''),
-                                           int(args.get('limit', 10)))}

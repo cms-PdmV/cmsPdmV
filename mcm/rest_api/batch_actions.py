@@ -1,18 +1,19 @@
-from rest_api.RestAPIMethod import RESTResource, DeleteRESTResource
+from rest_api.RestAPIMethod import GetRESTResource, RESTResource, DeleteRESTResource
 from json_layer.batch import Batch
 from json_layer.user import Role
 
 
-class GetBatch(RESTResource):
-
-    def get(self, prepid):
-        """
-        Retrieve the batch for given id
-        """
-        return {'results': Batch.get_database().get(prepid)}
+class GetBatch(GetRESTResource):
+    """
+    Endpoing for retrieving a batch
+    """
+    object_class = Batch
 
 
 class DeleteBatch(DeleteRESTResource):
+    """
+    Endpoint for deleting a batch
+    """
 
     @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def delete(self, prepid):
@@ -23,12 +24,15 @@ class DeleteBatch(DeleteRESTResource):
 
 
 class AnnounceBatch(RESTResource):
+    """
+    Endpoint for announcing batches
+    """
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
     @RESTResource.request_with_json
     def post(self, data):
         """
-        Annouce a given batches
+        Annouce a given batch or batches
         """
         def announce(batch):
             batch.announce()
