@@ -2,7 +2,6 @@
 Common utils
 """
 import json
-import inspect
 import time
 import re
 import os
@@ -22,6 +21,34 @@ def clean_split(string, separator=',', maxsplit=-1):
     Split a string by separator and collect only non-empty values
     """
     return [x.strip() for x in string.split(separator, maxsplit) if x.strip()]
+
+
+def cmssw_setup(cmssw_release, scram_arch=None):
+    """
+    Return code needed to set up CMSSW environment for given CMSSW release
+    Basically, cmsrel and cmsenv commands
+    If reuse is set to True, this will checkout CMSSW in parent directory
+    If scram_arch is None, use default arch of CMSSW release
+    Releases are put to <scram arch>/<release name> directory
+    """
+    if scram_arch is None:
+        scram_arch = get_scram_arch(cmssw_release)
+
+    if not scram_arch:
+        raise Exception(f'Could not find SCRAM arch of {cmssw_release}')
+
+    commands = [f'export SCRAM_ARCH={scram_arch}',
+                'source /cvmfs/cms.cern.ch/cmsset_default.sh',
+                'ORG_PWD=$(pwd)',
+                f'mkdir -p {scram_arch}',
+                f'cd {scram_arch}',
+                f'if [ ! -r {cmssw_release}/src ] ; then scram p CMSSW {cmssw_release} ; fi',
+                f'cd {cmssw_release}/src',
+                'CMSSW_SRC=$(pwd)',
+                'eval `scram runtime -sh`',
+                'cd $ORG_PWD']
+
+    return '\n'.join(commands)
 
 
 def get_scram_arch(cmssw_release):
@@ -189,8 +216,42 @@ def get_api_documentation(app, api_path):
             while hasattr(method, '__func__'):
                 method = method.__func__
 
-            method_file = inspect.getfile(method).replace(cwd, '', 1).lstrip('/')
-            method_line = inspect.getsourcelines(method)[1]
-            method_dict['source'] = f'{method_file}:{method_line}'
-
     return docs
+
+
+def run_commands_in_singularity(commands, os_name, mount_eos, mount_home):
+    bash = ['# Dump code to singularity-script.sh file that can be run in Singularity',
+            'cat <<\'EndOfTestFile\' > singularity-script.sh',
+            '#!/bin/bash',
+            '']
+    bash += commands
+    bash += ['',
+             '# End of singularity-script.sh file',
+             'EndOfTestFile',
+             '',
+             '# Make file executable',
+             'chmod +x singularity-script.sh',
+             ''
+             'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
+             '']
+
+    singularity = 'singularity run -B /afs -B /cvmfs -B /etc/grid-security'
+    if mount_eos:
+        singularity += ' -B /eos'
+
+    if mount_home:
+        singularity += ' --home $PWD:$PWD'
+    else:
+        singularity += ' --no-home'
+
+    singularity += ' '
+    if os_name == 'SLCern6':
+        singularity += '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/slc6:amd64'
+    else:
+        raise Exception(f'Unrecognized OS {os_name}')
+
+    singularity += ' $(pwd)/singularity-script.sh'
+    bash += [singularity,
+             'rm -f singularity-script.sh']
+
+    return bash

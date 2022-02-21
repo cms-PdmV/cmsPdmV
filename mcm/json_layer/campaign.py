@@ -74,42 +74,14 @@ class Campaign(json_base):
         """
         Return a list of dictionaries of cmsDrivers
         """
-        prepid = self.get_attribute('prepid')
         drivers = {}
         all_sequences = self.get_attribute('sequences')
         for sequence_name, sequences in all_sequences.items():
             drivers[sequence_name] = []
-            sequence_count = len(sequences)
-            for index, sequence_dict  in enumerate(sequences):
+            for sequence_dict  in sequences:
                 sequence = Sequence(sequence_dict)
-                sequence_args = {}
-                # --fileout is campaign name and index for non-last sequence
-                if index == sequence_count - 1:
-                    sequence_args['fileout'] = f'file:{prepid}.root'
-                else:
-                    sequence_args['fileout'] = f'file:{prepid}_{index}.root'
-
-                # --filein by default is unset - some input.root filr
-                sequence_args['filein'] = 'file:input.root'
-                if index == 0:
-                    # If input dataset is set, it is the input of first sequence
-                    input_dataset = self.get_attribute('input_dataset')
-                    if input_dataset:
-                        sequence_args['filein'] = f'dbs:{input_dataset}'
-                else:
-                    # For non-first sequences input is output of last sequence
-                    sequence_args['filein'] = f'file:{prepid}_{index - 1}.root'
-
                 pileup_dataset_name = self.get_attribute('pileup_dataset_name')
-                if pileup_dataset_name:
-                    pileup = sequence.get_attribute('pileup')
-                    datamix = sequence.get_attribute('datamix')
-                    # Classic mixing identified by the presence of --pileup
-                    # Mixing using premixed events - absesence of --pileup and presence of --datamix
-                    if (pileup and pileup != 'NoPileUp') or (not pileup and datamix == 'PreMix'):
-                        sequence_args['pileup_input'] = f'dbs:{pileup_dataset_name}'
-
-                driver = sequence.get_cmsdriver('NameOfFragment', sequence_args)
+                driver = sequence.get_cmsdriver('FRAGMENT', pileup_dataset_name, None)
                 drivers[sequence_name].append(driver)
 
         return drivers
@@ -141,7 +113,7 @@ class Campaign(json_base):
 
     def is_release_greater_or_equal_to(self, cmssw_release):
         """
-        Return whether given CMSSW release is greater or equal to campaign's
+        Return whether campaign's CMSSW release is greater or equal to given one
         """
         my_release = self.get_attribute('cmssw_release')
         my_release = tuple(int(x) for x in re.sub('[^0-9_]', '', my_release).split('_') if x)

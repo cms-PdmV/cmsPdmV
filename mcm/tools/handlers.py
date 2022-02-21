@@ -12,7 +12,7 @@ from tools.locator import locator
 from tools.locker import locker, semaphore_events
 from couchdb_layer.mcm_database import database
 from tools.communicator import Communicator
-from json_layer.request import Request, AFSPermissionError
+from json_layer.request import Request
 from json_layer.chained_request import ChainedRequest
 from json_layer.batch import Batch as batch
 from tools.logger import InjectionLogAdapter

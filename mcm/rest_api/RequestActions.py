@@ -11,7 +11,7 @@ from json_layer.request import Request
 from json_layer.campaign import Campaign
 from json_layer.user import Role, User
 from json_layer.chained_request import ChainedRequest
-from tools.exceptions import InvalidActionException
+from tools.exceptions import InvalidActionException, NotFoundException
 from tools.locator import locator
 from tools.locker import locker
 from tools.handlers import RequestInjector
@@ -297,78 +297,70 @@ class RequestSoftReset(RESTResource):
 
 
 class GetCmsDriverForRequest(RESTResource):
+    """
+    Endpoing for getting cmsDriver commands of a request
+    """
 
-    def get(self, request_id):
+    def get(self, prepid):
         """
-        Retrieve the cmsDriver commands for a given request
+        Retrieve the dictionary of cmsDriver commands of a request
         """
-        db = Database('requests')
-        return self.get_cmsDriver(db.get(prepid=request_id))
+        request = Request.fetch(prepid)
+        if not request:
+            raise NotFoundException(prepid)
 
-    def get_cmsDriver(self, data):
-        try:
-            mcm_req = request(json_input=data)
-        except request.IllegalAttributeName:
-            return {"results": ''}
-
-        return {"results": mcm_req.build_cmsDrivers()}
+        return {'results': request.get_cmsdrivers()}
 
 
 class GetFragmentForRequest(RESTResource):
+    """
+    Endpoint for getting fragment of a request
+    """
 
-    def get(self, request_id, version=None):
+    def get(self, prepid):
         """
         Retrieve the fragment as stored for a given request
         """
-        db = Database(self.db_name)
-        res = self.get_fragment(db.get(prepid=request_id))
-        self.representations = {'text/plain': self.output_text}
-        return dumps(res) if isinstance(res, dict) else res
+        request = Request.fetch(prepid)
+        if not request:
+            raise NotFoundException(prepid)
 
-    def get_fragment(self, data):
-        try:
-            mcm_req = request(json_input=data)
-        except request.IllegalAttributeName:
-            return {"results": ''}
-
-        fragmentText = mcm_req.get_attribute('fragment')
-        return fragmentText
+        fragment = request.get('fragment')
+        return self.build_response(data=fragment, content_type='text/plain')
 
 
-class GetSetupForRequest(RESTResource):
-    def __init__(self):
-        self.db_name = 'requests'
-        path = flask.request.path
-        if 'get_setup' in path:
-            self.opt = 'setup'
-        elif 'get_test' in path:
-            self.opt = 'test'
-        elif 'get_valid' in path:
-            self.opt = 'valid'
-            access_limit = access_rights.administrator
-        else:
-            raise Exception('Cannot create this resource with mode %s' % path)
+class GetSetupFileForRequest(RESTResource):
 
-        self.before_request()
-        self.count_call()
-        self.representations = {'text/plain': self.output_text}
-
-    def get(self, prepid, events=None):
+    def get(self, prepid):
         """
-        Retrieve the script necessary to setup and test a given request
-        get_setup - returns file for config generation for submission
-        get_test - returns file for user validation
-        get_valid - returns file for automatic validation
+        Retrieve the script necessary to setup and submit a given request
         """
-        for_validation = self.opt in ('test', 'valid')
-        automatic_validation = self.opt == 'valid'
-        request_db = Database('requests')
-        if request_db.document_exists(prepid):
-            req = request(request_db.get(prepid))
-            output_text = req.get_setup_file2(for_validation=for_validation, automatic_validation=automatic_validation, threads=1)
-            return output_text
-        else:
-            return dumps({"results": False, "message": "%s does not exist" % prepid}, indent=4)
+        request = Request.fetch(prepid)
+        return self.build_response(data=request.get_setup_file(True, False, False),
+                                   content_type='text/plain')
+
+
+class GetTestFileForRequest(RESTResource):
+
+    def get(self, prepid):
+        """
+        Retrieve the script necessary to setup and submit a given request
+        """
+        request = Request.fetch(prepid)
+        return self.build_response(data=request.get_setup_file(False, True, False),
+                                   content_type='text/plain')
+
+
+class GetValidationFileForRequest(RESTResource):
+
+    def get(self, prepid):
+        """
+        Retrieve the script necessary to setup and submit a given request
+        """
+        request = Request.fetch(prepid)
+        return self.build_response(data=request.get_setup_file(False, False, True),
+                                   content_type='text/plain')
+
 
 
 class GetRequestByDataset(RESTResource):

@@ -48,8 +48,11 @@ from rest_api.RequestActions import (RequestImport,
                                      RequestReset,
                                      RequestSoftReset,
                                      GetUniqueRequestValues,
-                                     #GetCmsDriverForRequest,
-                                     #GetFragmentForRequest,
+                                     GetSetupFileForRequest,
+                                     GetTestFileForRequest,
+                                     GetValidationFileForRequest,
+                                     GetCmsDriverForRequest,
+                                     GetFragmentForRequest,
                                      #GetSetupForRequest,
                                      #ApproveRequest,
                                      #SetStatus,
@@ -283,10 +286,7 @@ api.add_resource(GetUser, '/restapi/users/get/<string:username>')
 
 
 # create a restriction-free urls, with limited capabilities
-# api.add_resource(
-#     GetFragmentForRequest,
-#     '/public/restapi/requests/get_fragment/<string:request_id>',
-#     '/public/restapi/requests/get_fragment/<string:request_id>/<int:version>')  # for legacy support
+
 
 # api.add_resource(
 #     GetSetupForRequest,
@@ -329,7 +329,12 @@ api.add_resource(RequestNextStatus, '/restapi/requests/next_status')
 api.add_resource(RequestReset, '/restapi/requests/reset')
 api.add_resource(RequestSoftReset, '/restapi/requests/soft_reset')
 api.add_resource(GetUniqueRequestValues, '/restapi/requests/unique_values')
-# api.add_resource(GetCmsDriverForRequest, '/restapi/requests/get_cmsDrivers/<string:request_id>')
+api.add_resource(GetCmsDriverForRequest, '/restapi/requests/get_drivers/<string:prepid>')
+# Request public APIs
+api.add_resource(GetSetupFileForRequest, '/public/restapi/requests/get_setup/<string:prepid>')
+api.add_resource(GetTestFileForRequest, '/public/restapi/requests/get_test/<string:prepid>')
+api.add_resource(GetValidationFileForRequest, '/public/restapi/requests/get_valid/<string:prepid>')
+api.add_resource(GetFragmentForRequest, '/public/restapi/requests/get_fragment/<string:prepid>')
 # api.add_resource(
 #     ResetRequestApproval,
 #     '/restapi/requests/reset/<string:request_id>',

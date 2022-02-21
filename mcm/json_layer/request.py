@@ -1,14 +1,9 @@
-from asyncio.log import logger
 import os
 import re
 import hashlib
-import copy
 import time
 import logging
 import math
-import random
-import json
-from math import sqrt
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database as Database
@@ -19,23 +14,14 @@ from json_layer.flow import Flow
 from json_layer.batch import Batch
 from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import Sequence
-from tools.ssh_executor import SSHExecutor
 from tools.locator import locator
 from tools.installer import installer
 from tools.settings import Settings
 from tools.locker import locker
 from tools.logger import InjectionLogAdapter
-from tools.utils import get_scram_arch as fetch_scram_arch
+from tools.utils import cmssw_setup, get_scram_arch as fetch_scram_arch, run_commands_in_singularity
 from tools.connection_wrapper import ConnectionWrapper
 from json_layer.user import User, Role
-
-
-class AFSPermissionError(Exception):
-    def __init__(self, message=None):
-        self.message = message
-
-    def __str__(self):
-        return 'AFS permission error: %s' % (self.message)
 
 
 class Request(json_base):
@@ -52,6 +38,7 @@ class Request(json_base):
         'extension': 0,
         'flown_with': '',
         'fragment': '',
+        'fragment_name': '',
         'fragment_tag': '',
         'generator_parameters': [],
         'generators': [],
@@ -296,32 +283,89 @@ class Request(json_base):
         if not chained_request_ids:
             return []
 
-        chained_request_db = Database('chained_requests')
+        from json_layer.chained_request import ChainedRequest
+        chained_request_db = ChainedRequest.get_database()
         chained_requests = chained_request_db.bulk_get(chained_request_ids)
         return chained_requests
 
-    def get_previous_request(self):
+    def get_parent_request(self):
         """
-        Return request that is input for the current request or None if it does
-        not exist
+        Return request dictionary that is input for the current request or None
+        if it does not exist
         """
+        flown_with = self.get('flown_with')
+        if not flown_with:
+            # This is a root request
+            return None
+
         chained_request_ids = self.get_attribute('member_of_chain')
         if not chained_request_ids:
+            # Not member of any chains
             return None
 
         prepid = self.get_attribute('prepid')
-        chained_request_db = Database('chained_requests')
+        from json_layer.chained_request import ChainedRequest
+        chained_request_db = ChainedRequest.get_database()
         # Take first chained request as all of them should be identical
         chained_request = chained_request_db.get(chained_request_ids[0])
         index = chained_request['chain'].index(prepid)
-        if index <= 0:
+        if index == 0:
             return None
 
-        previous_prepid = chained_request['chain'][index - 1]
-        request_db = Database('requests')
-        req = request_db.get(previous_prepid)
-        self.logger.info('Previous request for %s is %s', prepid, previous_prepid)
-        return req
+        parent_prepid = chained_request['chain'][index - 1]
+        parent = self.get_database().get(parent_prepid)
+        self.logger.debug('Parent request for %s is %s', prepid, parent_prepid)
+        return parent
+
+    def get_parent_requests(self):
+        """
+        Return a list of request dictionaries that are parents and grandparents
+        to the current request of empty list if they do not exist
+        """
+        flown_with = self.get('flown_with')
+        if not flown_with:
+            # This is a root request
+            return []
+
+        chained_request_ids = self.get_attribute('member_of_chain')
+        if not chained_request_ids:
+            # Not member of any chains
+            return []
+
+        prepid = self.get_attribute('prepid')
+        from json_layer.chained_request import ChainedRequest
+        chained_request_db = ChainedRequest.get_database()
+        # Take first chained request as all of them should be identical
+        chained_request = chained_request_db.get(chained_request_ids[0])
+        index = chained_request['chain'].index(prepid)
+        if index == 0:
+            return []
+
+        parent_prepids = chained_request['chain'][:index]
+        parents = self.get_database().bulk_get(parent_prepids)
+        self.logger.debug('Parent requests for %s are %s',
+                          prepid,
+                          ','.join(p.get('prepid') for p in parents))
+        return parents
+
+    def get_derived_requests(self):
+        """
+        Go through all chains that request is in and fetch requests that have
+        current request as a parent
+        Return a dictionary where key is chained request prepid and value is a
+        list of request dictionaries
+        """
+        results = {}
+        prepid = self.get_attribute('prepid')
+        for chained_request in self.get_chained_requests():
+            chain = chained_request['chain']
+            if prepid not in chain:
+                raise Exception('%s is not a member of %s' % (prepid, chained_request['prepid']))
+
+            further_chain = chain[chain.index(prepid) + 1:]
+            results[chained_request['prepid']] = self.get_database().bulk_get(further_chain)
+
+        return results
 
     def set_approval_status(self, approval, status):
         """
@@ -525,7 +569,7 @@ class Request(json_base):
 
         chained_requests = self.get_chained_requests()
         # Check status of requests leading to this one
-        self.check_status_of_previous(chained_requests)
+        self.check_status_of_parents(chained_requests)
         self.check_with_previous(True)
         self.get_input_dataset_status()
         self.reload()
@@ -585,8 +629,8 @@ class Request(json_base):
         invalidations = invalidation_db.search("search", {'prepid': prepid}, limit=None)
         invalidations = [i for i in invalidations if i["status"] in {"new", "announced"}]
         if invalidations:
-            raise Exception('There are %s unacknowledged invalidations for %s' % (len(invalidations),
-                                                                                  prepid))
+            raise Exception(f'There are {len(invalidations)} unacknowledged '
+                            f'invalidations for {prepid}')
 
     def get_input_dataset(self, datasets):
         """
@@ -626,7 +670,7 @@ class Request(json_base):
         Check if previous request in the chain has enough events
         Update total events of this request if needed
         """
-        previous_request = self.get_previous_request()
+        previous_request = self.get_parent_request()
         if not previous_request:
             return
 
@@ -672,36 +716,19 @@ class Request(json_base):
         if update_total_events and total_events > events_after_filter:
             self.set_attribute('total_events', events_after_filter)
 
-    def check_status_of_previous(self, chained_requests):
+    def check_status_of_parents(self, chained_requests):
         """
         Go through all chains that request is in and check if requests that are
         leading to this request are in greater or equal status
         """
-        if not chained_requests:
-            return
-
-        prepids = set()
-        prepid = self.get_attribute('prepid')
-        for chained_request in chained_requests:
-            chain = chained_request['chain']
-            if prepid not in chain:
-                raise Exception('%s is not a member of %s' % (prepid, chained_request['prepid']))
-
-            prepids.update(chain[:chain.index(prepid)])
-
-        if not prepids:
-            return
-
-        request_db = Database('requests')
-        requests = request_db.bulk_get(list(prepids))
+        parents = self.get_parent_requests()
         approval_status = self.get_approval_status()
-
-        for request in requests:
-            request_approval_status = '%s-%s' % (request['approval'], request['status'])
-            if self.order.index(request_approval_status) < self.order.index(approval_status):
-                raise Exception('%s status is %s which is lower than %s' % (request['prepid'],
-                                                                            request_approval_status,
-                                                                            approval_status))
+        for parent in parents:
+            parent_approval_status = f'{parent["approval"]}-{parent["status"]}'
+            if self.order.index(parent_approval_status) < self.order.index(approval_status):
+                parent_prepid = parent.get('prepid')
+                raise Exception(f'{parent_prepid} status is {parent_approval_status} '
+                                f'which is lower than {approval_status}')
 
     def to_be_submitted_together(self, chained_requests):
         """
@@ -788,12 +815,12 @@ class Request(json_base):
 
         chained_requests = self.get_chained_requests()
         # Check status of requests leading to this one
-        self.check_status_of_previous(chained_requests)
+        self.check_status_of_parents(chained_requests)
 
         # TODO: Allow users to aprove only current steps of chain, only
         # submission or flowing code can approve otherwise
         chained_requests = [c for c in chained_requests if c['enabled']]
-        previous_request = self.get_previous_request()
+        previous_request = self.get_parent_request()
         if previous_request['status'] == 'done':
             self.get_input_dataset_status()
             for chained_request in chained_requests:
@@ -819,134 +846,63 @@ class Request(json_base):
         #                                            queue_lock=_q_lock)
         # submit_pool.add_task(threaded_submission.internal_run)
 
-    def has_at_least_an_action(self):
-        crdb = database('chained_requests')
-        for in_chain_id in self.get_attribute('member_of_chain'):
-            if not crdb.document_exists(in_chain_id):
-                self.logger.error('for %s there is a chain inconsistency with %s' % (self.get_attribute('prepid'), in_chain_id))
-                return False
-            in_chain = crdb.get(in_chain_id)
-            if in_chain['action_parameters']['flag']:
-                return True
-        return False
+    def retrieve_fragment_command(self):
+        """
+        Return a list of bash commands that would download required fragment
+        and rebuild the CMSSW
+        """
+        fragment_name = self.get_fragment_name()
+        if not fragment_name:
+            return []
 
-    def retrieve_fragment(self, name=None, get=True):
-        if not name:
-            name = self.get_attribute('name_of_fragment')
-        get_me = ''
-        tag = self.get_attribute('fragment_tag')
-        fragment_retry_amount = 2
-        if tag and name:
-            # remove this to allow back-ward compatibility of fragments/requests placed with PREP
-            name = name.replace('Configuration/GenProduction/python/', '')
-            name = name.replace('Configuration/GenProduction/', '')
-            # curl from git hub which has all history tags
-            # get_me = 'curl -L -s https://raw.github.com/cms-sw/genproductions/%s/python/%s --retry %s ' % (
-            get_me = 'curl  -s https://raw.githubusercontent.com/cms-sw/genproductions/%s/python/%s --retry %s ' % (
-                self.get_attribute('fragment_tag'),
-                name,
-                fragment_retry_amount)
-            # add the part to make it local
-            if get:
-                get_me += '--create-dirs -o Configuration/GenProduction/python/%s ' % (name)
-                # lets check if downloaded file actually exists and has more than 0 bytes
-                get_me += '\n[ -s Configuration/GenProduction/python/%s ] || exit $?;\n' % (name)
-
-        if get:
-            get_me += '\n'
-        return get_me
-
-    def get_fragment(self):
-        # provides the name of the fragment depending on
-        # fragment=self.get_attribute('name_of_fragment').decode('utf-8')
-        fragment = self.get_attribute('name_of_fragment')
-        if self.get_attribute('fragment') and not fragment:
-            # fragment='Configuration/GenProduction/python/%s_fragment.py'%(self.get_attribute('prepid').replace('-','_'))
-            fragment = 'Configuration/GenProduction/python/%s-fragment.py' % (self.get_attribute('prepid'))
-
-        if fragment and not fragment.startswith('Configuration/GenProduction/python/'):
-            fragment = 'Configuration/GenProduction/python/' + fragment
-
-        return fragment
-
-    def build_cmsDriver(self, sequenceindex):
-        fragment = self.get_fragment()
-
-        # JR
-        if fragment == '':
-            fragment = 'step%d' % (sequenceindex + 1)
-        command = 'cmsDriver.py %s ' % fragment
-
-        try:
-            seq = sequence(self.get_attribute('sequences')[sequenceindex])
-        except Exception:
-            self.logger.error('Request %s has less sequences than expected. Missing step: %d' % (
-                self.get_attribute('prepid'),
-                sequenceindex))
-
-            return ''
-
-        cmsDriverOptions = seq.build_cmsDriver()
-
-        if not cmsDriverOptions.strip():
-            return '%s %s' % (command, cmsDriverOptions)
-
-        # JR
-        input_from_ds = None
-        input_from_previous = None
-        input_from_lhe = None
-        if self.get_attribute('mcdb_id') > 0:
-            input_from_lhe = 'lhe:%d ' % (self.get_attribute('mcdb_id'))
-        if len(self.get_attribute('member_of_chain')):
-            crdb = database('chained_requests')
-            previouses = set()
-            for crn in self.get_attribute('member_of_chain'):
-                cr = crdb.get(crn)
-                here = cr['chain'].index(self.get_attribute('prepid'))
-                if here > 0 and here > cr['step']:  # there or not at root
-                    previouses.add(cr['chain'][here - 1])
-            if len(previouses) == 1:
-                input_from_previous = "file:%s.root" % list(previouses)[0]
-        if self.get_attribute('input_dataset') and not input_from_previous:
-            input_from_ds = '"dbs:%s"' % (self.get_attribute('input_dataset'))
-
-        input_default = 'file:%s_step%d.root' % (self.get_attribute('prepid'), sequenceindex)
-        if sequenceindex == 0:
-            if input_from_ds:
-                input_default = input_from_ds
-            elif input_from_previous:
-                input_default = input_from_previous
-            elif input_from_lhe:
-                input_default = input_from_lhe
-            else:
-                input_default = None
-        if input_default:
-            command += '--filein %s ' % input_default
-
-        output_file = ''
-        if sequenceindex == len(self.get_attribute('sequences')) - 1:
-            # last one
-            command += '--fileout file:%s.root ' % (self.get_attribute('prepid'))
-            output_file = '%s.root ' % (self.get_attribute('prepid'))
+        bash = ['# Get fragment',
+                f'cd $CMSSW_SRC',
+                f'mkdir -p $(dirname {fragment_name})']
+        fragment = self.get('fragment')
+        if fragment:
+            prepid = self.get('prepid')
+            url = f'{locator().baseurl()}public/restapi/requests/get_fragment/{prepid}'
         else:
-            command += '--fileout file:%s_step%d.root ' % (self.get_attribute('prepid'), sequenceindex + 1)
-            output_file += '%s_step%d.root ' % (self.get_attribute('prepid'), sequenceindex + 1)
+            tag = self.get_attribute('fragment_tag')
+            url = 'https://raw.githubusercontent.com/cms-sw/genproductions/'
+            if tag:
+                url += '{tag}/python/'
+            else:
+                url += 'master/genfragments/'
 
-        # JR
-        if self.get_attribute('pileup_dataset_name') and not (seq.get_attribute('pileup') in ['', 'NoPileUp']):
-            command += '--pileup_input "dbs:%s" ' % (self.get_attribute('pileup_dataset_name'))
-        elif self.get_attribute('pileup_dataset_name') and (seq.get_attribute('pileup') in ['']) and (seq.get_attribute('datamix') in ['PreMix']):
-            command += ' --pileup_input "dbs:%s" ' % (self.get_attribute('pileup_dataset_name'))
-        return '%s%s' % (command, cmsDriverOptions)
+            url += fragment_name.replace('Configuration/GenProduction/', '').replace('python/', '')
 
-    def transfer_from(self, camp):
-        keys_to_transfer = ['energy', 'cmssw_release', 'pileup_dataset_name', 'type', 'input_dataset', 'memory']
-        for k in keys_to_transfer:
-            try:
-                if camp.get_attribute(k):
-                    self.set_attribute(k, camp.get_attribute(k))
-            except request.IllegalAttributeName:
-                continue
+        bash += [f'wget {url} --quiet -O {fragment_name}']
+        bash += [f'[ -s {fragment_name} ] || exit $?;',
+                 '',
+                 '# Check if fragment contais gridpack path ant that it is in cvmfs',
+                 f'if grep -q "gridpacks" {fragment_name}; then',
+                 f'  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" {fragment_name}; then',
+                 '    echo "Gridpack inside fragment is not in /cvmfs"',
+                 '    exit 1',
+                 '  fi',
+                 'fi',
+                 '',
+                 '# Rebuild CMSSW with new fragment',
+                 'scram b',
+                 'cd $ORG_PWD']
+
+        return bash
+
+    def get_fragment_name(self):
+        """
+        Return a fragment name
+        """
+        fragment_name = self.get('name_of_fragment')
+        fragment = self.get('fragment')
+        prepid = self.get('prepid')
+        if fragment and not fragment_name:
+            fragment_name = f'Configuration/GenProduction/python/{prepid}-fragment.py'
+
+        if fragment_name and not fragment_name.startswith('Configuration/GenProduction/python/'):
+            fragment_name = f'Configuration/GenProduction/python/{fragment_name}'
+
+        return fragment_name
 
     def reset_options(self):
         """
@@ -1017,29 +973,6 @@ class Request(json_base):
 
         # Add hisotry entry
         self.update_history('reset', 'option')
-
-    def build_cmsDrivers(self):
-        commands = []
-        for i in range(len(self.get_attribute('sequences'))):
-            cd = self.build_cmsDriver(i)
-            if cd:
-                commands.append(cd)
-        return commands
-
-    def update_generator_parameters(self):
-        """
-        Create a new generator paramters at the end of the list
-        """
-        gens = self.get_attribute('generator_parameters')
-        if not len(gens):
-            genInfo = generator_parameters()
-        else:
-            genInfo = generator_parameters(gens[-1])
-            genInfo.set_attribute('submission_details', self._json_base__get_submission_details())
-            genInfo.set_attribute('version', genInfo.get_attribute('version') + 1)
-
-        gens.append(genInfo.json())
-        self.set_attribute('generator_parameters', gens)
 
     def get_tier(self, i):
         s = self.get_attribute('sequences')[i]
@@ -1121,7 +1054,7 @@ class Request(json_base):
 
     def get_scram_arch(self):
         """
-        Get scram arch of the request's release
+        Get scram arch of the request release
         """
         if hasattr(self, 'scram_arch'):
             return self.scram_arch
@@ -1129,25 +1062,9 @@ class Request(json_base):
         self.scram_arch = fetch_scram_arch(self.get_attribute('cmssw_release'))
         return self.scram_arch
 
-    def make_release(self):
-        cmssw_release = self.get_attribute('cmssw_release')
-        scram_arch = self.get_scram_arch()
-        release_command = ['export SCRAM_ARCH=%s\n' % (scram_arch),
-                           'source /cvmfs/cms.cern.ch/cmsset_default.sh',
-                           'if [ -r %s/src ] ; then' % (cmssw_release),
-                           '  echo release %s already exists' % (cmssw_release),
-                           'else',
-                           '  scram p CMSSW %s' % (cmssw_release),
-                           'fi',
-                           'cd %s/src' % (cmssw_release),
-                           'eval `scram runtime -sh`',
-                           '']
-
-        return '\n'.join(release_command)
-
-    def should_run_gen_script(self):
+    def run_gen_script(self):
         """
-        Return whether GEN checking script should be run during validation of this request
+        Return whether GEN checking script should be run during validation
         """
         sequence_steps = []
         for seq in self.get_attribute('sequences'):
@@ -1157,437 +1074,328 @@ class Request(json_base):
         sequence_steps = set(sequence_steps)
         gen_script_steps = set(('GEN', 'LHE', 'FSPREMIX'))
         should_run = bool(sequence_steps & gen_script_steps)
-        prepid = self.get_attribute('prepid')
         return should_run
 
-    def build_cmsdriver(self, sequence_dict, fragment):
-        command = 'cmsDriver.py %s' % (fragment)
-        # Add pileup dataset name
-        pileup_dataset_name = self.get_attribute('pileup_dataset_name').strip()
-        seq_pileup = sequence_dict.get('pileup').strip()
-        seq_datamix = sequence_dict.get('datamix')
-        if pileup_dataset_name:
-            if (seq_pileup not in ('', 'NoPileUp')) or (seq_pileup == '' and seq_datamix == 'PreMix'):
-                sequence_dict['pileup_input'] = '"dbs:%s"' % (pileup_dataset_name)
-
-        for key, value in sequence_dict.items():
-            if not value or key in ('index', 'extra'):
-                continue
-
-            if isinstance(value, list):
-                command += ' --%s %s' % (key, ','.join(value))
-            elif key == 'nThreads' and int(value) == 1:
-                # Do not add --nThreads 1 because some old CMSSW crashes
-                continue
-            else:
-                command += ' --%s %s' % (key, value)
-
-        # Extras
-        if sequence_dict.get('extra'):
-            command += ' %s' % (sequence_dict['extra'].strip())
-
-        command += ' --no_exec --mc -n $EVENTS || exit $? ;'
-        return command
+    def get_cmsdrivers(self):
+        """
+        Return all cmsDrivers of a request, with information available in
+        sequences
+        No filein, fileout, python_filename, addMonitoring, etc.
+        """
+        sequences = [Sequence(s) for s in self.get('sequences')]
+        pileup_dataset_name = self.get('pileup_dataset_name')
+        return [s.get_cmsdriver(None, pileup_dataset_name, None) for s in sequences]
 
     def get_input_file_for_sequence(self, sequence_index):
+        """
+        Return input file name for a sequence at given index
+        """
         prepid = self.get_attribute('prepid')
-        if sequence_index == 0:
-            # First sequence can have:
-            # * output from previous request (if any)
-            # * mcdb input
-            # * input_dataset attribute
-            # * no input file
-            # Get all chained requests and look for previous request
-            input_dataset = self.get_attribute('input_dataset')
-            if input_dataset:
-                return '"dbs:%s"' % (input_dataset)
+        if sequence_index > 0:
+            # Input is output of previous sequence
+            return f'file:{prepid}_{sequence_index-1}.root'
 
-            member_of_chain = self.get_attribute('member_of_chain')
-            if member_of_chain:
-                chained_requests_db = database('chained_requests')
-                previouses = set()
-                # Iterate through all chained requests
-                for chained_request_prepid in member_of_chain:
-                    chained_request = chained_requests_db.get(chained_request_prepid)
-                    # Get place of this request
-                    index_in_chain = chained_request['chain'].index(prepid)
-                    # If there is something before this request, return that prepid
-                    if index_in_chain > 0:
-                        return 'file:%s.root' % (chained_request['chain'][index_in_chain - 1])
+        # First sequence can have (checked in following order):
+        # * output from previous request (if any)
+        # * mcdb input
+        # * input_dataset attribute
+        # * no input file
+        # Get all chained requests and look for previous request
+        parent = self.get_parent_request()
+        if parent:
+            return f'file:{parent.get("prepid")}.root'
 
-            mcdb_id = self.get_attribute('mcdb_id')
-            if mcdb_id > 0:
-                return '"lhe:%s"' % (mcdb_id)
+        mcdb_id = self.get('mcdb_id')
+        if mcdb_id > 0:
+            return f'"lhe:{mcdb_id}"'
 
-        else:
-            return 'file:%s_%s.root' % (prepid, sequence_index - 1)
+        input_dataset = self.get('input_dataset')
+        if input_dataset:
+            return f'"dbs:{input_dataset}"'
 
         return ''
 
-    def get_setup_file2(self, for_validation, automatic_validation, threads=None, configs_to_upload=None):
-        loc = locator()
-        is_dev = loc.isDev()
-        base_url = loc.baseurl()
+    def get_output_file_for_sequence(self, sequence_index):
+        """
+        Return output file name for a sequence at given index
+        """
         prepid = self.get_attribute('prepid')
-        member_of_campaign = self.get_attribute('member_of_campaign')
-        scram_arch = self.get_scram_arch().lower()
-        if scram_arch.startswith('slc7_'):
-            scram_arch_os = 'CentOS7'
-        else:
-            scram_arch_os = 'SLCern6'
+        if sequence_index != len(self.get('sequences')) - 1:
+            # Add sequence index if this is not the last index
+            return f'file:{prepid}_{sequence_index}.root'
+
+        return f'file:{prepid}.root'
+
+    def get_gen_script_command(self, automatic_validation, dev, prepid, campaign):
+        """
+        Return a list of bash commands to run GEN checking script
+        """
+        # Download the script
+        bash = ['# GEN Script begin',
+                'rm -f request_fragment_check.py',
+                'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/'
+                'master/bin/utils/request_fragment_check.py',
+                'chmod +x request_fragment_check.py']
+        command = f'./request_fragment_check.py --bypass_status --prepid {prepid}'
+        if dev:
+            # Add --dev, so script would use McM DEV
+            command += ' --dev'
+
+        if automatic_validation:
+            eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script'
+            if dev:
+                eos_path += '_dev'
+
+            eos_path += f'/{campaign}'
+            bash += [f'eos mkdir -p "{eos_path}"']
+            command += f' > {prepid}_newest.log 2>&1'
+
+        # Execute the GEN script
+        bash += [command,
+                 'GEN_ERR=$?']
+        if automatic_validation:
+            bash += [f'eos cp {eos_path}/{prepid}.log . 2>/dev/null',
+                     f'touch {prepid}.log',
+                     f'cat {prepid}_newest.log >> {prepid}.log',
+                     f'echo "" >> {prepid}.log',
+                     f'echo "" >> {prepid}.log',
+                     f'eos cp {prepid}.log {eos_path}/{prepid}.log',
+                     'echo "--BEGIN GEN Request checking script output--"',
+                     f'cat {prepid}_newest.log',
+                     'echo "--END GEN Request checking script output--"',
+                     '']
+
+        # Check exit code of script
+        bash += ['if [ $GEN_ERR -ne 0 ]; then',
+                 '  echo "GEN Checking Script exit with code $GEN_ERR - there are $GEN_ERR errors"',
+                 '  echo "Validation WILL NOT RUN"',
+                 '  echo "Please correct errors in the request and run validation again"',
+                 '  exit $GEN_ERR',
+                 'fi',
+                 # If error code is zero, continue to validation
+                 'echo "Running VALIDATION. GEN Request Checking Script returned no errors"',
+                 '# GEN Script end']
+
+        return bash
+
+    def release_gte(self, cmssw_release):
+        """
+        Return whether request's CMSSW release is greater or equal to given one
+        """
+        my_release = self.get('cmssw_release')
+        my_release = tuple(int(x) for x in re.sub('[^0-9_]', '', my_release).split('_') if x)
+        other_release = tuple(int(x) for x in re.sub('[^0-9_]', '', cmssw_release).split('_') if x)
+        # It only compares major and minor version, does not compare the build,
+        # i.e. CMSSW_X_Y_Z, it compares only X and Y parts
+        # Why? Because it was like this for ever
+        my_release = my_release[:3]
+        other_release = other_release[:3]
+        return my_release >= other_release
+
+    def get_setup_file(self, for_submission, for_test, for_validation, threads=1, configs_to_upload=None):
+        loc = locator()
+        dev = loc.isDev()
+        prepid = self.get_attribute('prepid')
+        campaign_id = self.get_attribute('member_of_campaign')
 
         bash_file = ['#!/bin/bash', '']
-
-        if not for_validation or automatic_validation:
+        if for_submission or for_validation:
             bash_file += ['#############################################################',
                           '#   This script is used by McM when it performs automatic   #',
                           '#  validation in HTCondor or submits requests to computing  #',
-                          '#                                                           #',
                           '#      !!! THIS FILE IS NOT MEANT TO BE RUN BY YOU !!!      #',
-                          '# If you want to run validation script yourself you need to #',
-                          '#     get a "Get test" script which can be retrieved by     #',
-                          '#  clicking a button next to one you just clicked. It will  #',
-                          '# say "Get test command" when you hover your mouse over it  #',
-                          '#      If you try to run this, you will have a bad time     #',
                           '#############################################################',
+                          '',
+                          'if [[ "$USER" != "pdmvserv" ]]; then',
+                          '  echo "You should not be running this"',
+                          '  exit 1',
+                          'fi',
                           '']
 
-        if not for_validation and not automatic_validation:
-            directory = installer.build_location(prepid)
-            bash_file += ['cd %s' % (directory), '']
+        if for_submission:
+            directory = '/afs/cern.ch/cms/PPD/PdmV/work/McM/submit'
+            if dev:
+                directory += '_dev'
+
+            bash_file += [f'cd {directory}',
+                          f'rm -rf {prepid}',
+                          f'mkdir {prepid}',
+                          '']
 
         sequences = self.get_attribute('sequences')
-        if for_validation and automatic_validation:
-            for index, sequence_dict in enumerate(sequences):
-                report_name = '%s_' % (prepid)
-                # If it is not the last sequence, add sequence index to then name
-                if index != len(sequences) - 1:
-                    report_name += '%s_' % (index)
+        sequence_names = [f'{prepid}_{i}_{threads}' for i in range(len(sequences))]
+        report_names = [f'{name}_report.xml' for name in sequence_names]
+        if for_validation:
+            bash_file += [f'touch {report}' for report in report_names]
+            bash_file += ['']
 
-                report_name += '%s_threads_report.xml' % (threads)
-                bash_file += ['touch %s' % (report_name)]
-
-        run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1 or threads is None)
-        self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if run_gen_script else 'NO'))
+        run_gen_script = (for_validation or for_test) and self.run_gen_script() and threads == 1
+        self.logger.info('Should %s run GEN script: %s', prepid, run_gen_script)
         if run_gen_script:
-            # Download the script
-            bash_file += ['# GEN Script begin',
-                          'rm -f request_fragment_check.py',
-                          'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py',
-                          'chmod +x request_fragment_check.py']
-            # Checking script invocation
-            request_fragment_check = './request_fragment_check.py --bypass_status --prepid %s' % (prepid)
-            if is_dev:
-                # Add --dev, so script would use McM DEV
-                request_fragment_check += ' --dev'
+            bash_file += self.get_gen_script_command(for_validation, dev, prepid, campaign_id)
+            bash_file += ['']
 
-            if automatic_validation:
-                # For automatic validation
-                if is_dev:
-                    eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script_dev/%s' % (member_of_campaign)
-                else:
-                    eos_path = '/eos/cms/store/group/pdmv/mcm_gen_checking_script/%s' % (member_of_campaign)
-
-                # Set variables to save the script output
-                bash_file += ['eos mkdir -p %s' % (eos_path)]
-
-                # Point output to EOS
-                # Save stdout and stderr
-                request_fragment_check += ' > %s_newest.log 2>&1' % (prepid)
-
-            # Execute the GEN script
-            bash_file += [request_fragment_check]
-            # Get exit code of GEN script
-            bash_file += ['GEN_ERR=$?']
-            if automatic_validation:
-                # Add latest log to all logs
-                bash_file += ['eos cp %s/%s.log . 2>/dev/null' % (eos_path, prepid),
-                              'touch %s.log' % (prepid),
-                              'cat %s_newest.log >> %s.log' % (prepid, prepid),
-                              # Write a couple of empty lines to the end of a file
-                              'echo "" >> %s.log' % (prepid),
-                              'echo "" >> %s.log' % (prepid),
-                              'eos cp %s.log %s/%s.log' % (prepid, eos_path, prepid),
-                              # Print newest log to stdout
-                              'echo "--BEGIN GEN Request checking script output--"',
-                              'cat %s_newest.log' % (prepid),
-                              'echo "--END GEN Request checking script output--"']
-
-            # Check exit code of script
-            bash_file += ['if [ $GEN_ERR -ne 0 ]; then',
-                          '  echo "GEN Checking Script returned exit code $GEN_ERR which means there are $GEN_ERR errors"',
-                          '  echo "Validation WILL NOT RUN"',
-                          '  echo "Please correct errors in the request and run validation again"',
-                          '  exit $GEN_ERR',
-                          'fi',
-                          # If error code is zero, continue to validation
-                          'echo "Running VALIDATION. GEN Request Checking Script returned no errors"',
-                          '# GEN Script end',
-                          # Empty line after GEN business
-                          '']
-
-        if automatic_validation:
-            test_file_name = '%s_%s_threads_test.sh' % (prepid, threads)
-        else:
-            test_file_name = '%s_test.sh' % (prepid)
-
-        if not for_validation:
-            bash_file += ['# Make voms proxy',
-                          'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 4',
-                          'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
-                          '']
-
-        if automatic_validation:
+        if for_validation:
             bash_file += ['# Extract and print CPU name and hypervisor name',
-                          'cpu_name=$(lscpu | grep "Model name" | head -n 1 | sed "s/Model name: *//g")',
-                          'hypervisor_name=$(lscpu | grep "Hypervisor vendor" | head -n 1 | sed "s/Hypervisor vendor: *//g")',
+                          'cpu_name=$(lscpu | grep "Model name" | head -n 1 '
+                          '| sed "s/Model name: *//g")',
+                          'hypervisor_name=$(lscpu | grep "Hypervisor vendor" | head -n 1 '
+                          '| sed "s/Hypervisor vendor: *//g")',
                           'echo "CPU_NAME=$cpu_name ($hypervisor_name)"',
                           '']
 
-        # Whether to dump cmsDriver.py to a file so it could be run using singularity
-        dump_test_to_file = (scram_arch_os == 'SLCern6')
-        if dump_test_to_file:
-            bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
-                          'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
-                          '#!/bin/bash',
-                          '']
-
         # Set up CMSSW environment
-        bash_file += self.make_release().split('\n')
+        script = ['# Setup CMSSW environment']
+        script += cmssw_setup(self.get('cmssw_release')).split('\n')
 
         # Get the fragment if need to
-        fragment_name = self.get_fragment()
-        if fragment_name:
-            fragment = self.get_attribute('fragment')
-            if fragment:
-                # Download the fragment directly from McM into a file
-                bash_file += ['# Download fragment from McM',
-                              'curl -s -k %spublic/restapi/requests/get_fragment/%s --retry 3 --create-dirs -o %s' % (base_url,
-                                                                                                                      prepid,
-                                                                                                                      fragment_name),
-                              '[ -s %s ] || exit $?;' % (fragment_name)]
-            else:
-                bash_file += ['# Retrieve fragment from github and ensure it is there']
-                bash_file += self.retrieve_fragment().strip().split('\n')
+        script += ['']
+        script += self.retrieve_fragment_command()
+        script += ['']
+        if for_validation or for_submission:
+            script += ['# Make voms proxy',
+                       'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 4',
+                       'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
+                       '']
 
-            # Check if fragment contains gridpack path and that gridpack is in cvmfs when running validation
-            if for_validation:
-                bash_file += ['',
-                              '# Check if fragment contais gridpack path ant that it is in cvmfs',
-                              'if grep -q "gridpacks" %s; then' % (fragment_name),
-                              '  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" %s; then' % (fragment_name),
-                              '    echo "Gridpack inside fragment is not in cvmfs."',
-                              '    exit -1',
-                              '  fi',
-                              'fi']
-
-        bash_file += ['scram b',
-                      'cd ../..',
-                      '']
-
-        # Add proxy for submission and automatic validation
-        if for_validation and automatic_validation:
-            # Automatic validation
-            bash_file += ['# Environment variable to voms proxy in order to fetch info from cmsweb',
-                          'export X509_USER_PROXY=$(pwd)/voms_proxy.txt',
-                          'export HOME=$(pwd)',
-                          '']
+        if for_validation:
+            script += ['export HOME=$(pwd)', '']
 
         # Events to run
-        events, explanation = self.get_event_count_for_validation(with_explanation=True)
-        bash_file += [explanation,
-                      'EVENTS=%s' % (events),
-                      '']
+        event_command = self.get_validation_event_command()
+        script += event_command
 
         # Random seed for wmLHEGS requests
-        if 'wmlhegs' in self.get_attribute('prepid').lower():
-            bash_file += ['# Random seed between 1 and 100 for externalLHEProducer',
-                          'SEED=$(($(date +%s) % 100 + 1))',
-                          '']
+        if 'wmlhegs' in prepid.lower():
+            script += ['# Random seed between 1 and 100 for externalLHEProducer',
+                       'SEED=$(($(date +%s) % 100 + 1))',
+                       '']
 
-        # Iterate over sequences and build cmsDriver.py commands
+        fragment_name = self.get_fragment_name()
+        parsing = []
         for index, sequence_dict in enumerate(sequences):
-            self.logger.info('Getting sequence %s of %s' % (index, prepid))
-            config_filename = '%s_%s_cfg.py' % (prepid, index + 1)
-            sequence_dict = copy.deepcopy(sequence_dict)
-            sequence_dict['python_filename'] = config_filename
-            if sequence_dict['customise']:
-                sequence_dict['customise'] += ','
+            sequence = Sequence(data=sequence_dict)
+            seq_update = {}
+            seq_update['filein'] = self.get_input_file_for_sequence(index)
+            seq_update['fileout'] = self.get_output_file_for_sequence(index)
+            config_name = f'{prepid}_{index}_cfg.py'
+            report_name = f'{prepid}_{index}_{threads}.xml'
+            seq_update['python_filename'] = config_name
+            # Always add Utils.addMonitoring to customise
+            seq_update['customise'] = sequence_dict['customise']
+            if seq_update['customise']:
+                seq_update['customise'] += ','
 
-            sequence_dict['customise'] += 'Configuration/DataProcessing/Utils.addMonitoring'
+            seq_update['customise'] += 'Configuration/DataProcessing/Utils.addMonitoring'
+            # If there is wmlhegs in the prepid, add random initial seed
+            seq_update['customise_commands'] = sequence_dict['customise_commands']
             if 'wmlhegs' in prepid.lower():
-                if sequence_dict['customise_commands']:
-                    sequence_dict['customise_commands'] += '\\\\n'
+                if seq_update['customise_commands']:
+                    seq_update['customise_commands'] += '; '
 
-                sequence_dict['customise_commands'] += 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${SEED})"'
+                seq_update['customise_commands'] += 'process.RandomNumberGeneratorService.externalLHEProducer.initialSeed="int(${SEED})"'
+            # If it is a root request and CMSSW release >= 9.3.0, then add
+            # events per lumi to customise_commands
+            if index == 0 and not self.get('flown_with') and self.release_gte('9_3_0'):
+                events_per_lumi = self.get_events_per_lumi(threads)
+                events_per_lumi /= self.get_efficiency()
+                events_per_lumi = int(events_per_lumi)
+                if seq_update['customise_commands']:
+                    seq_update['customise_commands'] += '; '
 
-            if for_validation and self.should_run_gen_script() and index == 0 :
-                campaign_db = database('campaigns')
-                request_campaign = campaign(campaign_db.get(self.get_attribute('member_of_campaign')))
-                # CMSSW must be >= 9.3.0
-                if request_campaign.is_release_greater_or_equal_to('CMSSW_9_3_0'):
-                    member_of_chains = self.get_attribute('member_of_chain')
-                    # Request must be first in chain
-                    first_in_chain = True
-                    if len(member_of_chains) > 0:
-                        from json_layer.chained_request import chained_request
-                        chained_request_db = database('chained_requests')
-                        chained_req = chained_request(chained_request_db.get(member_of_chains[0]))
-                        chained_req_chain = chained_req.get_attribute('chain')
-                        if len(chained_req_chain) > 0 and chained_req_chain[0] != self.get_attribute('prepid'):
-                            first_in_chain = False
+                seq_update['customise_commands'] += f'process.source.numberEventsInLuminosityBlock="cms.untracked.uint32({events_per_lumi})"'
 
-                    self.logger.info('%s is first in chain: %s', prepid, 'YES' if first_in_chain else 'NO')
-                    if first_in_chain:
-                        events_per_lumi = self.get_events_per_lumi(threads)
-                        events_per_lumi /= self.get_efficiency() # should stay nevertheless as it's in wmcontrol for now
-                        events_per_lumi /= self.get_forward_efficiency()  # this does not take its own efficiency
-                        events_per_lumi = int(events_per_lumi)
-                        if sequence_dict['customise_commands']:
-                            sequence_dict['customise_commands'] += '\\\\n'
+            # Pileup
+            pileup_dataset_name = self.get_attribute('pileup_dataset_name')
+            # Driver itself
+            driver = sequence.get_cmsdriver(fragment_name, pileup_dataset_name, seq_update)
 
-                        sequence_dict['customise_commands'] += 'process.source.numberEventsInLuminosityBlock="cms.untracked.uint32(%s)"' % (events_per_lumi)
+            driver += ' --no_exec --mc -n $EVENTS || exit $? ;'
+            script += ['#####################',
+                       f'# Sequence {index + 1} driver #',
+                       '#####################',
+                       '',
+                       driver,
+                       '']
+            if for_validation:
+                kill_timeout = self.get_safe_runtime()
+                script += ['# Sleeping killer',
+                           'export VALIDATION_RUN=1',
+                           f'KILL_TIMEOUT={int(kill_timeout)}',
+                           'PARENT_PID=$$',
+                           'echo "Starting at "$(date)',
+                           'echo "Will kill at "$(date -d "+$KILL_TIMEOUT seconds")',
+                           '(sleep $KILL_TIMEOUT && CMSRUN_PID=$(ps --ppid $PARENT_PID | grep cmsRun | awk \'{print $1}\') && echo "Killing PID $CMSRUN_PID" && kill -s SIGINT $CMSRUN_PID)&',
+                           'SLEEP_PID=$!',
+                           '']
 
-            if threads is not None:
-                sequence_dict['nThreads'] = threads
-
-            if index != len(sequences) - 1:
-                # Add sequence index if this is not the last index
-                sequence_dict['fileout'] = 'file:%s_%s.root' % (prepid, index)
-            else:
-                # Otherwise it is just <prepid>.root
-                sequence_dict['fileout'] = 'file:%s.root' % (prepid)
-
-            filein = self.get_input_file_for_sequence(index)
-            if filein:
-                sequence_dict['filein'] = filein
-
-            bash_file += ['',
-                          '# cmsDriver command',
-                          self.build_cmsdriver(sequence_dict, fragment_name)]
+            if for_test or for_validation:
+                script += ['# Run the cmsRun',
+                           f'REPORT_{index+1}={report_name}',
+                           f'cmsRun -e -j $REPORT_{index+1} {config_name} || exit $? ;',
+                           '']
 
             if for_validation:
-                report_name = '%s_' % (prepid)
-                # If it is not the last sequence, add sequence index to then name
-                if index != len(sequences) - 1:
-                    report_name += '%s_' % (index)
+                script += ['kill $SLEEP_PID > /dev/null 2>& 1',
+                           '']
 
-                if automatic_validation:
-                    report_name += '%s_threads_report.xml' % (threads)
-                else:
-                    report_name += 'report.xml'
-
-                if automatic_validation:
-                    kill_timeout = self.get_validation_max_runtime() - 1800 # 30 minutes
-                    bash_file += ['',
-                                  '# Sleeping killer',
-                                  'export VALIDATION_RUN=1',
-                                  'KILL_TIMEOUT=%s' % (int(kill_timeout)),
-                                  'PARENT_PID=$$',
-                                  'echo "Starting at "$(date)',
-                                  'echo "Will kill at "$(date -d "+$KILL_TIMEOUT seconds")',
-                                  '(sleep $KILL_TIMEOUT && cmsRunPid=$(ps --ppid $PARENT_PID | grep cmsRun | awk \'{print $1}\') && echo "Killing PID $cmsRunPid" && kill -s SIGINT $cmsRunPid)&',
-                                  'SLEEP_PID=$!']
-
-                bash_file += ['',
-                              '# Run generated config',
-                              'REPORT_NAME=%s' % (report_name),
-                              '# Run the cmsRun',
-                              'cmsRun -e -j $REPORT_NAME %s || exit $? ;' % (config_filename),
-                              '']
-
-                if automatic_validation:
-                    bash_file += ['kill $SLEEP_PID > /dev/null 2>& 1',
-                                  '']
-
+            if for_test or for_validation:
                 # Parse report
-                bash_file += [# '# Report %s' % (report_name),
-                              # 'cat $REPORT_NAME',
-                              # '',
-                              '# Parse values from %s report' % (report_name),
-                              'processedEvents=$(grep -Po "(?<=<Metric Name=\\"NumberEvents\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
-                              'producedEvents=$(grep -Po "(?<=<TotalEvents>)(\\d*)(?=</TotalEvents>)" $REPORT_NAME | tail -n 1)',
-                              'threads=$(grep -Po "(?<=<Metric Name=\\"NumberOfThreads\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
-                              'peakValueRss=$(grep -Po "(?<=<Metric Name=\\"PeakValueRss\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
-                              'peakValueVsize=$(grep -Po "(?<=<Metric Name=\\"PeakValueVsize\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
-                              'totalSize=$(grep -Po "(?<=<Metric Name=\\"Timing-tstoragefile-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
-                              'totalSizeAlt=$(grep -Po "(?<=<Metric Name=\\"Timing-file-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
-                              'totalJobTime=$(grep -Po "(?<=<Metric Name=\\"TotalJobTime\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
-                              'totalJobCPU=$(grep -Po "(?<=<Metric Name=\\"TotalJobCPU\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
-                              'eventThroughput=$(grep -Po "(?<=<Metric Name=\\"EventThroughput\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
-                              'avgEventTime=$(grep -Po "(?<=<Metric Name=\\"AvgEventTime\\" Value=\\")(.*)(?=\\"/>)" $REPORT_NAME | tail -n 1)',
-                              'if [ -z "$threads" ]; then',
-                              '  echo "Could not find NumberOfThreads in report, defaulting to %s"' % (threads),
-                              '  threads=%s' % (threads),
-                              'fi',
-                              'if [ -z "$eventThroughput" ]; then',
-                              '  eventThroughput=$(bc -l <<< "scale=4; 1 / ($avgEventTime / $threads)")',
-                              'fi',
-                              'if [ -z "$totalSize" ]; then',
-                              '  totalSize=$totalSizeAlt',
-                              'fi',
-                              'if [ -z "$processedEvents" ]; then',
-                              '  processedEvents=$EVENTS',
-                              'fi',
-                              'echo "Validation report of %s sequence %s/%s"' % (prepid, index + 1, len(sequences)),
-                              'echo "Processed events: $processedEvents"',
-                              'echo "Produced events: $producedEvents"',
-                              'echo "Threads: $threads"',
-                              'echo "Peak value RSS: $peakValueRss MB"',
-                              'echo "Peak value Vsize: $peakValueVsize MB"',
-                              'echo "Total size: $totalSize MB"',
-                              'echo "Total job time: $totalJobTime s"',
-                              'echo "Total CPU time: $totalJobCPU s"',
-                              'echo "Event throughput: $eventThroughput"',
-                              'echo "CPU efficiency: "$(bc -l <<< "scale=2; ($totalJobCPU * 100) / ($threads * $totalJobTime)")" %"',
-                              'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $producedEvents)")" kB"',
-                              'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"',
-                              'echo "Filter efficiency percent: "$(bc -l <<< "scale=8; ($producedEvents * 100) / $processedEvents")" %"',
-                              'echo "Filter efficiency fraction: "$(bc -l <<< "scale=10; ($producedEvents) / $processedEvents")'
-                             ]
+                parsing += ['#####################',
+                            f'# Sequence {index+1} report #',
+                            '#####################',
+                            '',
+                            f'processedEvents=$(grep -Po "(?<=<Metric Name=\\"NumberEvents\\" Value=\\")(.*)(?=\\"/>)" $REPORT_{index+1} | tail -n 1)',
+                            f'producedEvents=$(grep -Po "(?<=<TotalEvents>)(\\d*)(?=</TotalEvents>)" $REPORT_{index+1} | tail -n 1)',
+                            f'threads=$(grep -Po "(?<=<Metric Name=\\"NumberOfThreads\\" Value=\\")(.*)(?=\\"/>)" $REPORT_{index+1} | tail -n 1)',
+                            f'peakValueRss=$(grep -Po "(?<=<Metric Name=\\"PeakValueRss\\" Value=\\")(.*)(?=\\"/>)" $REPORT_{index+1} | tail -n 1)',
+                            f'peakValueVsize=$(grep -Po "(?<=<Metric Name=\\"PeakValueVsize\\" Value=\\")(.*)(?=\\"/>)" $REPORT_{index+1} | tail -n 1)',
+                            f'totalSize=$(grep -Po "(?<=<Metric Name=\\"Timing-tstoragefile-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" $REPORT_{index+1} | tail -n 1)',
+                            f'totalSizeAlt=$(grep -Po "(?<=<Metric Name=\\"Timing-file-write-totalMegabytes\\" Value=\\")(.*)(?=\\"/>)" $REPORT_{index+1} | tail -n 1)',
+                            f'totalJobTime=$(grep -Po "(?<=<Metric Name=\\"TotalJobTime\\" Value=\\")(.*)(?=\\"/>)" $REPORT_{index+1} | tail -n 1)',
+                            f'totalJobCPU=$(grep -Po "(?<=<Metric Name=\\"TotalJobCPU\\" Value=\\")(.*)(?=\\"/>)" $REPORT_{index+1} | tail -n 1)',
+                            f'eventThroughput=$(grep -Po "(?<=<Metric Name=\\"EventThroughput\\" Value=\\")(.*)(?=\\"/>)" $REPORT_{index+1} | tail -n 1)',
+                            f'avgEventTime=$(grep -Po "(?<=<Metric Name=\\"AvgEventTime\\" Value=\\")(.*)(?=\\"/>)" $REPORT_{index+1} | tail -n 1)',
+                            'if [ -z "$threads" ]; then',
+                            f'  echo "Could not find NumberOfThreads in report, defaulting to {threads}"',
+                            f'  threads={threads}',
+                            'fi',
+                            'if [ -z "$eventThroughput" ]; then',
+                            '  eventThroughput=$(bc -l <<< "scale=4; 1 / ($avgEventTime / $threads)")',
+                            'fi',
+                            'if [ -z "$totalSize" ]; then',
+                            '  totalSize=$totalSizeAlt',
+                            'fi',
+                            'if [ -z "$processedEvents" ]; then',
+                            '  processedEvents=$EVENTS',
+                            'fi',
+                            f'echo "Validation report of {prepid} sequence {index+1}/{len(sequences)}"',
+                            'echo "Processed events: $processedEvents"',
+                            'echo "Produced events: $producedEvents"',
+                            'echo "Threads: $threads"',
+                            'echo "Peak value RSS: $peakValueRss MB"',
+                            'echo "Peak value Vsize: $peakValueVsize MB"',
+                            'echo "Total size: $totalSize MB"',
+                            'echo "Total job time: $totalJobTime s"',
+                            'echo "Total CPU time: $totalJobCPU s"',
+                            'echo "Event throughput: $eventThroughput"',
+                            'echo "CPU efficiency: "$(bc -l <<< "scale=2; ($totalJobCPU * 100) / ($threads * $totalJobTime)")" %"',
+                            'echo "Size per event: "$(bc -l <<< "scale=4; ($totalSize * 1024 / $producedEvents)")" kB"',
+                            'echo "Time per event: "$(bc -l <<< "scale=4; (1 / $eventThroughput)")" s"',
+                            'echo "Filter efficiency percent: "$(bc -l <<< "scale=8; ($producedEvents * 100) / $processedEvents")" %"',
+                            'echo "Filter efficiency fraction: "$(bc -l <<< "scale=10; ($producedEvents) / $processedEvents")',
+                            ''
+                           ]
 
-        if not for_validation and configs_to_upload:
-            test_string = '--wmtest' if is_dev else ''
-            bash_file += ['\n\n# Upload configs',
-                          'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
-                          'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
-                          'if [[ $(head -n 1 `which cmsDriver.py`) =~ "python3" ]]; then',
-                          '  python3 `which wmupload.py` %s -u pdmvserv -g ppd %s || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
-                          'else',
-                          '  wmupload.py %s -u pdmvserv -g ppd %s || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
-                          'fi',
-                         ]
+        script += parsing
+        scram_arch = self.get_scram_arch().lower()
+        if scram_arch.startswith('slc6_'):
+            script = run_commands_in_singularity(commands=script,
+                                                 os_name='SLCern6',
+                                                 mount_eos=for_validation,
+                                                 mount_home=not for_submission)
 
-        if dump_test_to_file:
-            bash_file += ['',
-                          '# End of %s file' % (test_file_name),
-                          'EndOfTestFile',
-                          '',
-                          '# Make file executable',
-                          'chmod +x %s' % (test_file_name),
-                          '']
-
-        if scram_arch_os == 'SLCern6':
-            if for_validation:
-                # Validation will run on CC7 machines (HTCondor, lxplus)
-                # If it's CC7, just run the script normally
-                # If it's SLC6, run it in slc6 singularity container
-                bash_file += ['# Run in SLC6 container',
-                              '# Mount afs, eos, cvmfs',
-                              '# Mount /etc/grid-security for xrootd',
-                              'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/slc6:amd64 $(echo $(pwd)/%s)' % (test_file_name)]
-            else:
-                # Config generation for production run on CC7 machine - vocms0481
-                # If it's CC7, just run the script normally
-                # If it's SLC6, run it in slc6 singularity container
-                bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/slc6:amd64 $(echo $(pwd)/%s)' % (test_file_name)]
-
-        # Empty line at the end of the file
-        bash_file += ['']
-        # self.logger.info('bash_file:\n%s' % ('\n'.join(bash_file)))
-        return '\n'.join(bash_file)
+        return '\n'.join(bash_file + script)
 
     def change_priority(self, priority):
         """
@@ -1690,18 +1498,6 @@ class Request(json_base):
 
         actors = list(set(actors))
         return actors
-
-    def test_failure(self, message, what='Submission', rewind=False, with_notification=True):
-        if rewind:
-            self.set_status(0)
-            self.approve(0)
-
-        self.update_history({'action': 'failed'})
-        if with_notification:
-            subject = '%s failed for request %s' % (what, self.get_attribute('prepid'))
-            self.notify(subject, message)
-
-        self.reload()
 
     def get_stats(self, forced=False):
         return
@@ -2159,18 +1955,6 @@ class Request(json_base):
             not_good.update({'message': " there are no requests in request manager. Please invsetigate!"})
             return not_good
 
-    def parse_fragment(self):
-        if self.get_attribute('fragment'):
-            for line in self.get_attribute('fragment').split('\n'):
-                yield line
-        elif self.get_attribute('name_of_fragment') and self.get_attribute('fragment_tag'):
-            # for line in os.popen('curl http://cmssw.cvs.cern.ch/cgi-bin/cmssw.cgi/CMSSW/%s?revision=%s'%(self.get_attribute('name_of_fragment'),self.get_attribute('fragment_tag') )).read().split('\n'):
-            for line in os.popen(self.retrieve_fragment(get=False)).read().split('\n'):
-                yield line
-        else:
-            for line in []:
-                yield line
-
     def textified(self):
         l_type = locator()
         view_in_this_order = ['pwg',
@@ -2199,132 +1983,58 @@ class Request(json_base):
         text += '%srequests?prepid=%s' % (l_type.baseurl(), self.get_attribute('prepid'))
         return text
 
-    def target_for_test(self):
-        """
-        Return number of max events to run in validation
-        """
-        test_target = settings.get_value('test_target')
-        total_events = self.get_attribute('total_events')
-        return max(0, min(test_target, total_events))
-
-    def get_efficiency_error(self, relative=True):
-        if not self.get_attribute('generator_parameters'):
-            return 0.
-        match = float(self.get_attribute('generator_parameters')[-1]['match_efficiency_error'])
-        filter_eff = float(self.get_attribute('generator_parameters')[-1]['filter_efficiency_error'])
-        error = sqrt(match * match + filter_eff * filter_eff)
-
-        if relative:
-            eff = self.get_efficiency()
-            if eff:
-                return error / eff
-            else:
-                return 0.
-        else:
-            return error
-
     def get_efficiency(self):
-        # use the trick of input_dataset ?
-        if self.get_attribute('generator_parameters'):
-            match = float(self.get_attribute('generator_parameters')[-1]['match_efficiency'])
-            filter_eff = float(self.get_attribute('generator_parameters')[-1]['filter_efficiency'])
-            return match * filter_eff
-        return 1.
+        generator_parameters = self.get('generator_parameters')
+        if not generator_parameters:
+            return 1.0
 
-    def get_forward_efficiency(self, achain=None):
-        chains = self.get_attribute('member_of_chain')
-        myid = self.get_attribute('prepid')
-        crdb = database('chained_requests')
-        rdb = database('requests')
-        max_forward_eff = 0.
-        for cr in chains:
-            if achain and cr != achain:
-                continue
-            forward_eff = None
-            mcm_cr = crdb.get(cr)
-            chain = mcm_cr['chain']
-            chain = chain[chain.index(myid):]
-            for r in chain:
-                if r == myid:
-                    continue
-                mcm_r = request(rdb.get(r))
-                an_eff = mcm_r.get_efficiency()
-                if an_eff > 0:
-                    if forward_eff:
-                        forward_eff *= an_eff
-                    else:
-                        forward_eff = an_eff
-            if forward_eff and forward_eff > max_forward_eff:
-                max_forward_eff = forward_eff
-        if bool(max_forward_eff):  # to check if its not 0. as it might trigger
-            return max_forward_eff  # division by 0 in request_to_wma
-        else:
-            return 1
+        match_eff = float(generator_parameters.get('match_efficiency'))
+        filter_eff = float(generator_parameters.get('filter_efficiency'))
+        return match_eff * filter_eff
 
-    def get_n_unfold_efficiency(self, target):
-        if self.get_attribute('generator_parameters'):
-            eff = self.get_efficiency()
-            if eff != 0:
-                target /= eff
-        return int(target)
-
-    def get_validation_max_runtime(self):
+    def get_safe_runtime(self):
         """
-        Return maximum number of seconds that job could run for, i.e. validation duration
+        Return maximum number of seconds that job could run with safety margin
         """
-        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
-        max_runtime = settings.get_value('batch_timeout') * 60. * multiplier
-        return max_runtime
+        runtime = Settings.get('validation_runtime')
+        time_margin = Settings.get('validation_margin')
+        multiplier = self.get('validation').get('time_multiplier', 1)
+        runtime = (runtime * (1.0 - time_margin)) * multiplier
+        return int(runtime)
 
-    def get_event_count_for_validation(self, with_explanation=False):
-        # Efficiency
+    def get_validation_event_command(self):
+        """
+        Return number a list of bash commands that set $EVENTS variable to
+        number of events that validation should run
+        """
+        # Settings
+        total_events = self.get('total_events')
         efficiency = self.get_efficiency()
-        # Max number of events to run
-        max_events = self.target_for_test()
-        # Max events taking efficiency in consideration
-        max_events_with_eff = max_events / efficiency
-        # Max number of seconds that validation can run for
-        max_runtime = self.get_validation_max_runtime()
-        # "Safe" margin of validation that will not be used for actual running
-        # but as a buffer in case user given time per event is slightly off
-        margin = settings.get_value('test_timeout_fraction')
-        # Time per event
-        time_per_event = self.get_attribute('time_event')
-        # Threads in sequences
-        sequence_threads = [int(sequence.get('nThreads', 1)) for sequence in self.get_attribute('sequences')]
-        while len(sequence_threads) < len(time_per_event):
-            time_per_event = time_per_event[:-1]
+        max_events = Settings.get('validation_max_events')
+        runtime = self.get_safe_runtime()
+        # Events with efficiency
+        events_with_eff = int(max_events / efficiency)
+        # Time per event sum for single core
+        time_per_event_sum = 0
+        for time_per_event, sequence in zip(self.get('time_event'), self.get('sequences')):
+            time_per_event_sum += int(sequence.get('nThreads', 1)) * time_per_event
 
-        # Time per event for single thread
-        single_thread_time_per_event = [time_per_event[i] * sequence_threads[i] for i in range(len(time_per_event))]
-        # Sum of single thread time per events
-        time_per_event_sum = sum(single_thread_time_per_event)
-        # Max runtime with applied margin
-        max_runtime_with_margin = max_runtime * (1.0 - margin)
-        # How many events can be produced in given "safe" time
-        events = int(max_runtime_with_margin / time_per_event_sum)
-        # Try to produce at least one event
-        clamped_events = int(max(1, min(events, max_events_with_eff)))
-        # Estimate produced events
+        # Events that can fit into safe runtime
+        events = int(runtime / time_per_event_sum)
+        clamped_events = int(max(1, min(events, events_with_eff, total_events)))
         estimate_produced = int(clamped_events * efficiency)
-
-        self.logger.info('Events to run for %s - %s', self.get_attribute('prepid'), clamped_events)
-        if not with_explanation:
-            return clamped_events
-        else:
-            explanation = ['# Maximum validation duration: %ds' % (max_runtime),
-                           '# Margin for validation duration: %d%%' % (margin * 100),
-                           '# Validation duration with margin: %d * (1 - %.2f) = %ds' % (max_runtime, margin, max_runtime_with_margin),
-                           '# Time per event for each sequence: %s' % (', '.join(['%.4fs' % (x) for x in time_per_event])),
-                           '# Threads for each sequence: %s' % (', '.join(['%s' % (x) for x in sequence_threads])),
-                           '# Time per event for single thread for each sequence: %s' % (', '.join(['%s * %.4fs = %.4fs' % (sequence_threads[i], time_per_event[i], single_thread_time_per_event[i]) for i in range(len(single_thread_time_per_event))])),
-                           '# Which adds up to %.4fs per event' % (time_per_event_sum),
-                           '# Single core events that fit in validation duration: %ds / %.4fs = %d' % (max_runtime_with_margin, time_per_event_sum, events),
-                           '# Produced events limit in McM is %d' % (max_events),
-                           '# According to %.4f efficiency, validation should run %d / %.4f = %d events to reach the limit of %s' % (efficiency, max_events, efficiency, max_events_with_eff, max_events),
-                           '# Take the minimum of %d and %d, but more than 0 -> %d' % (events, max_events_with_eff, clamped_events),
-                           '# It is estimated that this validation will produce: %d * %.4f = %d events' % (clamped_events, efficiency, estimate_produced)]
-            return clamped_events, '\n'.join(explanation)
+        prepid = self.get('prepid')
+        self.logger.info('Events to run for %s - %s', prepid, clamped_events)
+        cmd = [f'# Duration with safety margin: {runtime}s',
+               f'# Efficiency: {efficiency:.4f}',
+               f'# Events/efficiency: {max_events} / {efficiency:.4f} = {events_with_eff}',
+               f'# Time per event sum for single core: {time_per_event_sum:.2f}s',
+               f'# Events that fit: {runtime}s / {time_per_event_sum:.2f}s/evt = {events} events',
+               f'# Events to run: {clamped_events} events',
+               f'# Estimated output: {estimate_produced} events',
+               f'EVENTS={clamped_events}',
+               '']
+        return cmd
 
     def unique_string(self, step_i):
         # create a string that supposedly uniquely identifies the request configuration for step
@@ -2348,98 +2058,6 @@ class Request(json_base):
         # create a hash value that supposedly uniquely defines the configuration
         hash_id = hashlib.sha224(uniqueString).hexdigest()
         return hash_id
-
-    @staticmethod
-    # another copy/paste
-    def put_together(nc, fl, new_req):
-        # copy the sequences of the flow
-        sequences = []
-        for i, step in enumerate(nc.get_attribute('sequences')):
-            flag = False  # states that a sequence has been found
-            for name in step:
-                if name in fl.get_attribute('request_parameters')['sequences'][i]:
-                    # if a seq name is defined, store that in the request
-                    sequences.append(copy.deepcopy(step[name]))
-
-                    # if the flow contains any parameters for the sequence,
-                    # then override the default ones inherited from the campaign
-                    if fl.get_attribute('request_parameters')['sequences'][i][name]:
-                        for key in fl.get_attribute('request_parameters')['sequences'][i][name]:
-                            sequences[-1][key] = fl.get_attribute('request_parameters')['sequences'][i][name][key]
-                            # to avoid multiple sequence selection
-                            # continue to the next step (if a valid seq is found)
-                    flag = True
-                    break
-
-            # if no sequence has been found, use the default
-            if not flag:
-                sequences.append(copy.deepcopy(step['default']))
-
-        new_req.set_attribute('sequences', sequences)
-        # setup the keep output parameter
-        keep = []
-        for s in sequences:
-            keep.append(False)
-
-        if not nc.get_attribute('no_output'):
-            keep[-1] = True
-
-        new_req.set_attribute('keep_output', keep)
-        # override request's parameters
-        for key in fl.get_attribute('request_parameters'):
-            if key == 'sequences':
-                continue
-            elif key == 'process_string':
-                pass
-            else:
-                if key in new_req.json():
-                    new_req.set_attribute(key, fl.get_attribute('request_parameters')[key])
-
-    @staticmethod
-    def transfer(current_request, next_request):
-        to_be_transferred = ['dataset_name', 'generators', 'process_string', 'mcdb_id', 'notes', 'extension']
-        for key in to_be_transferred:
-            next_request.set_attribute(key, current_request.get_attribute(key))
-
-    def get_parent_requests(self, chained_requests):
-        """
-        Return a list of requests that are considered as parents to the current
-        request
-        """
-        if not chained_requests:
-            return []
-
-        chained_request = chained_requests[0]
-        prepid = self.get_attribute('prepid')
-        chain = chained_request['chain']
-        if prepid not in chain:
-            raise Exception('%s is not a member of %s' % (prepid, chained_request['prepid']))
-
-        request_db = Database('requests')
-        return request_db.bulk_get(chain[:chain.index(prepid)])
-
-    def get_derived_requests(self, chained_requests):
-        """
-        Go through all chains that request is in and fetch requests that have
-        current request as a parent
-        Return a dictionary where key is chained request prepid and value is a
-        list of request dictionaries
-        """
-        results = {}
-        prepid = self.get_attribute('prepid')
-        for chained_request in chained_requests:
-            chain = chained_request['chain']
-            if prepid not in chain:
-                raise Exception('%s is not a member of %s' % (prepid, chained_request['prepid']))
-
-            results[chained_request['prepid']] = chain[chain.index(prepid) + 1:]
-
-        request_db = Database('requests')
-        # Flatten list of lists and bulk fetch the requests
-        requests = request_db.bulk_get(set(item for chain in results.values() for item in chain))
-        requests = {r['prepid']: r for r in requests}
-        results = {key: [requests[c] for c in chain] for key, chain in results.items()}
-        return results
 
     def reset(self, soft=True):
         """
@@ -2690,29 +2308,21 @@ class Request(json_base):
             for i in to_release:
                 locker.release(i)
 
-    def get_events_per_lumi(self, num_cores):
-        cdb = database('campaigns')
-        camp = campaign(cdb.get(self.get_attribute("member_of_campaign")))
-        evts_per_lumi = camp.get_attribute("events_per_lumi")
-        if num_cores and num_cores > 1:
-            if 'multicore' in evts_per_lumi:  # multicore value set for campaign
-                return evts_per_lumi["multicore"]
-            else:  # in case someone removed multicore from dict
-                return int(num_cores) * int(evts_per_lumi["singlecore"])
-        else:  # TO-DO what if singlecore is deleted from dict?
-            return evts_per_lumi["singlecore"]
+    def get_events_per_lumi(self, cores):
+        """
+        Return number of events per lumi for given request
+        """
+        events_per_lumi = self.get('events_per_lumi')
+        if events_per_lumi != 0:
+            return events_per_lumi
 
-    def get_core_num(self):
-        self.logger.info("calling get_core_num for:%s" % (self.get_attribute('prepid')))
-        num = 1
-        for seq in self.get_attribute('sequences'):
-            local_num = 0
-            if 'nThreads' in seq:
-                local_num = seq['nThreads']
-            if local_num > num:
-                num = local_num
+        campaign = Campaign.fetch(self.get('member_of_campaign'))
+        events_per_lumi = campaign.get('events_per_lumi')
+        if cores > 1 and 'multicore' in events_per_lumi:
+            # Multicore value set for campaign
+            return events_per_lumi['multicore']
 
-        return int(num)
+        return cores * events_per_lumi['singlecore']
 
     def get_list_of_steps(self, in_string):
         if isinstance(in_string, basestring):

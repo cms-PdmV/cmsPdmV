@@ -442,7 +442,7 @@ class GetRESTResource(RESTResource):
         """
         Retrieve the object for given id
         """
-        obj = self.object_class.get_database.get(prepid)
+        obj = self.object_class.get_database().get(prepid)
         if not obj:
             raise NotFoundException(prepid)
 

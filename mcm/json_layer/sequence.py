@@ -45,7 +45,7 @@ class Sequence(json_base):
                           "step": [],
                           "triggerResultsProcess": ""}
 
-    def get_cmsdriver(self, fragmant_name, update_dict):
+    def get_cmsdriver(self, fragment_name, pileup_dataset_name, update_dict):
         """
         Build a cmsDriver command
         """
@@ -54,10 +54,18 @@ class Sequence(json_base):
         arguments['mc'] = True
         # Always --noexec
         arguments['no_exec'] = True
-        arguments.update(update_dict)
+        if update_dict:
+            arguments.update(update_dict)
+
         command = 'cmsDriver.py'
-        if fragmant_name:
-            command += ' %s' % (fragmant_name)
+        if fragment_name:
+            command += f' {fragment_name}'
+
+        pileup = arguments.get('pileup')
+        datamix = arguments.get('datamix')
+        if pileup_dataset_name:
+            if (pileup and pileup != 'NoPileUp') or (not pileup and datamix == 'PreMix'):
+                arguments['pileup_input'] = f'dbs:{pileup_dataset_name}'
 
         for key in sorted(arguments.keys()):
             if key in ('index', 'extra'):
@@ -82,7 +90,6 @@ class Sequence(json_base):
             elif not isinstance(value, str):
                 value = str(value)
 
-            value = shell_quote(value) if value else value
             command += (' --%s=%s' % (key, value)).rstrip(' =')
 
         extra_value = arguments.get('extra')
