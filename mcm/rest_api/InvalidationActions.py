@@ -39,10 +39,6 @@ class Announcer():
             text += '\nas a consequence of requests being reset.\n'
 
             to_who = [settings.get_value('service_account')]
-            if self.l_type.isDev():
-                to_who.append(settings.get_value('hypernews_test'))
-            else:
-                to_who.append(settings.get_value('dataops_announce'))
 
             try:
                 elem = (r_to_be_rejected + ds_to_be_invalidated)[0]

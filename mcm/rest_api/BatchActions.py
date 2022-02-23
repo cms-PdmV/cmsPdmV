@@ -289,11 +289,6 @@ class NotifyBatch(RESTResource):
         message = message_notes
         to_who = [settings.get_value('service_account')]
         l_type = locator()
-        if l_type.isDev():
-            to_who.append(settings.get_value('hypernews_test'))
-        else:
-            to_who.append(settings.get_value('dataops_announce'))
-
         single_batch = batch(self.bdb.get(batch_id))
         subject = single_batch.get_subject('[Notification]')
         current_message_id = single_batch.get_attribute('message_id')

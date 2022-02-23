@@ -393,9 +393,6 @@ class json_base:
         if service:
             # let the service know at any time
             dest.append(settings.get_value('service_account'))
-        if HN:
-            # back bone HN notification ?
-            dest.append(settings.get_value('hypernews_test'))
 
         # be sure to not have duplicates
         dest = set(dest)

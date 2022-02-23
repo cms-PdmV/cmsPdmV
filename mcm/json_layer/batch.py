@@ -146,11 +146,6 @@ class batch(json_base):
 
 
         to_who = [settings.get_value('service_account')]
-        if l_type.isDev():
-            to_who.append(settings.get_value('hypernews_test'))
-        else:
-            to_who.append(settings.get_value('dataops_announce'))
-
         returned_id = self.notify(
             subject,
             message,
