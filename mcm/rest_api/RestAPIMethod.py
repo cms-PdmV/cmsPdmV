@@ -295,6 +295,8 @@ class CreateRESTResource(RESTResource):
                     'prepid': prepid,
                     'message': 'Object with prepid "%s" already exists' % (prepid)}
 
+        data.pop('_rev')
+        data.pop('history')
         obj = object_class(data)
         self.logger.info('Creating new object "%s"', prepid)
         # Validate

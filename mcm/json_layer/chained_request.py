@@ -306,7 +306,7 @@ class ChainedRequest(json_base):
         statistics_fraction = Settings.get('statistics_fraction')
         current_completed_events = current_request.get('completed_events')
         current_total_events = current_request.get('total_events')
-        current_keeps_output = current_request.keeps_output()
+        current_keeps_output = any(current_request.get('keep_output'))
         min_events = int(current_total_events * statistics_fraction)
         if current_completed_events <= min_events and current_keeps_output:
             raise Exception('%s keeps output, but has only %s completed events, at least '

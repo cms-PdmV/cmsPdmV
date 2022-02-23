@@ -146,33 +146,26 @@
 
     <div class="custom-footer">
       <div>
-        <input type="button"
-                class="btn btn-primary"
-                ng-click="openCreateItemModal(database)"
-                value="Create new campaign"
-                ng-show="user.is_production_manager"/>
-        <div>
-          Multiple selection buttons
-          <a ng-click="loadShortView('selected')" title="Load short view for selected requests" ng-href="#">
-            <i class="glyphicon glyphicon-eye-open"></i>
-          </a>
-          <a ng-click="rewindToRoot('selected')" title="Rewind chained request to root" ng-show="user.is_production_manager" ng-href="#">
-            <i class="glyphicon glyphicon-fast-backward"></i>
-          </a>
-          <a ng-click="rewind('selected')"  title="Rewind selected chained requests" ng-show="user.is_production_manager" ng-href="#">
-            <i class="glyphicon glyphicon-backward"></i>
-          </a>
-          <a ng-click="flow('selected')" title="Flow selected requests" ng-show="user.is_production_manager" ng-href="#">
-            <i class="glyphicon glyphicon-forward"></i>
-          </a>
-          <a ng-click="openReserveChainModal('selected')" title="Reserve selected chains" ng-show="user.is_production_manager" ng-href="#">
-            <i class="glyphicon glyphicon-align-right"></i>
-          </a>
-          <a ng-click="inspect('selected')" title="Inspect selected chained requests" ng-show="user.is_production_manager" ng-href="#">
-            <i class="glyphicon glyphicon-screenshot"></i>
-          </a>
-          <input type="checkbox" ng-click="toggleAll()" title="Toggle select all" ng-checked="result.length == selectedItems.length">
-        </div>
+        Multiple selection buttons
+        <a ng-click="loadShortView('selected')" title="Load short view for selected requests" ng-href="#">
+          <i class="glyphicon glyphicon-eye-open"></i>
+        </a>
+        <a ng-click="rewindToRoot('selected')" title="Rewind chained request to root" ng-show="user.is_production_manager" ng-href="#">
+          <i class="glyphicon glyphicon-fast-backward"></i>
+        </a>
+        <a ng-click="rewind('selected')"  title="Rewind selected chained requests" ng-show="user.is_production_manager" ng-href="#">
+          <i class="glyphicon glyphicon-backward"></i>
+        </a>
+        <a ng-click="flow('selected')" title="Flow selected requests" ng-show="user.is_production_manager" ng-href="#">
+          <i class="glyphicon glyphicon-forward"></i>
+        </a>
+        <a ng-click="openReserveChainModal('selected')" title="Reserve selected chains" ng-show="user.is_production_manager" ng-href="#">
+          <i class="glyphicon glyphicon-align-right"></i>
+        </a>
+        <a ng-click="inspect('selected')" title="Inspect selected chained requests" ng-show="user.is_production_manager" ng-href="#">
+          <i class="glyphicon glyphicon-screenshot"></i>
+        </a>
+        <input type="checkbox" ng-click="toggleAll()" title="Toggle select all" ng-checked="result.length == selectedItems.length">
       </div>
     </div>
 

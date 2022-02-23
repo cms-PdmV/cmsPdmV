@@ -200,7 +200,7 @@ class Request(json_base):
             cores = seq.get('nThreads')
             cores = int(cores) if cores else 1
             memory_per_core = memory / cores
-            if not (500 <= memory_per_core <= 4000):
+            if not 500 <= memory_per_core <= 4000:
                 raise Exception('Allowed memory 500-4000MB/core, found %.1fMB' % (memory_per_core))
 
         # Number of time per event values:
@@ -214,12 +214,6 @@ class Request(json_base):
         # Number of keep output values:
         if len(self.get_attribute('keep_output')) != len(sequences):
             raise Exception('Number of keep output values is different from number of sequences')
-
-    def keeps_output(self):
-        """
-        Return whether any sequence of request keeps output
-        """
-        return bool(list(filter(None, self.get('keep_output'))))
 
     def approve(self):
         """
@@ -376,14 +370,11 @@ class Request(json_base):
         self.set_attribute('status', status)
         # When status is changed, udpdate it in all chained requests
         chained_requests = self.get_chained_requests()
-
         # No need to update to same satus
         chained_requests = [c for c in chained_requests if c['last_status'] != status]
-
         # Don't care where request is not current step
         prepid = self.get_attribute('prepid')
         chained_requests = [c for c in chained_requests if c['step'] == c['chain'].index(prepid)]
-
         if not chained_requests:
             return
 
@@ -399,7 +390,7 @@ class Request(json_base):
         """
         approval = self.get_attribute('approval')
         status = self.get_attribute('status')
-        return '%s-%s' % (approval, status)
+        return f'{approval}-{status}'
 
     def move_to_validating(self, for_chain=False):
         """
@@ -519,7 +510,7 @@ class Request(json_base):
 
         bypass_list = Settings.get('validation_bypass')
         if prepid in bypass_list:
-            self.logger.info('Request %s is in validation bypass list and is being moved to approved status',
+            self.logger.info('Request %s is in validation bypass list and is moved to approved',
                              prepid)
             self.move_to_approved()
             return
@@ -580,7 +571,7 @@ class Request(json_base):
         campaign, same processing string and datatier
         Ignore none-new requests
         """
-        request_db = Database('requests')
+        request_db = self.get_database()
         dataset_name = self.get_attribute('dataset_name')
         campaign = self.get_attribute('member_of_campaign')
         query = {'dataset_name': dataset_name, 'member_of_campaign': campaign}
@@ -716,7 +707,7 @@ class Request(json_base):
         if update_total_events and total_events > events_after_filter:
             self.set_attribute('total_events', events_after_filter)
 
-    def check_status_of_parents(self, chained_requests):
+    def check_status_of_parents(self):
         """
         Go through all chains that request is in and check if requests that are
         leading to this request are in greater or equal status
@@ -1955,38 +1946,17 @@ class Request(json_base):
             not_good.update({'message': " there are no requests in request manager. Please invsetigate!"})
             return not_good
 
-    def textified(self):
-        l_type = locator()
-        view_in_this_order = ['pwg',
-                              'prepid',
-                              'dataset_name',
-                              'mcdb_id',
-                              'notes',
-                              'total_events',
-                              'validation',
-                              'approval',
-                              'status',
-                              'input_dataset',
-                              'member_of_chain',
-                              'reqmgr_name',
-                              'completed_events']
-
-        text = ''
-        for view in view_in_this_order:
-            value = self.get_attribute(view)
-            if value:
-                if isinstance(value, list) or isinstance(value, dict):
-                    text += '%s: %s\n' % (view, dumps(value, indent=4))
-                else:
-                    text += '%s: %s\n' % (view, self.get_attribute(view))
-        text += '\n'
-        text += '%srequests?prepid=%s' % (l_type.baseurl(), self.get_attribute('prepid'))
-        return text
-
     def get_efficiency(self):
+        """
+        Get filter and match efficiency of request
+        If there are no generator parameters, efficiency is 1.0
+        """
         generator_parameters = self.get('generator_parameters')
         if not generator_parameters:
             return 1.0
+
+        if isinstance(generator_parameters, list):
+            generator_parameters = generator_parameters[-1]
 
         match_eff = float(generator_parameters.get('match_efficiency'))
         filter_eff = float(generator_parameters.get('filter_efficiency'))
@@ -2556,24 +2526,6 @@ class Request(json_base):
 
             tasks.append(task_dict)
         return tasks
-
-    def get_sum_time_events(self):
-        """
-        return sum of time_events for request
-        """
-        return sum(self.get_attribute("time_event"))
-
-    def get_sum_size_events(self):
-        """
-        return sum of size_events for request
-        """
-        return sum(self.get_attribute("size_event"))
-
-    def any_negative_events(self, field):
-        """
-        return True if there is a negative or zero value in time_event/size_event list
-        """
-        return any(n <= 0 for n in self.get_attribute(field))
 
     def get_gen_script_output(self):
         prepid = self.get_attribute('prepid')
