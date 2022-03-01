@@ -295,8 +295,8 @@ class CreateRESTResource(RESTResource):
                     'prepid': prepid,
                     'message': 'Object with prepid "%s" already exists' % (prepid)}
 
-        data.pop('_rev')
-        data.pop('history')
+        data.pop('history', None)
+        data.pop('_rev', None)
         obj = object_class(data)
         self.logger.info('Creating new object "%s"', prepid)
         # Validate
@@ -510,7 +510,7 @@ class CloneRESTResource(CreateRESTResource):
             return {'results': False,
                     'message': 'Missing either old or new "prepid" attribute'}
 
-        if not prepid == new_prepid:
+        if prepid == new_prepid:
             self.logger.error('Old and new "prepid" cannot be the same')
             return {'results': False,
                     'prepid': prepid,
@@ -533,8 +533,6 @@ class CloneRESTResource(CreateRESTResource):
         new_data = deepcopy(object.json())
         new_data['prepid'] = new_prepid
         new_data['_id'] = new_prepid
-        new_data.pop('history', None)
-        new_data.pop('_rev', None)
 
         self.prepid = prepid
         return self.create_object(new_data, object_class)

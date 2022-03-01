@@ -112,7 +112,7 @@ class CreateFlow(CreateRESTResource, FlowRESTResource):
         """
         Create a flow with the provided json content
         """
-        return self.create_object(data, Campaign)
+        return self.create_object(data, Flow)
 
     def before_create(self, obj):
         # Check if allowed and next campaigns exist

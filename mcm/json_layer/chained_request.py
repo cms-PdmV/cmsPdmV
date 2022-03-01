@@ -6,6 +6,7 @@ from json_layer.request import Request
 from json_layer.campaign import Campaign
 from json_layer.flow import Flow
 from couchdb_layer.mcm_database import database as Database
+from json_layer.user import Role, User
 from tools.settings import Settings
 
 
@@ -64,6 +65,21 @@ class ChainedRequest(json_base):
 
         return cls.database
 
+    def get_editing_info(self):
+        info = super().get_editing_info()
+        user = User()
+        info['enabled'] = user.get_role() >= Role.PRODUCTION_MANAGER;
+        info['notes'] = True
+        return info
+
+    def toggle_enabled(self):
+        """
+        Toggle enabled
+        """
+        enabled = self.get('enabled')
+        self.set_attribute('enabled', not enabled)
+        self.update_history('enabled', str(not enabled))
+
     def request_join(self, request):
         """
         Update request's member of chain and history
@@ -86,6 +102,30 @@ class ChainedRequest(json_base):
             chain.append(request_prepid)
             self.set_attribute('chain', chain)
             self.update_history('add request', request_prepid)
+
+    def request_leave(self, request):
+        """
+        Update request's member of chain and history
+        Remove request's prepid to the chain
+        """
+        chain_prepid = self.get('prepid')
+        request_prepid = request.get('prepid')
+        self.logger.info('Request %s is leaving %s', request_prepid, chain_prepid)
+        # Update request
+        chains = request.get_attribute('member_of_chain')
+        if chain_prepid in chains:
+            self.logger.info('Removing %s from %s', chain_prepid, request_prepid)
+            chains.remove(chain_prepid)
+            request.set_attribute('member_of_chain', chains)
+            request.update_history('leave chain', chain_prepid)
+
+        # Update chained request
+        chain = self.get_attribute('chain')
+        if request_prepid in chain:
+            self.logger.info('Removing %s from %s', request_prepid, chain_prepid)
+            chain.remove(request_prepid)
+            self.set_attribute('chain', chain)
+            self.update_history('remove request', request_prepid)
 
     def get_setup(self, for_validation, automatic_validation, scratch=False):
         if scratch:
@@ -112,8 +152,7 @@ class ChainedRequest(json_base):
         """
         prepid = self.get('prepid')
         self.logger.info('Flowing %s', prepid)
-        chain = self.get('chain')
-        if not chain:
+        if not self.get('chain'):
             # Empty chained requests are not valid, they must have at least a
             # root request
             raise Exception('Chained request is missing root request')
@@ -135,7 +174,7 @@ class ChainedRequest(json_base):
 
         # Fetch root request as it will be needed when searching for requests
         # that could be reused
-        root_request_id = chain[0]
+        root_request_id = self[0]
         root_request = Request.fetch(root_request_id)
 
         start_flowing_at = self.current()
@@ -151,7 +190,8 @@ class ChainedRequest(json_base):
                              len(chained_campaign),
                              next_flow_id,
                              next_campaign_id)
-            self.logger.info('Current step %s in chain %s', current_id, ', '.join(self.get('chain')))
+            chain = self.get('chain')
+            self.logger.info('Current step %s in chain %s', current_id, ', '.join(chain))
             # Next campaign
             next_campaign = Campaign.fetch(next_campaign_id)
             if not next_campaign.is_started():
@@ -175,7 +215,7 @@ class ChainedRequest(json_base):
             if current_id == start_flowing_at:
                 # When trying to flow to after_done, current request must be
                 # submit-done
-                if next_flow_approval == 'after_done' and current_status != 'submit-done':
+                if next_flow_approval in ('after_done', 'after_done_unique') and current_status != 'submit-done':
                     if reserve and current_step == 0:
                         break
 
@@ -184,7 +224,7 @@ class ChainedRequest(json_base):
             else:
                 # During normal flow, stop when next flow is not "together"
                 self.logger.info('Next flow %s type is "%s"', next_flow_id, next_flow_approval)
-                if next_flow_approval != 'together':
+                if next_flow_approval not in ('together', 'together_unique'):
                     break
 
             next_request = self.get_request_for_step(next_step, root_request, current_request, next_flow, next_campaign)
@@ -228,6 +268,9 @@ class ChainedRequest(json_base):
             # Prepare for next iteration
             current_step += 1
             next_step = current_step + 1
+
+        if trigger_others:
+            self.reload()
 
         if not reserve:
             # Do not flow itself again
@@ -407,7 +450,7 @@ class ChainedRequest(json_base):
                 if other_approval != 'submit' or other_keep_output:
                     # Important to take the first request from the checked
                     # part of the chain, not the matching request!
-                    return other_requests[0]['prepid']
+                    return Request(other_requests[0])
 
             self.logger.info('None of available requests of %s are suitable',
                              candidate['prepid'])

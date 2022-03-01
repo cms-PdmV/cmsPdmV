@@ -7,6 +7,7 @@ import math
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database as Database
+from json_layer.chained_campaign import ChainedCampaign
 from json_layer.invalidation import Invalidation
 from json_layer.json_base import json_base
 from json_layer.campaign import Campaign
@@ -269,7 +270,7 @@ class Request(json_base):
             self.logger.error('Unsupported request %s status "%s"', prepid, current_status)
             raise Exception('Unsupported request %s status "%s"' % (prepid, current_status))
 
-    def get_chained_requests(self):
+    def get_chained_requests(self, only_enabled=False):
         """
         Return chained request dicts that this request is member of
         """
@@ -279,8 +280,17 @@ class Request(json_base):
 
         from json_layer.chained_request import ChainedRequest
         chained_request_db = ChainedRequest.get_database()
-        chained_requests = chained_request_db.bulk_get(chained_request_ids)
-        return chained_requests
+        chains = chained_request_db.bulk_get(chained_request_ids)
+        if only_enabled:
+            self.logger.info('Filtering out disabled chained requests, including chained campaigns')
+            chains = [c for c in chains if c['enabled']]
+            chained_campaign_ids = [c['member_of_campaign'] for c in chains]
+            self.logger.debug('Fetching %s chained campaigns to check if enabled',
+                              len(chained_campaign_ids))
+            chained_campaigns = {c: ChainedCampaign.fetch(c) for c in chained_campaign_ids}
+            chains = [c for c in chains if chained_campaigns[c['member_of_campaign']]['enabled']]
+
+        return chains
 
     def get_parent_request(self):
         """
@@ -721,17 +731,15 @@ class Request(json_base):
                 raise Exception(f'{parent_prepid} status is {parent_approval_status} '
                                 f'which is lower than {approval_status}')
 
-    def to_be_submitted_together(self, chained_requests):
+    def to_be_submitted_together(self):
         """
         Return dictionary of chained requests and their requests that should be
         submitted togetger with this request
         """
-        chained_requests = [c for c in chained_requests if c['enabled']]
-        prepid = self.get_attribute('prepid')
-        chained_campaign_db = Database('chained_campaigns')
-        request_db = Database('requests')
+        chained_requests = self.get_chained_requests(only_enabled=True)
+        request_db = Request.get_database()
         requests_cache = {}
-        flow_db = Database('flows')
+        flow_db = Flow.get_database()
         flows_cache = {}
         def get_requests(prepids):
             to_get = [p for p in prepids if p not in requests_cache]
@@ -748,26 +756,30 @@ class Request(json_base):
 
             return flows_cache[prepid]
 
-        together = []
-        for chained_request in chained_requests:
-            chained_campaign = chained_campaign_db.get(chained_request['member_of_campaign'])
-            if not chained_campaign['enabled']:
-                chained_campaign_id = chained_campaign['prepid']
-                self.logger.debug('Chained campaign %s is disabled, ignoring', chained_campaign_id)
+        together = {}
+        prepid = self.get('prepid')
+        while chained_requests:
+            # Collect
 
-            chain = chained_request['chain']
-            chain = chain[chain.index(prepid) + 1:]
-            if not chain:
-                continue
+            # Remove chained requests that don't have any further requests
+            chained_requests = [c for c in chained_requests if c['chain'][-1] != prepid]
+            for chained_request in chained_requests:
+                chain_prepid = chained_request.get('prepid')
+                chain = chained_request['chain']
+                chain = chained_request['chain'][chained_request['chain'].index(prepid) + 1:]
+                self.logger.info('Requests in %s after %s: %s', chain_prepid, prepid, chain)
+                if not chain:
+                    chained_requests
+                    continue
 
-            together[chained_request['prepid']] = []
-            requests = get_requests(chain)
-            for request in requests:
-                flow = get_flow(request['flown_with'])
-                if flow['approval'] == 'tasksubmit':
-                    together[chained_request['prepid']].append(request)
-                else:
-                    break
+                together[chained_request['prepid']] = [prepid]
+                requests = get_requests(chain)
+                for request in requests:
+                    flow = get_flow(request['flown_with'])
+                    if flow['approval'] in ('together', 'together_unique'):
+                        together[chained_request['prepid']].append(request['prepid'])
+                    else:
+                        break
 
         return together
 

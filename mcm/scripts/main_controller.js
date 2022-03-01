@@ -318,7 +318,7 @@ angular.module('mcmApp').controller('mainController',
                 } else {
                   errorModal(data.data.prepid, data.data.message);
                 }
-              }).error(function (data, status) {
+              }, function (data) {
                 errorModal(data.data.prepid, data.data.message);
               });
               $uibModalInstance.close();

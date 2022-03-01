@@ -1,5 +1,6 @@
 import datetime
 from json_layer.user import Role, User
+from tools.exceptions import BadAttributeException
 
 from tools.settings import Settings
 from json_layer.json_base import json_base
@@ -28,10 +29,9 @@ class MccM(json_base):
     }
 
     def validate(self):
-        repetitions = int(self.get_attribute('repetitions', 1))
+        repetitions = int(self.get('repetitions'))
         if repetitions > 10:
-            self.logger.error('Too many repetitions: %s', repetitions)
-            raise Exception('Too many repetitions: %s' % (repetitions))
+            raise BadAttributeException(f'Too many repetitions: {repetitions}')
 
         self.get_request_list()
         return super().validate()
@@ -109,7 +109,7 @@ class MccM(json_base):
             elif isinstance(entry, str):
                 requests.append(entry)
             else:
-                raise Exception('Unrecognized prepid/range %s of type', entry, type(entry))
+                raise BadAttributeException(f'Unrecognized prepid {entry} of type {type(entry)}')
 
         return requests
 

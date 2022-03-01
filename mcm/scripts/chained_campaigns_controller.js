@@ -1,6 +1,6 @@
 angular.module('mcmApp').controller('chainedCampaignController',
-  ['$scope',
-    function chainedCampaignController($scope) {
+  ['$scope', '$uibModal',
+    function chainedCampaignController($scope, $uibModal) {
 
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
@@ -12,7 +12,7 @@ angular.module('mcmApp').controller('chainedCampaignController',
       $scope.openChainCreationModal = function () {
         const modal = $uibModal.open({
           templateUrl: "chainedCampaignCreateModal.html",
-          controller: function ($scope, $uibModalInstance, $window, $http, errorModal, setSuccess) {
+          controller: function ($scope, $uibModalInstance, $window, $http, errorModal) {
             $scope.pairs = [{ campaigns: [], flows: [], selectedCampaign: '', selectedFlow: { prepid: undefined } }]
             let promise = $http.get("search?db_name=campaigns&page=-1");
             promise.then(function (data) {
@@ -47,17 +47,14 @@ angular.module('mcmApp').controller('chainedCampaignController',
             $scope.save = function () {
               $scope.pairs = $scope.pairs.filter(pair => pair.selectedCampaign && pair.selectedCampaign !== '')
               let campaigns = $scope.pairs.map(pair => { const x = [pair.selectedCampaign, pair.selectedFlow.prepid]; return x; })
-              $http({ method: 'PUT', url: 'restapi/chained_campaigns/save/', data: { 'campaigns': campaigns } }).success(function (data, status) {
-                setSuccess(data["results"]);
-                if (data.results) {
-                  $window.location.href = 'edit?db_name=chained_campaigns&query=' + data.prepid;
+              $http({ method: 'PUT', url: 'restapi/chained_campaigns/save/', data: { 'campaigns': campaigns } }).then(function (data) {
+                if (data.data.results) {
+                  $window.location.href = 'chained_campaigns?prepid=' + data.data.prepid;
                 } else {
-                  errorModal(data.prepid, data['message']);
-                  setSuccess(false, status);
+                  errorModal(data.data.prepid, data.data.message);
                 }
-              }).error(function (data, status) {
-                errorModal(data.prepid, data['message']);
-                setSuccess(false, status);
+              }, function (data) {
+                errorModal(data.data.prepid, data.data.message);
               });
             };
             $scope.close = function () {
@@ -66,7 +63,6 @@ angular.module('mcmApp').controller('chainedCampaignController',
           },
           resolve: {
             errorModal: function () { return $scope.openErrorModal; },
-            setSuccess: function () { return $scope.setSuccess; },
           }
         });
       };

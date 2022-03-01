@@ -63,6 +63,9 @@
                 <a ng-click='validate(data.prepid)' title="Validate the chain" ng-show="user.is_user" ng-href="#">
                   <i class="glyphicon glyphicon-star-empty"></i>
                 </a>
+                <a ng-click="toggleEnabled(data.prepid)" title="Toggle enabled" ng-show="user.is_production_manager;" ng-href="#">
+                  <i class="glyphicon glyphicon-flag"></i>
+                </a>
                 <a ng-href='public/restapi/{{database}}/get_setup/{{data.prepid}}' title="Get setup command" target="_self">
                   <i class="glyphicon glyphicon-download"></i>
                 </a>
@@ -119,11 +122,15 @@
               </div>
               <div ng-switch-when="member_of_campaign">
                 <a ng-href='chained_requests?member_of_campaign={{data[column.db_name]}}&page=0'
-                   title="View chained requests for {{data[column.db_name]}}">{{data[column.db_name]}}<i
-                   class="glyphicon glyphicon-indent-left"></i></a>
+                   title="View chained requests for {{data[column.db_name]}}">
+                  {{data[column.db_name]}}
+                  <i class="glyphicon glyphicon-indent-left"></i>
+                </a>
                 <a ng-href='chained_campaigns?prepid={{data[column.db_name]}}&page=0'
-                   title="Show chained campaign {{data[column.db_name]}}"><i
-                   class="glyphicon glyphicon-align-right"></i></a>
+                   title="Show chained campaign {{data[column.db_name]}}"
+                   target="_self">
+                  <i class="glyphicon glyphicon-align-right"></i>
+                </a>
               </div>
               <div ng-switch-when="validate">
                 <i class="glyphicon" ng-class="{'glyphicon-ok' : data[column.db_name], 'glyphicon-remove' : !data[column.db_name]}"></i>

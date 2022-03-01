@@ -18,7 +18,7 @@ class CreateChainedCampaign(CreateRESTResource):
         Create a chained campaign with the provided content
         Required attribute - a list of flows and campaigns as 'campaigns'
         """
-        campaigns = data.get_attribute('campaigns')
+        campaigns = data.get('campaigns')
         if not campaigns:
             return {'results': False,
                     'message': 'Chained campaign must have at least one campaign'}
@@ -30,6 +30,7 @@ class CreateChainedCampaign(CreateRESTResource):
             else:
                 prepid += '_%s' % (flow)
 
+        data['prepid'] = prepid
         return self.create_object(data, ChainedCampaign)
 
 

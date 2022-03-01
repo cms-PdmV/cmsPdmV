@@ -103,6 +103,20 @@ class UniqueChainsRESTResource(RESTResource):
         return prepids
 
 
+class ToggleChainedRequestEnabled(RESTResource):
+
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
+    @RESTResource.request_with_json
+    def post(self, data):
+        """
+        Toggle the given chained requests to enabled or disabled
+        """
+        def toggle(chained_request):
+            chained_request.toggle_enabled()
+
+        return self.do_multiple_items(data['prepid'], ChainedRequest, toggle)
+
+
 class ChainedRequestFlow(UniqueChainsRESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)

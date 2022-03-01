@@ -197,20 +197,14 @@ class RequestDelete(DeleteRESTResource):
                 # Don't care about this in deletion
                 continue
 
-            chain = chained_request_dict['chain']
-            if prepid not in chain:
-                # Don't care about this in deletion
-                continue
-
             chained_request_id = chained_request_dict['prepid']
-            if prepid == chain[0]:
+            chained_request = ChainedRequest(chained_request_dict)
+            chained_request.request_leave(obj)
+            if prepid == chained_request[0]:
                 # Request is root - delete it together with the chained request
                 chained_request_db.delete(chained_request_id)
             else:
                 # Request is not root - just pop it off the chained request
-                chained_request = ChainedRequest(chained_request_dict)
-                chain.remove(prepid)
-                chained_request.update_history('remove request', prepid)
                 chained_request.reload()
 
         return super().before_delete(obj)
@@ -361,6 +355,38 @@ class GetValidationFileForRequest(RESTResource):
         return self.build_response(data=request.get_setup_file(False, False, True),
                                    content_type='text/plain')
 
+
+class GetSubmittedTogetherForRequest(RESTResource):
+
+    def get(self, prepid):
+        """
+        Retrieve the ductionary of submission plan for a given request
+        """
+        request = Request.fetch(prepid)
+        submitted_together = request.to_be_submitted_together()
+        message = ''
+        request_lists = []
+        lengths = []
+        for chain_prepid in sorted(submitted_together):
+            request_list = submitted_together[chain_prepid]
+            request_lists.append(request_list)
+            lengths += [0] * (len(request_list) - len(lengths))
+            for i, request in enumerate(request_list):
+                lengths[i] = max(lengths[i], len(request) + 1)
+
+        for i, request_list in enumerate(request_lists):
+            for j, request in enumerate(request_list):
+                if i == 0 or len(request_lists[i-1]) <= j or request_lists[i-1][j] != request:
+                    message += f'{request}' + ' ' * (lengths[j] - len(request) + 1)
+                else:
+                    message += ' ' * (lengths[j] + 1)
+
+            message += '\n'
+
+        message = '\n\n'.join([x for x in message.split('\n') if x.strip()])
+        return self.build_response(message, content_type='text/plain')
+        # return {'results': submitted_together,
+        #         'message': message}
 
 
 class GetRequestByDataset(RESTResource):

@@ -3,13 +3,13 @@ import time
 
 import json
 from json_layer.chained_request import ChainedRequest
-from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource
+from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource, UpdateRESTResource
 from couchdb_layer.mcm_database import database as Database
 from json_layer.mccm import MccM
 from json_layer.user import Role, User
 from json_layer.chained_campaign import ChainedCampaign
 from json_layer.request import Request
-from tools.exceptions import NotFoundException
+from tools.exceptions import BadAttributeException, InvalidActionException, McMException, NotFoundException
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import Communicator
@@ -65,80 +65,36 @@ class CreateMccm(RESTResource):
                 'message': 'MccM ticket could not be created'}
 
 
-class UpdateMccm(RESTResource):
+class UpdateMccm(UpdateRESTResource):
+    """
+    Endpoint for updating a MccM ticket
+    """
 
     @RESTResource.ensure_role(Role.MC_CONTACT)
-    def post(self):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
-        Updating a MccM with an updated dictionary
+        Update a MccM ticket with the provided content
+        Required attributes - prepid and revision
         """
-        data = json.loads(flask.request.data)
-        if '_rev' not in data:
-            return {'results': False,
-                    'message': 'No revision provided'}
+        return self.update_object(data, MccM)
 
-        try:
-            mccm = MccM(data)
-        except Exception as ex:
-            return {'results': False,
-                    'message': str(ex)}
-
-        prepid = mccm.get_attribute('prepid')
-        if not prepid:
-            self.logger.error('Invalid prepid "%s"', prepid)
-            return {'results': False,
-                    'message': 'Invalid prepid "%s"' % (prepid)}
-
-        pwg = mccm.get_attribute('pwg').upper()
+    def before_update(self, old_obj, new_obj):
+        pwg = old_obj.get_attribute('pwg').upper()
         user = User()
         if pwg not in user.get_user_pwgs():
             username = user.get_username()
-            return {'results': False,
-                    'message': 'User %s is not allowed to edit tickets for %s' % (username, pwg)}
+            raise InvalidActionException(f'{username} is not allowed to edit tickets for {pwg}')
 
-        mccm_db = Database('mccms')
-        mccm_json = mccm_db.get(prepid)
-        if not mccm_json:
-            self.logger.error('Cannot update, %s does not exist', prepid)
-            return {'results': False,
-                    'message': 'Cannot update, "%s" does not exist' % (prepid)}
-
-        duplicates = mccm.get_duplicate_requests()
+        duplicates = new_obj.get_duplicate_requests()
         if duplicates:
-            return {'results': False,
-                    'message': 'Duplicated requests: %s' % (', '.join(duplicates))}
+            duplicates = ', '.join(duplicates)
+            raise BadAttributeException(f'Duplicated requests: {duplicates}')
 
-        old_mccm = MccM(mccm_json)
-        # Find what changed
-        for (key, editable) in old_mccm.get_editable().items():
-            old_value = old_mccm.get_attribute(key)
-            new_value = mccm.get_attribute(key)
-            if not editable and old_value != new_value:
-                message = 'Not allowed to change "%s": "%s" -> "%s' % (key, old_value, new_value)
-                self.logger.error(message)
-                return {'results': False,
-                        'message': message}
-
-        if set(old_mccm.get_request_list()) != set(mccm.get_request_list()):
-            self.logger.info('Request list changed, recalculating total events')
-            mccm.update_total_events()
-
-        difference = self.get_obj_diff(old_mccm.json(),
-                                       mccm.json(),
-                                       ('history', '_rev'))
-        if not difference:
-            return {'results': True}
-
-        difference = ', '.join(difference)
-        mccm.update_history('update', difference)
-
-        # Save to DB
-        if not mccm_db.update(mccm.json()):
-            self.logger.error('Could not save MccM %s to database', prepid)
-            return {'results': False,
-                    'message': 'Could not save MccM %s to database' % (prepid)}
-
-        return {'results': True}
+    def after_update(self, old_obj, new_obj, changes):
+        if set(old_obj.get_request_list()) != set(new_obj.get_request_list()):
+            new_obj.update_total_events()
+            new_obj.reload(save=True)
 
 
 class DeleteMccm(DeleteRESTResource):
@@ -167,10 +123,10 @@ class DeleteMccm(DeleteRESTResource):
                         owner_name = history_entry['updater']['author_name']
 
             if not owner:
-                raise Exception('Could not get owner of the ticket')
+                raise McMException('Could not get owner of the ticket')
 
             if owner != username:
-                raise Exception('Only the owner %s is allowed to delete the ticket' % (owner_name))
+                raise InvalidActionException(f'Only {owner_name} is allowed to delete the ticket')
 
         return super().delete_check(obj)
 
@@ -364,7 +320,7 @@ class GenerateChains(RESTResource):
                     if skip_existing:
                         # Remove duplicates
                         duplicates = set(duplicates)
-                        chained_campaigns_for_request = [c for c in chained_campaigns_for_request if c['prepid'] not in duplicates]
+                        chained_campaigns_for_request = [c for c in chained_campaigns_for_request if c.get('prepid') not in duplicates]
                     else:
                         raise Exception('Chain with request "%s" and chained campaign "%s" '
                                         'already exist.' % (request_prepid, duplicates[0]))

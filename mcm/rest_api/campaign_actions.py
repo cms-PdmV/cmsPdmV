@@ -36,6 +36,7 @@ class CreateCampaign(CreateRESTResource):
         sequences = obj.get('sequences')
         sequences = {name: [Sequence(s).json() for s in seqs] for name, seqs in sequences.items()}
         obj.set_attribute('sequences', sequences)
+        obj.set_attribute('next', [])
 
     def after_create(self, obj):
         prepid = obj.get('prepid')

@@ -21,6 +21,16 @@ angular.module('mcmApp').controller('chainedRequestController',
            data: {'prepid': prepids}});
       };
 
+      $scope.toggleEnabled = function (prepid) {
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
+        let message = 'Are you sure you want to toggle enabled status of ' + $scope.promptPrepid(prepids) + '?';
+        $scope.objectAction(message,
+          prepids,
+          {method: 'POST',
+           url: 'restapi/' + $scope.database + '/toggle_enabled',
+           data: {'prepid': prepids}});
+      };
+
       $scope.rewind = function (prepid) {
         let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
         let message = 'Are you sure you want to rewind ' + $scope.promptPrepid(prepids) + '?';
