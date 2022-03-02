@@ -363,30 +363,38 @@ class GetSubmittedTogetherForRequest(RESTResource):
         Retrieve the ductionary of submission plan for a given request
         """
         request = Request.fetch(prepid)
-        submitted_together = request.to_be_submitted_together()
-        message = ''
+        submitted_together = sorted(list(request.to_be_submitted_together().values()))
+        i = 0
+        # Remove duplicate branches
+        while len(submitted_together) > 1 and i < len(submitted_together) - 1:
+            first_str = '___'.join(submitted_together[i])
+            second_str = '___'.join(submitted_together[i + 1])
+            if second_str.startswith(first_str):
+                submitted_together.pop(i)
+            else:
+                i += 1
+
+        # Calculate prepid lengths for nicer alignment
         request_lists = []
         lengths = []
-        for chain_prepid in sorted(submitted_together):
-            request_list = submitted_together[chain_prepid]
+        for request_list in submitted_together:
             request_lists.append(request_list)
             lengths += [0] * (len(request_list) - len(lengths))
             for i, request in enumerate(request_list):
                 lengths[i] = max(lengths[i], len(request) + 1)
 
+        # Generate text
+        text = ''
         for i, request_list in enumerate(request_lists):
             for j, request in enumerate(request_list):
                 if i == 0 or len(request_lists[i-1]) <= j or request_lists[i-1][j] != request:
-                    message += f'{request}' + ' ' * (lengths[j] - len(request) + 1)
+                    text += f'{request}' + ' ' * (lengths[j] - len(request) + 1)
                 else:
-                    message += ' ' * (lengths[j] + 1)
+                    text += ' ' * (lengths[j] + 1)
 
-            message += '\n'
+            text += '\n\n'
 
-        message = '\n\n'.join([x for x in message.split('\n') if x.strip()])
-        return self.build_response(message, content_type='text/plain')
-        # return {'results': submitted_together,
-        #         'message': message}
+        return self.build_response(text.strip(), content_type='text/plain')
 
 
 class GetRequestByDataset(RESTResource):

@@ -288,7 +288,12 @@ class Request(json_base):
             self.logger.debug('Fetching %s chained campaigns to check if enabled',
                               len(chained_campaign_ids))
             chained_campaigns = {c: ChainedCampaign.fetch(c) for c in chained_campaign_ids}
-            chains = [c for c in chains if chained_campaigns[c['member_of_campaign']]['enabled']]
+            enabled = []
+            for chain in chains:
+                if chained_campaigns[chain['member_of_campaign']].get('enabled'):
+                    enabled.append(chain)
+
+            chains = enabled
 
         return chains
 
@@ -738,48 +743,75 @@ class Request(json_base):
         """
         chained_requests = self.get_chained_requests(only_enabled=True)
         request_db = Request.get_database()
-        requests_cache = {}
         flow_db = Flow.get_database()
-        flows_cache = {}
-        def get_requests(prepids):
-            to_get = [p for p in prepids if p not in requests_cache]
-            if to_get:
-                requests = request_db.bulk_get(to_get)
-                for request in requests:
-                    requests_cache[request['prepid']] = request
-
-            return [requests_cache[p] for p in prepids]
-
+        cache = {}
         def get_flow(prepid):
-            if prepid not in flows_cache:
-                flows_cache[prepid] = flow_db.get(prepid)
+            if prepid not in cache:
+                cache[prepid] = flow_db.get(prepid)
 
-            return flows_cache[prepid]
+            return cache[prepid]
 
-        together = {}
+        def get_request(prepid):
+            if prepid not in cache:
+                cache[prepid] = request_db.get(prepid)
+
+            return cache[prepid]
+
         prepid = self.get('prepid')
-        while chained_requests:
-            # Collect
-
+        together = {c['prepid']: [prepid] for c in chained_requests}
+        # Just in case, in order not to run into infinite loop
+        max_iterations = max(len(c['chain']) for c in chained_requests) + 1
+        # Tuples - (chained request, current prepid)
+        chained_requests = [(c, prepid) for c in chained_requests]
+        while chained_requests and max_iterations > 0:
+            max_iterations -= 1
             # Remove chained requests that don't have any further requests
-            chained_requests = [c for c in chained_requests if c['chain'][-1] != prepid]
-            for chained_request in chained_requests:
-                chain_prepid = chained_request.get('prepid')
-                chain = chained_request['chain']
-                chain = chained_request['chain'][chained_request['chain'].index(prepid) + 1:]
-                self.logger.info('Requests in %s after %s: %s', chain_prepid, prepid, chain)
-                if not chain:
-                    chained_requests
-                    continue
+            chained_requests = [c for c in chained_requests if c[0]['chain'][-1] != c[1]]
+            if not chained_requests:
+                break
 
-                together[chained_request['prepid']] = [prepid]
-                requests = get_requests(chain)
-                for request in requests:
-                    flow = get_flow(request['flown_with'])
-                    if flow['approval'] in ('together', 'together_unique'):
-                        together[chained_request['prepid']].append(request['prepid'])
-                    else:
+            current_request_chains_flows = {}
+            # Get (chained request, next request prepid and next flow approval)
+            # Group them by current request
+            for chained_request, current_prepid in chained_requests:
+                chain = chained_request['chain']
+                next_prepid = chain[chain.index(current_prepid) + 1]
+                self.logger.info('Request after %s -> %s', current_prepid, next_prepid)
+                next_request = get_request(next_prepid)
+                next_flow = get_flow(next_request['flown_with'])
+                next_approval = next_flow['approval']
+                current_request_chains_flows.setdefault(current_prepid, []).append((chained_request,
+                                                                                    next_prepid,
+                                                                                    next_approval))
+
+            # Go through groups and either take all chained requests or pick one
+            # if there are at least one together_unique flow
+            new_chained_requests = []
+            for current_prepid, chains_requests_flows in current_request_chains_flows.items():
+                self.logger.debug('%s group:', current_prepid)
+
+                # Try to find together_unique first
+                for chain_request_flow in chains_requests_flows:
+                    chained_request, next_request, next_approval = chain_request_flow
+                    if next_approval == 'together_unique':
+                        self.logger.debug('   (%s) %s', next_approval, next_request)
+                        # Add all chained requests that have next request
+                        for chained_request, _, _ in chains_requests_flows:
+                            if next_request in chained_request['chain']:
+                                new_chained_requests.append((chained_request, next_request))
+
                         break
+                else:
+                    # No together_unique found - add all that have flow 'together'
+                    for chain_request_flow in chains_requests_flows:
+                        chained_request, next_request, next_approval = chain_request_flow
+                        if next_approval == 'together':
+                            self.logger.debug('   (%s) %s', next_approval, next_request)
+                            new_chained_requests.append((chained_request, next_request))
+
+            chained_requests = new_chained_requests
+            for chained_request, next_request in chained_requests:
+                together[chained_request['prepid']].append(next_request)
 
         return together
 
