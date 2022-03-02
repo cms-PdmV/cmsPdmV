@@ -34,7 +34,7 @@ class Flow(json_base):
         return super().validate()
 
     def toggle_type(self):
-        approval_steps = ('none', 'together', 'after_done', 'together_unique', 'after_done_unique')
+        approval_steps = ('none', 'together', 'together_unique', 'after_done')
         approval = self.get_attribute('approval')
         index = approval_steps.index(approval) if approval in approval_steps else 0
         new_approval = approval_steps[(index + 1) % (len(approval_steps))]

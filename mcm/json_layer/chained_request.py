@@ -215,7 +215,7 @@ class ChainedRequest(json_base):
             if current_id == start_flowing_at:
                 # When trying to flow to after_done, current request must be
                 # submit-done
-                if next_flow_approval in ('after_done', 'after_done_unique') and current_status != 'submit-done':
+                if next_flow_approval == 'after_done' and current_status != 'submit-done':
                     if reserve and current_step == 0:
                         break
 
