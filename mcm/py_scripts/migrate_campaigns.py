@@ -45,6 +45,11 @@ for campaigns in database.bulk_yield(50):
 
             campaign['sequences'] = new_sequences
 
+        for _, sequences_list in campaign['sequences'].items():
+            for sequence in sequences_list:
+                sequence['nThreads'] = int(sequence.get('nThreads', 1))
+                sequence['nStreams'] = int(sequence.get('nStreams', 0))
+
         no_output = campaign.get('no_output')
         if no_output is not None:
             keep_output = {}
