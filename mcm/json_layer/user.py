@@ -239,3 +239,9 @@ class User():
         Set new user PWGs
         """
         self.user_info['pwg'] = sorted(list(set(pwg.upper() for pwg in pwgs)))
+
+    def json(self):
+        """
+        Return a copy of user info
+        """
+        return deepcopy(self.get_user_info())

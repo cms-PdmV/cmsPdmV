@@ -1,4 +1,4 @@
-from rest_api.RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import GetEditableRESTResource, GetRESTResource, RESTResource
 from couchdb_layer.mcm_database import database as Database
 from tools.exceptions import BadAttributeException, NotFoundException
 from tools.locker import Locker
@@ -6,14 +6,28 @@ from tools.settings import Settings
 from json_layer.user import Role, User
 
 
-class GetUser(RESTResource):
+class AddCurrentUser(RESTResource):
 
-    def get(self, username):
+    def post(self):
         """
-        Retrieve the information about a provided user
+        Add the current user to the user database if user is not already in db
         """
         user_db = Database('users')
-        return {'results': user_db.get(username)}
+        user = User()
+        username = user.get_username()
+        if user_db.document_exists(username):
+            return {'results': False,
+                    'message': 'User "%s" is already in the database' % (username)}
+
+        user.set_role(Role.USER)
+        user.update_history('created')
+        # save to db
+        if not user.save():
+            self.logger.error('Could not save user %s to database', username)
+            return {'results': False,
+                    'message': 'Error adding %s to the database' % (username)}
+
+        return {'results': True}
 
 
 class UpdateUser(RESTResource):
@@ -57,17 +71,21 @@ class UpdateUser(RESTResource):
             # Difference
             old_role = old_user.get_role()
             new_role = new_user.get_role()
-            difference = self.get_obj_diff(old_user.get_user_info(),
-                                           new_user.get_user_info(),
-                                           ('history', '_rev', 'role'))
-            if not difference and old_role == new_role:
-                self.logger.info('No updates for %s', username)
-                return {'results': True, 'prepid': username}
+            changes = self.get_changes(old_user.json(), new_user.json())
+            changes.pop('role', None)
+            if not changes and old_role == new_role:
+                self.logger.info('No updates for "%s"', username)
+                return {'results': True,
+                        'prepid': username,
+                        'message': 'Nothing changed'}
 
-            difference = ', '.join(difference)
-            self.logger.info('Update difference for %s: %s', username, difference)
-            new_user.set('history', old_user.get('history'))
-            new_user.update_history('update', difference)
+            if changes:
+                editing_info = old_user.get_editing_info()
+                self.logger.info('Changes of %s update: %s', username, changes)
+                self.logger.debug('Editing info %s', editing_info)
+                self.check_if_edits_are_allowed(changes, editing_info)
+                new_user.set('history', old_user.get('history'))
+                new_user.update_history('update', str(changes))
 
             if old_role != new_role:
                 changer_role_str = str(changer.get_role())
@@ -84,7 +102,13 @@ class UpdateUser(RESTResource):
 
                 new_user.update_history('role change', new_role_str)
 
-            new_user.save()
+            # Save to DB
+            self.logger.info('Saving updated object "%s"', username)
+            if not new_user.save():
+                self.logger.error('Could not save %s to database', username)
+                return {'results': False,
+                        'prepid': username,
+                        'message': 'Could not save %s to database' % (username)}
 
         return {'results': True, 'message': ''}
 
@@ -103,42 +127,15 @@ class GetUserInfo(RESTResource):
                 'pwgs': user.get_user_pwgs()}
 
 
-class AddCurrentUser(RESTResource):
-
-    def post(self):
-        """
-        Add the current user to the user database if user is not already in db
-        """
-        user_db = Database('users')
-        user = User()
-        username = user.get_username()
-        if user_db.document_exists(username):
-            return {'results': False,
-                    'message': 'User "%s" is already in the database' % (username)}
-
-        user.set_role(Role.USER)
-        user.update_history('created')
-        # save to db
-        if not user.save():
-            self.logger.error('Could not save user %s to database', username)
-            return {'results': False,
-                    'message': 'Error adding %s to the database' % (username)}
-
-        return {'results': True}
+class GetUser(GetRESTResource):
+    """
+    Endpoing for retrieving a user
+    """
+    object_class = User
 
 
-class GetEditableUser(RESTResource):
+class GetEditableUser(GetEditableRESTResource):
     """
     Endpoing for retrieving a user and it's editing info
     """
-
-    def get(self, prepid):
-        """
-        Retrieve the user and it's editing info for given id
-        """
-        user = User.fetch(prepid)
-        if not user:
-            raise NotFoundException(prepid)
-
-        return {'results': {'object': user.get_user_info(),
-                            'editing_info': user.get_editing_info()}}
+    object_class = User
