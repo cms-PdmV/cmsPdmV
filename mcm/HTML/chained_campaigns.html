@@ -57,6 +57,9 @@
                 <a ng-click='deleteObject(data.prepid)' title="Delete chained campaign" ng-show="user.is_production_manager" ng-href="#">
                   <i class="glyphicon glyphicon-trash"></i>
                 </a>
+                <a ng-click="toggleEnabled(data.prepid)" title="Toggle enabled" ng-show="user.is_production_manager;" ng-href="#">
+                  <i class="glyphicon glyphicon-flag"></i>
+                </a>
                 <a ng-href='chained_requests?member_of_campaign={{data.prepid}}' title="Show chained requests in {{data.prepid}}" target="_self">
                   <i class="glyphicon glyphicon-indent-left"></i>
                 </a>

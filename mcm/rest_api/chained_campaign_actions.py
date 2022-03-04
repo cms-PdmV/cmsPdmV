@@ -106,3 +106,17 @@ class GetEditableChainedCampaign(GetEditableRESTResource):
     Endpoing for retrieving a chained campaign and it's editing info
     """
     object_class = ChainedCampaign
+
+
+class ToggleChainedCampaignEnabled(RESTResource):
+
+    @RESTResource.ensure_role(Role.PRODUCTION_MANAGER)
+    @RESTResource.request_with_json
+    def post(self, data):
+        """
+        Toggle the given chained campaigns to enabled or disabled
+        """
+        def toggle(chained_campaign):
+            chained_campaign.toggle_enabled()
+
+        return self.do_multiple_items(data['prepid'], ChainedCampaign, toggle)

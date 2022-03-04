@@ -102,3 +102,11 @@ class ChainedCampaign(json_base):
         info['notes'] = True
         info['threshold'] = True
         return info
+
+    def toggle_enabled(self):
+        """
+        Toggle enabled
+        """
+        enabled = self.get('enabled')
+        self.set_attribute('enabled', not enabled)
+        self.update_history('enabled', str(not enabled))

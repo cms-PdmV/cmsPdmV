@@ -5,9 +5,20 @@ angular.module('mcmApp').controller('chainedCampaignController',
       $scope.columns = [
         { text: 'PrepId', select: true, db_name: 'prepid' },
         { text: 'Actions', select: true, db_name: '' },
+        { text: 'Enabled', select: true, db_name: 'enabled' },
         { text: 'Campaigns', select: true, db_name: 'campaigns' }
       ];
       $scope.setDatabaseInfo('chained_campaigns', $scope.columns);
+
+      $scope.toggleEnabled = function (prepid) {
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
+        let message = 'Are you sure you want to toggle enabled status of ' + $scope.promptPrepid(prepids) + '?';
+        $scope.objectAction(message,
+          prepids,
+          {method: 'POST',
+           url: 'restapi/' + $scope.database + '/toggle_enabled',
+           data: {'prepid': prepids}});
+      };
 
       $scope.openChainCreationModal = function () {
         const modal = $uibModal.open({

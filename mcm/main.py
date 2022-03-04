@@ -23,7 +23,8 @@ from rest_api.chained_campaign_actions import (CreateChainedCampaign,
                                                GetChainedCampaign,
                                                UpdateChainedCampaign,
                                                DeleteChainedCampaign,
-                                               GetEditableChainedCampaign)
+                                               GetEditableChainedCampaign,
+                                               ToggleChainedCampaignEnabled)
 
 from rest_api.batch_actions import GetBatch, DeleteBatch, AnnounceBatch
 
@@ -258,6 +259,7 @@ api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
 api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:prepid>')
 api.add_resource(GetEditableChainedCampaign,
                  '/restapi/chained_campaigns/get_editable/<string:prepid>')
+api.add_resource(ToggleChainedCampaignEnabled, '/restapi/chained_campaigns/toggle_enabled')
 
 
 # REST Batches Actions
