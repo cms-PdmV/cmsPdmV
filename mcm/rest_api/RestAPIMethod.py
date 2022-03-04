@@ -268,6 +268,30 @@ class RESTResource(Resource):
         # Comparing two values
         return reference != target
 
+    def stringify_changes(self, changes, prefix='', stringified=None):
+        """
+        Make a list of a human readable change strings
+        """
+        if stringified is None:
+            stringified = []
+
+        if isinstance(changes, dict):
+            for key, value in changes.items():
+                self.stringify_changes(value, f'{prefix}.{key}', stringified)
+
+            return stringified
+
+        if isinstance(changes, list):
+            for index, value in enumerate(changes):
+                self.stringify_changes(value, f'{prefix}[{index}]', stringified)
+
+            return stringified
+
+        if changes:
+            stringified.append(prefix.lstrip('.'))
+
+        return stringified
+
 
 class CreateRESTResource(RESTResource):
 
@@ -371,7 +395,8 @@ class UpdateRESTResource(RESTResource):
         self.logger.debug('Editing info %s', editing_info)
         self.check_if_edits_are_allowed(changes, editing_info)
         new_obj.set('history', old_obj.get('history'))
-        new_obj.update_history('update', str(changes))
+        changes_str = ', '.join(sorted(self.stringify_changes(changes)))
+        new_obj.update_history('update', changes_str)
 
         # Save to DB
         self.logger.info('Saving updated object "%s"', prepid)
