@@ -57,7 +57,7 @@ class MccM(json_base):
         is_admin = user_role >= Role.ADMINISTRATOR
         is_prod_expert = user_role >= Role.PRODUCTION_EXPERT
         is_prod_manager = user_role >= Role.PRODUCTION_MANAGER
-        is_gen_convener = user_role >= Role.GEN_CONVENER
+        is_gen_convener = user_role >= Role.GENERATOR_CONVENER
         is_mc_contact = user_role >= Role.MC_CONTACT
         is_user = user_role >= Role.USER
         # Some are always editable

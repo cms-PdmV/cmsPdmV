@@ -54,6 +54,12 @@
                 <a ng-href='edit?db_name={{database}}&prepid={{data.username}}' title="Edit details" ng-show="user.is_production_manager" target="_self">
                   <i class="glyphicon glyphicon-wrench"></i>
                 </a>
+                <a ng-click="roleChange(data, -1)" title="Demote" ng-show="user.is_production_manager && data.role != 'user';" ng-href="#">
+                  <i class="glyphicon glyphicon-thumbs-down"></i>
+                </a>
+                <a ng-click="roleChange(data, +1)" title="Promote" ng-show="user.is_production_manager && data.role != 'administrator';" ng-href="#">
+                  <i class="glyphicon glyphicon-thumbs-up"></i>
+                </a>
               </div>
               <div ng-switch-when="role">
                 <a ng-href='users?role={{data[column.db_name]}}' title="View users with {{data[column.db_name]}} role">

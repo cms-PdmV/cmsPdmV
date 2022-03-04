@@ -22,6 +22,21 @@ angular.module('mcmApp').controller('userController',
           $scope.openErrorModal(undefined, data.data.message);
         };
       };
+
+      $scope.roleChange = function (userDict, change) {
+        let role = userDict['role'];
+        role = $scope.roles[$scope.roles.indexOf(role) + change];
+        userDict['role'] = role;
+        $http({ method: 'POST', url: 'restapi/users/update', data: userDict}).then(function (data) {
+          if (data.data.results) {
+            $scope.getData();
+          } else {
+            $scope.openErrorModal(undefined, data.data.message);
+          }
+        }), function (data) {
+          $scope.openErrorModal(undefined, data.data.message);
+        };
+      };
     }
   ]
 );

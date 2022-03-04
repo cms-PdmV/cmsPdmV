@@ -38,21 +38,22 @@ angular.module('mcmApp').controller('mainController',
         $scope.getData($scope.database);
       }
 
+      $scope.roles = ['anonymous',
+                      'user',
+                      'mc_contact',
+                      'generator_convener',
+                      'production_manager',
+                      'production_expert',
+                      'administrator'];
+
       // Get user details
       $http.get('restapi/users/get').then(function (data) {
         $scope.user.username = data.data.username;
         $scope.user.fullname = data.data.user_name;
         $scope.user.role = data.data.role;
         $scope.user.pwgs = data.data.pwgs;
-        const roles = ['anonymous',
-                       'user',
-                       'mc_contact',
-                       'generator_convener',
-                       'production_manager',
-                       'production_expert',
-                       'administrator'];
-        for (let role of roles) {
-          $scope.user['is_' + role] = roles.indexOf(role) <= roles.indexOf(data.data.role);
+        for (let role of $scope.roles) {
+          $scope.user['is_' + role] = $scope.roles.indexOf(role) <= $scope.roles.indexOf(data.data.role);
         }
       }, function (data) {
         $scope.openErrorModal(undefined, 'Could not get user details: ' + data.status);

@@ -102,7 +102,7 @@ class Request(json_base):
         is_admin = user_role >= Role.ADMINISTRATOR
         is_prod_expert = user_role >= Role.PRODUCTION_EXPERT
         is_prod_manager = user_role >= Role.PRODUCTION_MANAGER
-        is_gen_convener = user_role >= Role.GEN_CONVENER
+        is_gen_convener = user_role >= Role.GENERATOR_CONVENER
         is_mc_contact = user_role >= Role.MC_CONTACT
         is_user = user_role >= Role.USER
         # Some are always editable
@@ -555,7 +555,7 @@ class Request(json_base):
             username = user.get_username()
             user_role = user.get_role()
             self.logger.info('User %s (%s) is trying to approve %s', username, user_role, prepid)
-            if user_role != Role.GEN_CONVENER and user_role < Role.PRODUCTION_EXPERT:
+            if user_role != Role.GENERATOR_CONVENER and user_role < Role.PRODUCTION_EXPERT:
                 raise Exception('You are not allowed to approve "defined" requests')
 
         if not self.get_attribute('dataset_name'):
@@ -2098,7 +2098,7 @@ class Request(json_base):
             raise Exception('Cannot reset a request that is being validated')
         elif approval_status == 'approve-approved':
             # Only GEN conveners and up can reset approve-approved
-            if role < Role.GEN_CONVENER:
+            if role < Role.GENERATOR_CONVENER:
                 username = user.get_username()
                 raise Exception('%s is not allowed to reset approve-approved requests' % (username))
         elif approval_status in ('submit-approved', 'submit-submitted', 'submit-done'):
