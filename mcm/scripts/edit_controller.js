@@ -897,12 +897,12 @@ angular.module('mcmApp').controller('editController',
             }
             url += '&member_of_campaign=' + firstParts[1];
           }
-          if (scope.cache[url]) {
-            return scope.cache[url].filter(x => !scope.requests.includes(x))
+          if (scope.cache[value]) {
+            return scope.cache[value].filter(x => !scope.requests.slice(0, -1).includes(x))
           }
           return $http.get(url).then(function (data) {
-            scope.cache[url] = data.data.results.map(x => x.prepid);
-            return scope.cache[url].filter(x => !scope.requests.includes(x))
+            scope.cache[value] = data.data.results.map(x => x.prepid);
+            return scope.cache[value].filter(x => !scope.requests.slice(0, -1).includes(x))
           }, function (data) {
             return [];
           });
@@ -976,13 +976,13 @@ angular.module('mcmApp').controller('editController',
           if (!value.length) {
             return [];
           }
-          let url = "search/?db_name=chained_campaigns&include_fields=prepid&enabled=true&prepid=" + value + "*";
-          if (scope.cache[url]) {
-            return scope.cache[url].filter(x => !scope.chains.includes(x));
+          if (scope.cache[value]) {
+            return scope.cache[value].filter(x => !scope.chains.includes(x));
           }
+          let url = "search/?db_name=chained_campaigns&include_fields=prepid&enabled=true&prepid=" + value + "*";
           return $http.get(url).then(function (data) {
-            scope.cache[url] = data.data.results.map(x => x.prepid);
-            return scope.cache[url].filter(x => !scope.chains.includes(x));
+            scope.cache[value] = data.data.results.map(x => x.prepid);
+            return scope.cache[value].filter(x => !scope.chains.slice(0, -1).includes(x));
           }, function (data) {
             return [];
           });
