@@ -82,6 +82,15 @@ function requestController($scope, $http, $window, $uibModal) {
                              data: {'prepid': prepids}})
       };
 
+      $scope.updateStats = function(prepid) {
+        let prepids = prepid == 'selected' ? $scope.selectedItems : [prepid];
+        $scope.objectAction(undefined,
+                            prepids,
+                            {method: 'POST',
+                             url: 'restapi/requests/update_stats',
+                             data: {'prepid': prepids}})
+      }
+
       $scope.toggleSelection = function (prepid) {
         if ($scope.selectedItems.includes(prepid)) {
           $scope.selectedItems = $scope.selectedItems.filter(x => x != prepid);

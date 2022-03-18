@@ -2,6 +2,7 @@ import os
 import re
 import hashlib
 import time
+import json
 import logging
 import math
 from operator import itemgetter
@@ -20,7 +21,7 @@ from tools.installer import installer
 from tools.settings import Settings
 from tools.locker import locker
 from tools.logger import InjectionLogAdapter
-from tools.utils import cmssw_setup, get_scram_arch as fetch_scram_arch, run_commands_in_singularity
+from tools.utils import cmssw_setup, get_scram_arch as fetch_scram_arch, get_workflows_from_stats, get_workflows_from_stats_for_prepid, run_commands_in_singularity, sort_workflows_by_name
 from tools.connection_wrapper import ConnectionWrapper
 from json_layer.user import User, Role
 
@@ -67,7 +68,7 @@ class Request(json_base):
         'time_event': [-1.0],
         'total_events': -1,
         'type': '',
-        'validation': {"valid":False, "content":"all"},
+        'validation': {},
         'version': 0,
     }
 
@@ -1534,8 +1535,81 @@ class Request(json_base):
         actors = list(set(actors))
         return actors
 
-    def get_stats(self, forced=False):
+    def get_stats(self):
+        """
+        Fetch workflows from Stats, save them
+        Update output datasets accordingly
+        Update completed events accordingly
+        """
+        prepid = self.get('prepid')
+        self.logger.info('Updating Stats for %s', prepid)
+        # Make a dictionary of available workflows in stats for request
+        workflows_in_stats = get_workflows_from_stats_for_prepid(prepid)
+        workflows_in_stats = {w['RequestName']: w for w in workflows_in_stats}
+        # Get workflow names of all the workflows - in Stats and in McM
+        workflow_names = set(workflows_in_stats)
+        workflow_names.update(w['name'] for w in self.get('reqmgr_name'))
+        workflow_names = sorted(list(workflow_names), key=lambda w: '_'.join(w.split('_')[-3:]))
+        self.logger.info('%s workflow names (%s): %s',
+                         prepid,
+                         len(workflow_names),
+                         ', '.join(workflow_names))
+        all_workflows = []
+        total_events = 0
+        dead_status = {'rejected', 'aborted', 'failed', 'rejected-archived',
+                       'aborted-archived', 'failed-archived', 'aborted-completed'}
+
+        for workflow_name in workflow_names:
+            workflow = workflows_in_stats.get(workflow_name)
+            if not workflow:
+                self.logger.warning('Could not find %s', workflow_name)
+                continue
+
+            self.logger.info('Found workflow %s', workflow_name)
+            workflow_type = workflow.get('RequestType', '')
+            total_events = max(total_events, workflow.get('TotalEvents', 0))
+            status_history = [x['Status'] for x in workflow.get('RequestTransition', [])]
+            dead = len(set(status_history) & dead_status) > 0
+            priority = workflow.get('RequestPriority', 0)
+            stats_update = workflow.get('LastUpdate', 0)
+            new_workflow = {'name': workflow_name,
+                            'type': workflow_type,
+                            'status_history': status_history,
+                            'priority': priority,
+                            'stats_update': stats_update,
+                            'datasets': [],
+                            'dead': dead}
+
+            for output_dataset in workflow.get('OutputDatasets', []):
+                for history_entry in reversed(workflow.get('EventNumberHistory', [])):
+                    if output_dataset in history_entry['Datasets']:
+                        dataset_dict = history_entry['Datasets'][output_dataset]
+                        new_workflow['datasets'].append({'name': output_dataset,
+                                                         'type': dataset_dict['Type'],
+                                                         'events': dataset_dict['Events']})
+                        break
+
+            # self.logger.debug(json.dumps(new_workflow, indent=2, sort_keys=True))
+            all_workflows.append(new_workflow)
+
+        all_workflows = sort_workflows_by_name(all_workflows, 'name')
+        self.logger.info('Saving %s workflows for %s', len(all_workflows), prepid)
+        self.set('reqmgr_name', all_workflows)
+        if total_events > 0 and total_events != self.get('total_events'):
+            self.set('total_events', total_events)
+            self.update_history('update', 'total_events')
+
+        if any(self.get('keep_output')):
+            output_datasets = self.pick_output_datasets(all_workflows)
+            completed_events = self.get_completed_events(all_workflows, output_datasets)
+        else:
+            output_datasets = []
+            completed_events = 0
+
+        self.set('output_dataset', output_datasets)
+        self.set('completed_events', completed_events)
         return
+
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
         prepid = self.get_attribute('prepid')
         stats_workflows = stats_db.raw_query_view('_designDoc',
@@ -1871,6 +1945,79 @@ class Request(json_base):
 
         # return only list of sorted datasets
         return [el[0] for el in collected]
+
+    def get_processing_strings(self):
+        processing_strings = []
+        for i in range(len(self.get('sequences'))):
+            processing_strings.append(self.get_processing_string(i))
+
+        return processing_strings
+
+    def pick_output_datasets(self, workflows):
+        prepid = self.get('prepid')
+        processing_strings = set(self.get_processing_strings())
+        campaign = self.get('member_of_campaign').replace("-", "\\-")
+        dataset_name = self.get('dataset_name').replace("-", "\\-")
+        dataset_pattern = f'/{dataset_name}/{campaign}\\-(.*)\\-v([0-9]+)/.*'
+        self.logger.info('Picking output for %s from %s workflows, processing strings: %s, pattern: %s',
+                         prepid,
+                         len(workflows),
+                         processing_strings,
+                         dataset_pattern)
+        dataset_matcher = re.compile(dataset_pattern)
+        # Pick only not-dead workflows
+        workflows = [w for w in workflows if not w.get('dead') and w.get('type').lower() != 'resubmission']
+        dataset_names = [dataset['name'] for w in workflows for dataset in w['datasets']]
+        dataset_names = list(set(dataset_names))
+        # Expected datatiers
+        tiers = list(reversed(self.get_tiers()))
+        # Keep only those, which have expected datatiers
+        dataset_names = [d for d in dataset_names if d.split('/')[-1] in tiers]
+        self.logger.info('Datasets (%s): %s', len(dataset_names), dataset_names)
+        # Collect datasets as dictionary or tuples {tier: [(version, name)]}
+        datasets = {}
+        # Go through dataset names
+        for dataset in dataset_names:
+            match = dataset_matcher.fullmatch(dataset)
+            if not match:
+                self.logger.info('No match %s', dataset)
+                continue
+
+            groups = match.groups()
+            if len(groups) != 2:
+                self.logger.warning('Unexpected number of groups for %s: %s', dataset, groups)
+                continue
+
+            processing_string = groups[0]
+            if processing_string not in processing_strings:
+                self.logger.warning('Processing string %s does is not expected: %s', processing_string, processing_strings)
+                continue
+
+            tier = dataset.split('/')[-1]
+            version = int(groups[1])
+            datasets.setdefault(tier, []).append((version, dataset))
+
+        self.logger.debug('Collected datasets: %s', json.dumps(datasets, indent=2))
+        # Pick newest version for each datatier
+        datasets = [sorted(datasets[tier])[-1][1] for tier in tiers if datasets.get(tier)]
+        self.logger.info('Picked datasets for %s: %s', prepid, datasets)
+        return datasets
+
+    def get_completed_events(self, workflows, output_datasets):
+        """
+        Get number of completed events of output dataset in given workflows
+        """
+        if not output_datasets:
+            return 0
+
+        dataset = output_datasets[-1]
+        for workflow in reversed(workflows):
+            for dataset_info in workflow.get('datasets'):
+                if dataset_info['name'] == dataset:
+                    return dataset_info['events']
+
+        return 0
+
 
     def collect_status_and_completed_events(self, mcm_rr, ds_for_accounting):
         counted = 0

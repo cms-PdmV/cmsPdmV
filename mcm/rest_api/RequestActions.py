@@ -549,38 +549,16 @@ class InspectStatus(RESTResource):
 class UpdateStats(RESTResource):
 
     @RESTResource.ensure_role(Role.PRODUCTION_EXPERT)
-    def get(self, request_id, refresh=None, forced=None):
+    @RESTResource.request_with_json
+    def post(self, data):
         """
-        Triggers the forced update of the stats page for the given request id
+        Make McM refetch workflows from Stats
         """
-        refresh_stats = True
-        if refresh == "no_refresh":
-            refresh_stats = False
+        def update_stats(request):
+            request.get_stats()
 
-        # set forcing argument
-        force = True if forced == "force" else False
+        return self.do_multiple_items(data['prepid'], Request, update_stats)
 
-        rdb = Database('requests')
-        if not rdb.document_exists(request_id):
-            return {"prepid": request_id, "results": False,
-                    "message": '%s does not exist' % request_id}
-
-        mcm_r = request(rdb.get(request_id))
-        if mcm_r.get_stats(forced=force):
-            mcm_r.reload()
-            return {"prepid": request_id, "results": True}
-        else:
-            if force:
-                mcm_r.reload()
-                return {
-                    "prepid": request_id,
-                    "results": False,
-                    "message": "no apparent changes, but request was foced to reload"}
-            else:
-                return {
-                    "prepid": request_id,
-                    "results": False,
-                    "message": "no apparent changes"}
 
 class UpdateEventsFromWorkflow(RESTResource):
 

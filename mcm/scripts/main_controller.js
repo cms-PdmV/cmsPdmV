@@ -592,39 +592,56 @@ mcmApp.directive('dropdownToggle', ['$document', '$location', function ($documen
   };
 }]);
 
-mcmApp.directive("reqmgrName", function ($http) {
+mcmApp.directive("reqmgrName", function () {
   return {
     require: 'ngModel',
     restrict: 'E',
-    // scope: true,
-    templateUrl: 'HTML/templates/request.manager.name.html',
+    template:
+    `<ol>
+      <li ng-repeat="workflow in workflows">
+        <a ng-if="!isDevMachine()" target="_blank" title="Open workflow in ReqMgr2" ng-href="https://cmsweb.cern.ch/reqmgr2/fetch?rid={{workflow.name}}">{{workflow.name}}</a>&nbsp;
+        <a ng-if="isDevMachine()" target="_blank" title="Open workflow in ReqMgr2" ng-href="https://cmsweb-testbed.cern.ch/reqmgr2/fetch?rid={{workflow.name}}">{{workflow.name}}</a>&nbsp;
+        <small> open in:</small> <a target="_blank" title="Open workflow in Stats2" ng-href="https://cms-pdmv.cern.ch/stats?workflow_name={{workflow.name}}">Stats2</a>&nbsp;
+        <span ng-if-if="workflow.status_history && workflow.status_history.length > 0">
+          <small> status:</small> {{workflow.status_history[workflow.status_history.length - 1]}}
+        </span>
+        <small> type:</small> {{workflow.type}}
+        <ul ng-if="workflow.shouldShow" class="zebra-datasets">
+          <li ng-repeat="dataset in workflow.datasets">
+            <div>
+              <div class="gray-bar">
+                <div style="width: {{dataset.completed}}%" class="bar {{dataset.type.toLowerCase()}}-bar"></div>
+              </div>
+              <small>datatier:</small> {{dataset.datatier}},
+              <small>completed:</small> {{dataset.completed}}%,
+              <small>events:</small> {{dataset.niceEvents}},
+              <small>type:</small> <b class="{{dataset.type.toLowerCase()}}-type">{{dataset.type}}</b>
+              <br>
+              <small style="letter-spacing: -0.1px"><a target="_blank" title="Open dataset in DAS" ng-href="{{makeDASLink(dataset.name)}}">{{dataset.name}}</a></small>
+            </div>
+          </li>
+        </ul>
+      </li>
+    </ol>`,
     replace: true,
     reqmgr_name: [],
-    link: function (scope, element, attrs, ctrl) {
-      scope.links = {};
-      scope.image_width = 150;
+    link: function (scope, element, attr, ctrl) {
       ctrl.$render = function () {
-        scope.reqmgr_name = ctrl.$viewValue;
-        scope.prepid = scope.$eval(attrs.prepid);
-      };
-      scope.getrqmnr_data = function (reqmgr_name) {
-        scope.stats_cache[reqmgr_name] = 'Not found'
-        for (var index = 0; index < scope.reqmgr_name.length; index++) {
-          reqmgr_name_dict = scope.reqmgr_name[index];
-          if (reqmgr_name_dict['name'] === reqmgr_name) {
-            if (Object.keys(reqmgr_name_dict['content']).length > 0) {
-              scope.stats_cache[reqmgr_name] = reqmgr_name_dict['content']
-            }
-            break;
+        scope.workflows = ctrl.$viewValue;
+        scope.prepid = scope.$eval(attr.prepid);
+        scope.totalEvents = scope.$eval(attr.total);
+        console.log(attr.total);
+        if (scope.workflows && scope.workflows.length) {
+          for (let workflow of scope.workflows) {
+            workflow.shouldShow = !workflow.dead && workflow.type.toLowerCase() != 'resubmission';
+            workflow.datasets.forEach(ds => {
+              ds.datatier = ds.name.split('/').pop();
+              ds.completed = (scope.totalEvents > 0 ? (ds.events / scope.totalEvents * 100) : 0).toFixed(2);
+              ds.niceEvents = ds.events.toLocaleString('en-US');
+            });
           }
         }
       };
-      scope.$on('loadDataSet', function (events, values) {
-        if (scope.prepid !== values[0]) {
-          return
-        }
-        scope.stats_cache[values[1]] = values[2].content
-      });
     }
   }
 });

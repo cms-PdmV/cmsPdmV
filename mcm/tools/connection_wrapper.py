@@ -1,13 +1,12 @@
 """
 Module that contains ConnectionWrapper class
 """
-import http.client as client
 import logging
 import os
 import json
 import time
 import ssl
-from contextlib import contextmanager
+from http import client
 
 
 class ConnectionWrapper():
@@ -18,34 +17,28 @@ class ConnectionWrapper():
 
     def __init__(self,
                  host,
-                 keep_open=False,
                  cert_file=None,
                  key_file=None):
         self.logger = logging.getLogger('mcm_error')
         self.connection = None
         host = host.rstrip('/')
-        if host.startswith('https://'):
-            self.host_url = host.replace('https://', '', 1)
-            self.https = True
-            self.port = self.host_url.split(':')[-1] if self.host_url.count(':') else 443
-        elif host.startswith('http://'):
-            self.host_url = host.replace('http://', '', 1)
-            self.https = False
-            self.port = self.host_url.split(':')[-1] if self.host_url.count(':') else 80
-        else:
-            self.host_url = host
-            self.https = False
-            self.port = 80
+        self.https = host.startswith('https://')
+        self.host_url = host.replace('https://', '', 1).replace('http://', '', 1)
+        self.port = 443 if self.https else 80
+        if ':' in self.host_url:
+            host_port = self.host_url.rsplit(':', 1)
+            self.port = host_port[-1]
+            self.host_url = host_port[0]
 
+        self.logger.debug('Host: %s, port %s, https: %s', self.host_url, self.port, self.https)
         self.cert_file = cert_file or os.getenv('USERCRT', None)
         self.key_file = key_file or os.getenv('USERKEY', None)
-        self.keep_open = keep_open
         self.connection_attempts = 3
         self.timeout = 120
 
     def __enter__(self):
         self.logger.debug('Entering context, host: %s', self.host_url)
-        self.keep_open = True
+        return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.logger.debug('Exiting context, host: %s', self.host_url)
@@ -114,9 +107,6 @@ class ConnectionWrapper():
                                       url,
                                       response_to_return)
                     return response_to_return
-
-                if not self.keep_open:
-                    self.close()
 
                 end_time = time.time()
                 self.logger.debug('%s request to %s%s took %.2f',

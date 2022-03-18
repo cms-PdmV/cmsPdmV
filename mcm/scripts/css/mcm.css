@@ -181,3 +181,42 @@ img.led {
     word-break: break-word;
     white-space: pre-wrap;
 }
+
+.bar {
+    line-height:10px;
+    height: 10px;
+    display: inline-block;
+    max-width: 100%;
+    background-color: #2C3E50;
+}
+.production-bar {
+    background-color:#F39C12;
+}
+.valid-bar {
+    background-color:#3498db;
+}
+.invalid-bar {
+    background-color:#C0392B;
+}
+.deleted-bar {
+    background-color:#E74C3C;
+}
+.gray-bar {
+    width: 100px;
+    background-color: #BDC3C7;
+    display: inline-block;
+    line-height:10px;
+    height: 10px;
+    font-size: 0;
+    overflow: hidden;
+    margin-right: 4px;
+}
+.valid-type {
+    color: green;
+}
+.production-type, .invalid-type, .deleted-type, .deprecated-type {
+    color: red;
+}
+.none-type {
+    color: #8A8A8A;
+}

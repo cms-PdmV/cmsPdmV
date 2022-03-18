@@ -98,10 +98,10 @@
                 </a>
                 <!-- <a ng-click="objectAction('inspect', data.prepid)" title="Inspect status of {{data.prepid}}" ng-show="user.is_production_manager" ng-href="#">
                   <i class="glyphicon glyphicon-screenshot"></i>
-                </a>
-                <a ng-click="objectAction('update_stats', data.prepid)" title="Update status of {{data.prepid}} in Stats" ng-show="user.is_administrator" ng-href="#">
-                  <i class="glyphicon glyphicon-refresh"></i>
                 </a> -->
+                <a ng-click="updateStats(data.prepid)" title="Fetch workflows from in Stats" ng-show="user.is_administrator" ng-href="#">
+                  <i class="glyphicon glyphicon-refresh"></i>
+                </a>
                 <a ng-href="restapi/requests/gen_log/{{data.prepid}}" title="See GEN request checking script logs for {{data.prepid}}" target="_self">
                   <i class="glyphicon glyphicon-th"></i>
                 </a>
@@ -290,7 +290,7 @@
                 {{numberWithCommas(data[column.db_name])}}
               </div>
               <div ng-switch-when="reqmgr_name">
-                <reqmgr-Name ng-model="data[column.db_name]" prepid="data.prepid"></reqmgr-Name>
+                <reqmgr-Name ng-model="data[column.db_name]" prepid="data.prepid" total="data.total_events"></reqmgr-Name>
               </div>
               <div ng-switch-when="memory">
                 {{data[column.db_name]}}
@@ -372,10 +372,10 @@
           </a>
           <!-- <a ng-click="objectAction('inspect', 'selected')"  ng-hide="role(3);" title="Inspect status of selected requests" ng-href="#">
             <i class="glyphicon glyphicon-screenshot"></i>
-          </a>
-          <a ng-click="objectAction('update_stats', 'selected')"  ng-hide="role(4);" title="Update status of selected requests in Stats" ng-href="#">
-            <i class="glyphicon glyphicon-refresh"></i>
           </a> -->
+          <a ng-click="updateStats('selected')" title="Fetch workflows from in Stats" ng-show="user.is_administrator" ng-href="#">
+            <i class="glyphicon glyphicon-refresh"></i>
+          </a>
           <a ng-click="openOnlySelected();"  ng-hide="role(1);" title="View only selected prepids" ng-href="#">
             <i class="glyphicon glyphicon-th-list"></i>
           </a>

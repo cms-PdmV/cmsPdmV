@@ -99,17 +99,19 @@ def dbs_datasetlist(query):
     if not query:
         return []
 
-    dbs_conn = ConnectionWrapper(host='cmsweb-prod.cern.ch', port=8443)
-
     if isinstance(query, list):
         query = [ds[ds.index('/'):] for ds in query]
     else:
         query = query[query.index('/'):]
 
-    dbs_response = dbs_conn.api('POST',
-                                '/dbs/prod/global/DBSReader/datasetlist',
-                                {'dataset': query,
-                                 'detail': 1})
+    with ConnectionWrapper('https://cmsweb-prod.cern.ch:8443') as dbs_conn:
+        dbs_response = dbs_conn.api('POST',
+                                    '/dbs/prod/global/DBSReader/datasetlist',
+                                    {'dataset': query,
+                                     'detail': 1,
+                                     'dataset_access_type': '*'},
+                                    headers={'Content-type': 'application/json'})
+
     dbs_response = json.loads(dbs_response.decode('utf-8'))
     if not dbs_response:
         return []
@@ -255,3 +257,51 @@ def run_commands_in_singularity(commands, os_name, mount_eos, mount_home):
              'rm -f singularity-script.sh']
 
     return bash
+
+
+def sort_workflows_by_name(workflows, name_attr):
+    """
+    Sort workflows by their submission date
+    """
+    return sorted(workflows, key=lambda w: '_'.join(w[name_attr].split('_')[-3:]))
+
+
+def get_workflows_from_stats_for_prepid(prepid):
+    """
+    Fetch workflows from Stats for given prepid
+    """
+    if not prepid:
+        return []
+
+    with ConnectionWrapper('http://vocms074.cern.ch:5984') as stats_conn:
+        response = stats_conn.api(
+            'GET',
+            f'/requests/_design/_designDoc/_view/requestsPrepids?key="{prepid}"&include_docs=True',
+            headers={'Content-Type': 'application/json'}
+        )
+
+    response = json.loads(response.decode('utf-8'))
+    workflows = [x['doc'] for x in response['rows']]
+    workflows = sort_workflows_by_name(workflows, 'RequestName')
+    return workflows
+
+
+def get_workflows_from_stats(workflow_names):
+    """
+    Fetch workflows from Stats with given names
+    """
+    workflow_names = [w.strip() for w in workflow_names if w.strip()]
+    if not workflow_names:
+        return []
+
+    data = {'docs': [{'id': name} for name in workflow_names]}
+    with ConnectionWrapper('http://vocms074.cern.ch:5984') as stats_conn:
+        response = stats_conn.api('POST',
+                                  '/requests/_bulk_get',
+                                  data=data,
+                                  headers={'Content-Type': 'application/json'})
+
+    response = json.loads(response.decode('utf-8')).get('results', [])
+    workflows = [r['docs'][-1]['ok'] for r in response if r.get('docs') if r['docs'][-1].get('ok')]
+    workflows = sort_workflows_by_name(workflows, 'RequestName')
+    return workflows

@@ -56,6 +56,7 @@ from rest_api.RequestActions import (RequestImport,
                                      GetCmsDriverForRequest,
                                      GetFragmentForRequest,
                                      GetSubmittedTogetherForRequest,
+                                     UpdateStats,
                                      #GetSetupForRequest,
                                      #ApproveRequest,
                                      #SetStatus,
@@ -336,6 +337,7 @@ api.add_resource(RequestSoftReset, '/restapi/requests/soft_reset')
 api.add_resource(GetUniqueRequestValues, '/restapi/requests/unique_values')
 api.add_resource(GetCmsDriverForRequest, '/restapi/requests/get_drivers/<string:prepid>')
 api.add_resource(GetSubmittedTogetherForRequest, '/restapi/requests/submit_plan/<string:prepid>')
+api.add_resource(UpdateStats, '/restapi/requests/update_stats')
 # Request public APIs
 api.add_resource(GetSetupFileForRequest, '/public/restapi/requests/get_setup/<string:prepid>')
 api.add_resource(GetTestFileForRequest, '/public/restapi/requests/get_test/<string:prepid>')
