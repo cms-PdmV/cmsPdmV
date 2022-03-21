@@ -9,12 +9,12 @@ import urllib
 from urllib.request import build_opener, Request, HTTPHandler
 from urllib.error import HTTPError
 from tools.locator import locator
-from tools.locker import locker
+from tools.locker import Locker
 from tools.config_manager import Config
 from cachelib import SimpleCache
 
 
-class database:
+class Database:
     logger = logging.getLogger("mcm_error")
     # Cache timeout in seconds
     cache = SimpleCache(default_timeout=3600) # 1h
@@ -158,7 +158,7 @@ class database:
         Save value to cache if cache is enabled
         """
         if self.cache_enabled:
-            with locker.lock(key):
+            with Locker.get_lock(key):
                 cache_key = 'mcm_database_' + key
                 self.cache.set(cache_key, value)
 
@@ -168,7 +168,7 @@ class database:
         If cache is disabled or value could not be found, return None
         """
         if self.cache_enabled:
-            with locker.lock(key):
+            with Locker.get_lock(key):
                 cache_key = 'mcm_database_' + key
                 return self.cache.get(cache_key)
         else:

@@ -1,14 +1,13 @@
-from couchdb_layer.mcm_database import database as Database
-from json_layer.json_base import json_base
+from json_layer.model_base import ModelBase
 from tools.connection_wrapper import ConnectionWrapper
 from tools.config_manager import Config
-from tools.locker import locker
+from tools.locker import Locker
 from tools.settings import Settings
 
 
-class Batch(json_base):
+class Batch(ModelBase):
 
-    _json_base__schema = {
+    _ModelBase__schema = {
         '_id': '',
         'prepid': '',
         'history': [],
@@ -16,16 +15,7 @@ class Batch(json_base):
         'requests': [],
         'status': '',
     }
-
-    @classmethod
-    def get_database(cls):
-        """
-        Return shared database instance
-        """
-        if not hasattr(cls, 'database'):
-            cls.database = Database('batches')
-
-        return cls.database
+    database_name = 'batches'
 
     def add_request(self, prepid, workflow):
         """
@@ -55,7 +45,7 @@ class Batch(json_base):
         key = Config.get('grid_key')
         prepid = self.get('prepid')
         campaign = prepid.split('-')[0]
-        with locker.lock(f'batch-{campaign}'):
+        with Locker.get_lock(f'batch-{campaign}'):
             if self.get('status') != 'new':
                 raise Exception('Only new batches can be announced')
 
@@ -99,7 +89,7 @@ class Batch(json_base):
         """
         batch_db = Batch.get_database()
         batch_threshold = Settings.get('max_in_batch')
-        with locker.lock(f'batch-{campaign}'):
+        with Locker.get_lock(f'batch-{campaign}'):
             # Get the newest batch, any status
             newest_batches = batch_db.search({'prepid': f'{campaign}-*'}, limit=1, sort_asc=False)
             # Get the batch
@@ -124,7 +114,7 @@ class Batch(json_base):
         Create a new batch with a unique prepid and return it
         """
         batch_db = Batch.get_database()
-        with locker.lock('batch-prepid-%s' % (campaign)):
+        with Locker.get_lock('batch-prepid-%s' % (campaign)):
             prepid = batch_db.get_next_prepid(campaign, [campaign])
             batch = Batch({'_id': prepid,
                            'prepid': prepid})

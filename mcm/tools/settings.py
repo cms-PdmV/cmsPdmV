@@ -2,8 +2,8 @@
 Module that contains Settings class
 """
 from cachelib import SimpleCache
-from couchdb_layer.mcm_database import database as Database
-from tools.locker import locker
+from couchdb_layer.mcm_database import Database
+from tools.locker import Locker
 
 
 class Settings():
@@ -39,7 +39,7 @@ class Settings():
         Set setting value and notes and save to database
         If notes are None, they will not be updated
         """
-        with locker.lock('settings-%s' % (key)):
+        with Locker.get_lock('settings-%s' % (key)):
             setting = cls.get_database().get(key)
             if not setting:
                 setting = {'_id': key}

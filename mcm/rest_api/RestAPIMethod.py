@@ -6,7 +6,7 @@ import time
 from tools.exceptions import BadAttributeException, CouldNotSaveException, McMException, NotFoundException
 
 import flask
-from tools.locker import locker
+from tools.locker import Locker
 from flask_restful import Resource
 from flask import request, make_response, current_app, render_template
 from json_layer.user import User, Role

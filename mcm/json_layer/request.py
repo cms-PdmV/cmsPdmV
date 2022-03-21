@@ -7,27 +7,27 @@ import logging
 import math
 from operator import itemgetter
 
-from couchdb_layer.mcm_database import database as Database
+from couchdb_layer.mcm_database import Database
 from json_layer.chained_campaign import ChainedCampaign
 from json_layer.invalidation import Invalidation
-from json_layer.json_base import json_base
+from json_layer.model_base import ModelBase
 from json_layer.campaign import Campaign
 from json_layer.flow import Flow
 from json_layer.batch import Batch
-from json_layer.generator_parameters import generator_parameters
 from json_layer.sequence import Sequence
 from tools.locator import locator
 from tools.installer import installer
 from tools.settings import Settings
-from tools.locker import locker
+from tools.locker import Locker
 from tools.logger import InjectionLogAdapter
 from tools.utils import cmssw_setup, get_scram_arch as fetch_scram_arch, get_workflows_from_stats, get_workflows_from_stats_for_prepid, run_commands_in_singularity, sort_workflows_by_name
 from tools.connection_wrapper import ConnectionWrapper
 from json_layer.user import User, Role
+from tools.submitter import RequestSumbmitter
 
 
-class Request(json_base):
-    _json_base__schema = {
+class Request(ModelBase):
+    _ModelBase__schema = {
         '_id': '',
         'prepid': '',
         'approval': 'none',
@@ -42,7 +42,7 @@ class Request(json_base):
         'fragment': '',
         'fragment_name': '',
         'fragment_tag': '',
-        'generator_parameters': [],
+        'generator_parameters': {},
         'generators': [],
         'history': [],
         'input_dataset': '',
@@ -71,6 +71,7 @@ class Request(json_base):
         'validation': {},
         'version': 0,
     }
+    database_name = 'requests'
 
     # approval-status order
     order = ['none-new',
@@ -234,17 +235,23 @@ class Request(json_base):
         current_status = '%s-%s' % (self.get_attribute('approval'), self.get_attribute('status'))
         self.logger.info('Approving request "%s", current status "%s"', prepid, current_status)
         if current_status == 'none-new':
-            # Need to check if this is root campaign or not, it root or possible
-            # then move to validation, otherwise straight to approved
-            campaign_db = Database('campaigns')
-            campaign = campaign_db.get(self.get_attribute('member_of_campaign'))
-            if campaign['root'] > 0:
-                # Not root
+            # Check if validation should be bypassed
+            bypass_validation = self.get('validation').get('bypass', False)
+            if bypass_validation:
+                self.logger.info('Bypassing validation for %s', prepid)
                 self.move_to_approved()
             else:
-                # Root or possible root
-                # Skip to validated if request is in validation bypass list
-                self.move_to_validating()
+                # Need to check if this is root campaign or not, it root or possible
+                # then move to validation, otherwise straight to approved
+                campaign_name = self.get_attribute('member_of_campaign')
+                campaign = Campaign.fetch(campaign_name)
+                if campaign.get('root') > 0:
+                    # Not root
+                    self.move_to_approved()
+                else:
+                    # Root or possible root
+                    # Skip to validated if request is in validation bypass list
+                    self.move_to_validating()
 
         elif current_status == 'validation-new':
             # Move to validated, is allowed only for pdmvserv
@@ -425,14 +432,9 @@ class Request(json_base):
         if not self.get_attribute('dataset_name'):
             raise Exception('Missing dataset name')
 
-        # TODO: are generator parameters needed at all?
-        gen_parameters = self.get_attribute('generator_parameters')
-        if not gen_parameters or generator_parameters(gen_parameters[-1]).isInValid():
-            raise Exception('The generator parameters are invalid: either none or negative or null '
-                            'values, or efficiency larger than 1')
-
-        gen_parameters[-1] = generator_parameters(gen_parameters[-1]).json()
-        self.set_attribute('generator_parameters', gen_parameters)
+        generator_parameters = self.get_attribute('generator_parameters')
+        if not generator_parameters:
+            raise Exception('Missing generator parameters')
 
         if not self.get_attribute('generators'):
             raise Exception('There should be at least one generator specified in the request')
@@ -490,11 +492,13 @@ class Request(json_base):
             flow_processing_string = None
             flow_name = self.get_attribute('flown_with')
             request_parameters = {}
+            sequences_name = 'default'
+            flow = None
             if flow_name:
-                flow_db = Database('flows')
-                flow = flow_db.get(flow_name)
+                flow = Flow.fetch(flow_name)
                 request_parameters = flow.get('request_parameters', {})
                 flow_processing_string = request_parameters.get('process_string')
+                sequences_name = request_parameters.get(sequences_name, sequences_name)
 
             if not flow_processing_string:
                 def similar_sequences(seq1, seq2):
@@ -506,20 +510,19 @@ class Request(json_base):
                     # Get keys of both sequences and remove the ignored ones
                     keys = list(set(list(seq1.keys()) + list(seq2.keys())) - ignore)
                     # Cound number of different values for the keys above
-                    diff = [1 for k in keys if seq1.get(k) and seq2.get(k) and seq1[k] != seq2[k]]
-                    return bool(diff)
+                    diff = [k for k in keys if seq1.get(k) and seq2.get(k) and seq1[k] != seq2[k]]
+                    self.logger.info('Keys with different values: %s', diff)
+                    return not bool(diff)
 
                 # Neither request, nor flow have processing string, compare
                 # sequences of request and campaign
-                campaign_sequences = campaign['sequences']
-                # Get sequence names from flow
-                flow_sequences = list(request_parameters.get('sequences', {}).keys())
-                # Add 'default' name if any are missing
-                flow_sequences += ['default'] * len(campaign_sequences) - len(flow_sequences)
-                # Get sequences from campaign based on flow sequence names
-                campaign_sequences = [s[f] for f, s in zip(flow_sequences, campaign_sequences)]
-                for request_sequence, campaign_sequence in zip(sequences, campaign_sequences):
-                    if not similar_sequences(request_sequence, campaign_sequence):
+                if flow:
+                    reference_sequences = flow.build_sequences(campaign)
+                else:
+                    reference_sequences = campaign.get('sequences')[sequences_name]
+
+                for request_sequence, reference_sequence in zip(sequences, reference_sequences):
+                    if not similar_sequences(request_sequence, reference_sequence):
                         raise Exception('Sequences of request differ from campaign sequences, but '
                                         'neither flow, nor request itself have a processing string '
                                         'to show that')
@@ -574,9 +577,8 @@ class Request(json_base):
         # Set new status
         self.set_approval_status('approve', 'approved')
 
-        chained_requests = self.get_chained_requests()
         # Check status of requests leading to this one
-        self.check_status_of_parents(chained_requests)
+        self.check_status_of_parents()
         self.check_with_previous(True)
         self.get_input_dataset_status()
         self.reload()
@@ -591,7 +593,7 @@ class Request(json_base):
         dataset_name = self.get_attribute('dataset_name')
         campaign = self.get_attribute('member_of_campaign')
         query = {'dataset_name': dataset_name, 'member_of_campaign': campaign}
-        similar_requests = request_db.search('search', query, limit=-1)
+        similar_requests = request_db.search(query, limit=-1)
         if len(similar_requests) == 0:
             raise Exception('It seems that database is down, could not check for duplicates')
 
@@ -633,7 +635,7 @@ class Request(json_base):
         """
         invalidation_db = Database('invalidations')
         prepid = self.get_attribute('prepid')
-        invalidations = invalidation_db.search("search", {'prepid': prepid}, limit=None)
+        invalidations = invalidation_db.search({'prepid': prepid}, limit=None)
         invalidations = [i for i in invalidations if i["status"] in {"new", "announced"}]
         if invalidations:
             raise Exception(f'There are {len(invalidations)} unacknowledged '
@@ -821,11 +823,11 @@ class Request(json_base):
         Move reqeust to approve-approved ("approved") status
         """
         prepid = self.get_attribute('prepid')
-        user = User(db=True)
+        user = User()
         username = user.get_username()
-        user_role = user.user_dict.get('role')
+        user_role = user.get_role()
         self.logger.info('User %s (%s) is trying to approve %s', username, user_role, prepid)
-        if user_role not in {'production_manager', 'administrator'}:
+        if user_role < Role.PRODUCTION_MANAGER:
             raise Exception('You are not allowed to submit requests')
 
         if not self.get_attribute('dataset_name'):
@@ -851,13 +853,13 @@ class Request(json_base):
 
         chained_requests = self.get_chained_requests()
         # Check status of requests leading to this one
-        self.check_status_of_parents(chained_requests)
+        self.check_status_of_parents()
 
         # TODO: Allow users to aprove only current steps of chain, only
         # submission or flowing code can approve otherwise
         chained_requests = [c for c in chained_requests if c['enabled']]
         previous_request = self.get_parent_request()
-        if previous_request['status'] == 'done':
+        if previous_request and previous_request['status'] == 'done':
             self.get_input_dataset_status()
             for chained_request in chained_requests:
                 if chained_request['chain'].index(prepid) != chained_request['step']:
@@ -867,8 +869,8 @@ class Request(json_base):
             self.set_attribute('input_dataset', '')
 
         # Collect chains and requests that should be submitted together
-        submitted_together = self.to_be_submitted_together(chained_requests)
-        raise NotImplemented('Submission is no implemented')
+        submitted_together = self.to_be_submitted_together()
+        raise NotImplementedError('Submission is not implemented')
         # TODO: submit
         # from tools.handlers import ChainRequestInjector, submit_pool
         # _q_lock = locker.thread_lock(prepid)
@@ -971,20 +973,9 @@ class Request(json_base):
                 raise Exception('"%s" could not find "%s" to reset options' % (prepid, flow_name))
 
             request_parameters = flow.get('request_parameters')
-
-        sequences = []
-        sequences_name = request_parameters.get('sequences_name', 'default')
-        campaign_sequences = campaign.get('sequences')[sequences_name]
-        flow_sequences = request_parameters.get('sequences', [])
-        # Add empty sequences to flow
-        flow_sequences += (len(campaign_sequences) - len(flow_sequences)) * [{}]
-        assert len(campaign_sequences) == len(flow_sequences)
-        # Iterate through campaign and flow sequences
-        # Apply flow changes over campaign's sequence and add to list
-        for flow_seq, campaign_seq in zip(flow_sequences, campaign_sequences):
-            # Allow all attributes?
-            campaign_seq.update(flow_seq)
-            sequences.append(campaign_seq)
+            sequences = flow.build_sequences(campaign)
+        else:
+            sequences = campaign.get('sequences')['default']
 
         self.set_attribute('sequences', sequences)
         # Set values from request parameters
@@ -995,6 +986,7 @@ class Request(json_base):
             self.set(key, value)
 
         # Keep output
+        sequences_name = request_parameters.get('sequences_name', 'default')
         keep_output = campaign.get('keep_output')[sequences_name]
         self.set('keep_output', keep_output)
 
@@ -1454,15 +1446,14 @@ class Request(json_base):
                 else:
                     cmsweb_url = 'https://cmsweb.cern.ch'
 
-                connection = ConnectionWrapper(host=cmsweb_url, keep_open=True)
-                for workflow in workflows:
-                    self.logger.info('Changing "%s" priority to %s', workflow, priority)
-                    response = connection.api('PUT',
-                                              '/reqmgr2/data/request/%s' % (workflow),
-                                              {'RequestPriority': priority})
-                    self.logger.debug(response)
+                with ConnectionWrapper(cmsweb_url) as connection:
+                    for workflow in workflows:
+                        self.logger.info('Changing "%s" priority to %s', workflow, priority)
+                        response = connection.api('PUT',
+                                                '/reqmgr2/data/request/%s' % (workflow),
+                                                {'RequestPriority': priority})
+                        self.logger.debug(response)
 
-                connection.close()
 
         self.set_attribute('priority', priority)
         self.update_history('priority', priority)
@@ -1851,7 +1842,7 @@ class Request(json_base):
         db = database('requests')
         if self.get_attribute('approval') == 'approve':
             try:
-                with locker.lock('{0}-wait-for-approval'.format(self.get_attribute('prepid'))):
+                with Locker.get_lock('{0}-wait-for-approval'.format(self.get_attribute('prepid'))):
                     self.approve()
                     saved = db.save(self.json())
                 if saved:
@@ -2309,7 +2300,7 @@ class Request(json_base):
                          prepid)
         if workflows_to_invalidate or datasets_to_invalidate:
             invalidation_db = Database('invalidations')
-            with locker.lock('create-invalidations'):
+            with Locker.get_lock('create-invalidations'):
                 for workflow in workflows_to_invalidate:
                     if not invalidation_db.document_exists(workflow):
                         self.logger.info('Creating invalidation for %s of %s', workflow, prepid)

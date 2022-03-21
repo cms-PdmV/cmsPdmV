@@ -1,10 +1,9 @@
-from json_layer.json_base import json_base
-from couchdb_layer.mcm_database import database as Database
+from json_layer.model_base import ModelBase
 
 
-class ChainedCampaign(json_base):
+class ChainedCampaign(ModelBase):
 
-    _json_base__schema = {
+    _ModelBase__schema = {
         '_id': '',
         'prepid': '',
         'campaigns': [],  # list of lists [[campaign, flow]]
@@ -14,6 +13,7 @@ class ChainedCampaign(json_base):
         'notes': '',
         'threshold': 0,
     }
+    database_name = 'chained_campaigns'
 
     def generate_request(self, root_request):
         """
@@ -72,16 +72,6 @@ class ChainedCampaign(json_base):
         Return campaign at given index
         """
         return self[index][0]
-
-    @classmethod
-    def get_database(cls):
-        """
-        Return shared database instance
-        """
-        if not hasattr(cls, 'database'):
-            cls.database = Database('chained_campaigns')
-
-        return cls.database
 
     def flow(self, index):
         """

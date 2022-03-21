@@ -14,7 +14,7 @@ from new_ssh_executor import SSHExecutor
 
 sys.path.append(os.path.abspath(os.path.pardir + '/../'))
 import tools.settings as settings
-from couchdb_layer.mcm_database import database
+from couchdb_layer.mcm_database import Database
 from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
 from tools.installer import installer as Locator

@@ -1,13 +1,12 @@
 import re
-from couchdb_layer.mcm_database import database as Database
-from json_layer.json_base import json_base
+from json_layer.model_base import ModelBase
 from json_layer.sequence import Sequence
 from tools.exceptions import BadAttributeException
 
 
-class Campaign(json_base):
+class Campaign(ModelBase):
 
-    _json_base__schema = {
+    _ModelBase__schema = {
         '_id': '',
         'prepid': '',
         'cmssw_release': '',
@@ -27,6 +26,7 @@ class Campaign(json_base):
         'type': '',  # 'LHE', 'Prod', 'MCReproc'
         'www': '',
     }
+    database_name = 'campaigns'
 
     def validate(self):
         """
@@ -130,16 +130,6 @@ class Campaign(json_base):
         Return whether campaign is started
         """
         return self.get('status') == 'started'
-
-    @classmethod
-    def get_database(cls):
-        """
-        Return shared database instance
-        """
-        if not hasattr(cls, 'database'):
-            cls.database = Database('campaigns')
-
-        return cls.database
 
     def get_editing_info(self):
         info = super().get_editing_info()

@@ -1,5 +1,5 @@
 from rest_api.RestAPIMethod import GetEditableRESTResource, GetRESTResource, RESTResource
-from couchdb_layer.mcm_database import database as Database
+from couchdb_layer.mcm_database import Database
 from tools.exceptions import BadAttributeException, NotFoundException
 from tools.locker import Locker
 from tools.settings import Settings

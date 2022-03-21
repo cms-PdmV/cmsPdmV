@@ -1,4 +1,4 @@
-from couchdb_layer.mcm_database import database as Database
+from couchdb_layer.mcm_database import Database
 from rest_api.RestAPIMethod import CloneRESTResource, CreateRESTResource, DeleteRESTResource, GetEditableRESTResource, GetRESTResource, GetUniqueValuesRESTResource, RESTResource, UpdateRESTResource
 from json_layer.campaign import Campaign
 from json_layer.flow import Flow

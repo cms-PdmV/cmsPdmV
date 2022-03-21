@@ -23,7 +23,7 @@ class GetValidationInfo(RESTResource):
             self.logger.debug('Found cached results for validation info')
             return {'results': cached}
 
-        with Locker().lock(key):
+        with Locker.get_lock(key):
             cached = self.__cache.get(key)
             if cached:
                 self.logger.debug('Found cached results for validation info')
@@ -56,18 +56,7 @@ class GetLocksInfo(RESTResource):
 
     @RESTResource.ensure_role(Role.ADMINISTRATOR)
     def get(self):
-        from tools.locker import locker, semaphore_events
-        pretty_r_locks = {}
-        for key, lock in locker.lock_dictionary.iteritems():
-            pretty_r_locks[key] = '%s %s' % (key, str(lock))
-
-        pretty_locks = {}
-        for key, lock in locker.thread_lock_dictionary.iteritems():
-            pretty_locks[key] = '%s %s' % (key, str(lock))
-
-        return {"r_locks": pretty_r_locks,
-                "locks (thread)": pretty_locks,
-                "semaphores": semaphore_events.count_dictionary}
+        return {"results": Locker.get_status()}
 
 
 class GetQueueInfo(RESTResource):

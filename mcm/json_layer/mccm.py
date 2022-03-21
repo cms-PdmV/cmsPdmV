@@ -3,14 +3,14 @@ from json_layer.user import Role, User
 from tools.exceptions import BadAttributeException
 
 from tools.settings import Settings
-from json_layer.json_base import json_base
-from couchdb_layer.mcm_database import database as Database
+from json_layer.model_base import ModelBase
+from couchdb_layer.mcm_database import Database
 from tools.utils import expand_range
 
 
-class MccM(json_base):
+class MccM(ModelBase):
 
-    _json_base__schema = {
+    _ModelBase__schema = {
         '_id': '',
         'prepid': '',
         'block': 0,
@@ -27,6 +27,7 @@ class MccM(json_base):
         'generated_chains': {},
         'total_events': 0  # Sum of request events in ticket not considering repetitions nor chains
     }
+    database_name = 'mccms'
 
     def validate(self):
         repetitions = int(self.get('repetitions'))
@@ -35,16 +36,6 @@ class MccM(json_base):
 
         self.get_request_list()
         return super().validate()
-
-    @classmethod
-    def get_database(cls):
-        """
-        Return shared database instance
-        """
-        if not hasattr(cls, 'database'):
-            cls.database = Database('mccms')
-
-        return cls.database
 
     def get_editing_info(self):
         info = super().get_editing_info()

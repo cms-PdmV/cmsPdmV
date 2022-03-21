@@ -1,117 +1,98 @@
+"""
+Module that contains Locker class
+"""
 import logging
+import time
+from threading import _RLock, Lock
+from contextlib import contextmanager
 
-from threading import RLock, Event, Lock
-from collections import defaultdict
 
-
-class Locker(object):
+class RemarkableLock(_RLock):
     """
-    Class provides interface for locking mechanism using some kind of IDs passed as parameters in methods.
-    By using the lock method it can be used as a context manager:
-    locker = Locker()
-    with locker.lock(id):
-        do something locked
-    after releasing lock
+    An reentrant lock that also keeps a count and informs a delegate when count
+    gets down to 0
     """
-    # using reentrant lock so other threads don't release it
-    internal_lock = RLock()
-    lock_dictionary = defaultdict(RLock)
-    # we also have a dict of Lock which can be release from different threads
-    thread_lock_dictionary = defaultdict(Lock)
-    logger = logging.getLogger("mcm_error")
 
-    def lock(self, lock_id):
-        # defaultdict and setdefault are not atomic in python 2,6, some manual locking needed
-        with self.internal_lock:
-            # obtaining the lock has to be inside internal_lock space, as we cannot both obtain a lock and
-            # do something to it without risking race conditions
-            lock = self.lock_dictionary[lock_id]
+    def __init__(self, lock_id, delegate):
+        super().__init__()
+        self.lock_id = lock_id
+        self.lock_count = 0
+        self.delegate = delegate
+        self.acquired_time = 0
+
+    def acquire(self, *args, **kwargs):
+        acquired = super().acquire(*args, **kwargs)
+        if acquired:
+            self.lock_count += 1
+            if self.lock_count == 1:
+                self.acquired_time = int(time.time())
+
+        return acquired
+
+    __enter__ = acquire
+
+    def release(self):
+        super().release()
+        self.lock_count -= 1
+        if self.lock_count == 0:
+            self.delegate.is_released(self)
+            self.acquired_time = 0
+
+
+class Locker():
+    """
+    Locker objects has a shared dictionary with locks in it
+    Dictionary keys are strings
+    """
+
+    __locks = {}
+    __locker_lock = Lock()
+    logger = logging.getLogger()
+
+    @classmethod
+    def is_released(cls, lock):
+        """
+        A callback that is called by a lock when its count is down to 0
+        Lock is then removed from the global locks dictionary
+        """
+        cls.__locks.pop(lock.lock_id)
+
+    @classmethod
+    def get_lock(cls, lock_id):
+        """
+        Return a lock for a given lock id
+        It can be either existing one or a new one will be created
+        """
+        with Locker.__locker_lock:
+            lock = cls.__locks.get(lock_id, RemarkableLock(lock_id, cls))
+            cls.__locks[lock_id] = lock
+
         return lock
 
-    def acquire(self, lock_id, blocking=True):
-        with self.internal_lock:
-            lock = self.lock_dictionary[lock_id]
-            self.logger.info("Acquiring lock %s for lock_id %s" % (lock, lock_id))
-        return lock.acquire(blocking)
-
-    def release(self, lock_id):
-        with self.internal_lock:
-            lock = self.lock_dictionary[lock_id]
-            self.logger.info("Releasing lock %s for lock_id %s" % (lock, lock_id))
-        return lock.release()
-
-    # Thread sharable lock methods: can be released by different threads
-    # mostly needed for submission time locks before putting to Queue
-    def thread_lock(self, lock_id):
+    @classmethod
+    @contextmanager
+    def get_nonblocking_lock(cls, lock_id):
         """
-        Create and return Lock object to be shared between threads
+        Return a non blocking lock or throw LockedException
         """
-        with self.internal_lock:
-            lock = self.thread_lock_dictionary[lock_id]
-        return lock
+        lock = cls.get_lock(lock_id)
+        if not lock.acquire(blocking=False):
+            raise LockedException(f'Object "{lock_id}" is curretly locker by other process')
+        try:
+            yield lock
+        finally:
+            # Test does +1 to the lock
+            lock.release()
 
-    def thread_acquire(self, lock_id, blocking=True):
+    @classmethod
+    def get_status(cls):
         """
-        Acquire a Lock in our  global locks dictionary
+        Return current status of locks in the system
         """
-        with self.internal_lock:
-            lock = self.thread_lock_dictionary[lock_id]
-            self.logger.info("Acquiring simple lock %s for lock_id %s" % (lock, lock_id))
-        return lock.acquire(blocking)
-
-    def thread_release(self, lock_id):
-        """
-        Releasing a lock but also keeping lock object in dict.
-        ???? maybe this should be fixed to not save unneeded not used lock objects
-        """
-        with self.internal_lock:
-            lock = self.thread_lock_dictionary[lock_id]
-            self.logger.info("Releasing simple lock %s for lock_id %s" % (lock, lock_id))
-        return lock.release()
-
-locker = Locker()
+        return {lock_id: lock.lock_count for lock_id, lock in cls.__locks.items()}
 
 
-class SemaphoreEvents(object):
+class LockedException(Exception):
     """
-    Class works like semaphore (counts number of threads) and uses events to call waiting threads when the counter
-    reaches 0. Non-waiting threads should use increment/decrement statements.
+    Exception that should be thrown if nonblocking lock could not be acquired
     """
-
-    logger = logging.getLogger("mcm_error")
-    event_dictionary = defaultdict(Event)
-    count_dictionary = defaultdict(int)
-
-    def count(self, lock_id):
-        with locker.lock(lock_id):
-            return self.count_dictionary[lock_id]
-
-    def increment(self, lock_id):
-        with locker.lock(lock_id):
-            self.count_dictionary[lock_id] += 1
-            self.event_dictionary[lock_id].clear()
-            self.logger.info("Semaphore {0} incremented -> {1}".format(lock_id, self.count_dictionary[lock_id]))
-
-    def decrement(self, lock_id):
-        with locker.lock(lock_id):
-            self.count_dictionary[lock_id] = max(0, self.count_dictionary[lock_id] - 1)  # floor to 0
-            self.logger.info("Semaphore {0} decremented -> {1}".format(lock_id, self.count_dictionary[lock_id]))
-            if self.count_dictionary[lock_id] == 0:
-                self.event_dictionary[lock_id].set()
-
-    def wait(self, lock_id, timeout):
-        with locker.lock(lock_id):
-            event = self.event_dictionary[lock_id]
-        return event.wait(timeout)
-
-    def is_set(self, lock_id):
-        with locker.lock(lock_id):
-            # return self.event_dictionary[lock_id].is_set()
-            if lock_id in self.event_dictionary:
-                return self.event_dictionary[lock_id].is_set()
-            else:
-                # because the default oonstructor is with is_set=False
-                # in case the batch was created, sever cycled, and one tries to announce it on the "second" session
-                return True
-
-semaphore_events = SemaphoreEvents()

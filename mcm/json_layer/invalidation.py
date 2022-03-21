@@ -1,16 +1,16 @@
-from couchdb_layer.mcm_database import database as Database
-from json_layer.json_base import json_base
+from json_layer.model_base import ModelBase
 
 
-class Invalidation(json_base):
+class Invalidation(ModelBase):
 
-    _json_base__schema = {
+    _ModelBase__schema = {
         '_id': '',
         'prepid': '',
         'object': '',
         'status': '',
         'type': ''
     }
+    dataset_name = 'invalidations'
 
     # Status: 'new', "hold", 'announced', 'acknowledged'
 
@@ -29,13 +29,3 @@ class Invalidation(json_base):
     def set_acknowledged(self):
         self.set_attribute('status', 'acknowledged')
         self.update_history('status', self.get('status'))
-
-    @classmethod
-    def get_database(cls):
-        """
-        Return shared database instance
-        """
-        if not hasattr(cls, 'database'):
-            cls.database = Database('invalidations')
-
-        return cls.database

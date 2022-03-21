@@ -5,7 +5,7 @@ import time
 from flask.globals import request
 from collections import defaultdict
 
-from couchdb_layer.mcm_database import database as Database
+from couchdb_layer.mcm_database import Database
 from rest_api.RestAPIMethod import DeleteRESTResource, GetEditableRESTResource, GetRESTResource, GetUniqueValuesRESTResource, RESTResource, UpdateRESTResource
 from json_layer.request import Request
 from json_layer.campaign import Campaign
@@ -13,7 +13,7 @@ from json_layer.user import Role, User
 from json_layer.chained_request import ChainedRequest
 from tools.exceptions import InvalidActionException, NotFoundException
 from tools.locator import locator
-from tools.locker import locker
+from tools.locker import Locker
 from tools.handlers import RequestInjector
 from tools.utils import clean_split, expand_range
 
@@ -1158,7 +1158,7 @@ class Reserve_and_ApproveChain(RESTResource):
             return_list = []
             for re in creq.get_attribute("chain")[__current_step + 1:]:
                 req = request(self.rdb.get(re))
-                with locker.lock('{0}-wait-for-approval'.format(re)):
+                with Locker.get_lock('{0}-wait-for-approval'.format(re)):
                     ret = req.approve()
                     save = self.rdb.save(req.json())
                     if not save:

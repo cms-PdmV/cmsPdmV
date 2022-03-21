@@ -3,7 +3,7 @@ import os
 import time
 from random import shuffle
 sys.path.append(os.path.abspath(os.path.pardir))
-from couchdb_layer.mcm_database import database
+from couchdb_layer.mcm_database import Database
 from inspect_all import do_with_timeout
 
 

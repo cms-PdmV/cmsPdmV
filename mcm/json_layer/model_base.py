@@ -3,13 +3,14 @@ import re
 import time
 
 from tools.communicator import Communicator
-from tools.locker import locker
+from tools.locker import Locker
 from copy import deepcopy
 from json_layer.user import Role, User
 from tools.utils import make_regex_matcher
+from couchdb_layer.mcm_database import Database
 
 
-class json_base:
+class ModelBase:
     __json = {}
     __schema = {}
     __database = None
@@ -126,9 +127,12 @@ class json_base:
     @classmethod
     def get_database(cls):
         """
-        Return a database object for the object
+        Return shared database instance
         """
-        return cls.__database
+        if not hasattr(cls, 'database'):
+            cls.database = Database(cls.database_name)
+
+        return cls.database
 
     def get_actors(self):
         """
@@ -180,7 +184,7 @@ class json_base:
         """
         object_id = self.get_attribute('_id')
         database = self.get_database()
-        with locker.lock(object_id):
+        with Locker.get_lock(object_id):
             if save:
                 if not self.save():
                     return False
@@ -196,7 +200,7 @@ class json_base:
         """
         object_id = self.get_attribute('_id')
         database = self.get_database()
-        with locker.lock(object_id):
+        with Locker.get_lock(object_id):
             object_json = self.json()
             if database.document_exists(object_id):
                 success = database.update(object_json)

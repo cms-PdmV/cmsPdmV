@@ -1,7 +1,7 @@
 import time
 import traceback
 import flask
-from couchdb_layer.mcm_database import database as Database
+from couchdb_layer.mcm_database import Database
 from rest_api.RestAPIMethod import (CloneRESTResource, CreateRESTResource,
                                     GetRESTResource,
                                     UpdateRESTResource,

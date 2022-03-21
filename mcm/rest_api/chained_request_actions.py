@@ -5,7 +5,6 @@ from rest_api.RestAPIMethod import DeleteRESTResource, GetEditableRESTResource, 
 from json_layer.chained_request import ChainedRequest
 from json_layer.request import Request
 from tools.exceptions import CouldNotSaveException, InvalidActionException
-from tools.locker import locker
 from tools.priority import block_to_priority
 
 

@@ -6,7 +6,7 @@ import time
 import re
 import os
 import xml.etree.ElementTree as XMLet
-from tools.locker import locker
+from tools.locker import Locker
 from tools.connection_wrapper import ConnectionWrapper
 
 
@@ -67,7 +67,7 @@ def get_scram_arch(cmssw_release):
         if cached_value:
             return cached_value
 
-    with locker.lock('get-scram-arch'):
+    with Locker.get_lock('get-scram-arch'):
         # Maybe cache got updated while waiting for a lock
         cached_value = __scram_arch_cache.get(cmssw_release)
         if cached_value:

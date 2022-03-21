@@ -4,13 +4,13 @@ import time
 import json
 from json_layer.chained_request import ChainedRequest
 from rest_api.RestAPIMethod import DeleteRESTResource, RESTResource, UpdateRESTResource
-from couchdb_layer.mcm_database import database as Database
+from couchdb_layer.mcm_database import Database
 from json_layer.mccm import MccM
 from json_layer.user import Role, User
 from json_layer.chained_campaign import ChainedCampaign
 from json_layer.request import Request
 from tools.exceptions import BadAttributeException, InvalidActionException, McMException, NotFoundException
-from tools.locker import locker
+from tools.locker import Locker
 from tools.locator import locator
 from tools.communicator import Communicator
 from tools.settings import Settings
@@ -52,7 +52,7 @@ class CreateMccm(RESTResource):
         mccm.set_attribute('meeting', meeting_date_full)
         mccm.set_attribute('pwg', pwg) # Uppercase
         prepid_part = '%s-%s' % (pwg, meeting_date_short)
-        with locker.lock('create-ticket-%s' % (prepid_part)):
+        with Locker.get_lock('create-ticket-%s' % (prepid_part)):
             prepid = mccm_db.get_next_prepid(prepid_part, [meeting_date_full, pwg])
             mccm.set_attribute('prepid', prepid)
             mccm.set_attribute('_id', prepid)

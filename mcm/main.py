@@ -291,6 +291,13 @@ api.add_resource(GetEditableUser, '/restapi/users/get_editable/<string:prepid>')
 api.add_resource(GetUser, '/restapi/users/get/<string:username>')
 
 
+# REST System Actions
+api.add_resource(GetValidationInfo, '/restapi/system/validation_info')
+api.add_resource(GetStartTime, '/restapi/system/start_time')
+api.add_resource(GetLocksInfo, '/restapi/system/locks_info')
+api.add_resource(GetQueueInfo, '/restapi/system/submission_info')
+
+
 # create a restriction-free urls, with limited capabilities
 
 
@@ -398,11 +405,7 @@ api.add_resource(AcknowledgeInvalidation,
 api.add_resource(HoldInvalidation, '/restapi/invalidations/hold')
 api.add_resource(ResetInvalidation, '/restapi/invalidations/reset')
 
-# REST dashboard Actions
-api.add_resource(GetValidationInfo, '/restapi/dashboard/get_validation_info')
-api.add_resource(GetStartTime, '/restapi/dashboard/get_start_time')
-api.add_resource(GetLocksInfo, '/restapi/dashboard/get_lock_info')
-api.add_resource(GetQueueInfo, '/restapi/dashboard/get_submission_info')
+
 # REST mccms Actions
 api.add_resource(
     GetMccM,

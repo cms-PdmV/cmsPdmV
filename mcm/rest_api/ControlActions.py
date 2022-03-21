@@ -2,7 +2,7 @@ import flask
 from rest_api.RestAPIMethod import RESTResource
 from json_layer.user import User
 from tools.settings import Settings
-from couchdb_layer.mcm_database import database as Database
+from couchdb_layer.mcm_database import Database
 from tools.utils import clean_split, expand_range
 
 

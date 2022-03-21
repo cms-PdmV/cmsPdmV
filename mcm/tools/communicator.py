@@ -10,7 +10,7 @@ from email.message import Message
 from email.utils import formatdate
 from tools.config_manager import Config
 from tools.locator import locator
-from tools.locker import locker
+from tools.locker import Locker
 from tools.utils import clean_split
 from tools.settings import Settings
 
@@ -64,7 +64,7 @@ class Communicator:
         body = '%s,\n\n%s\n\n%s,\nMcM' % (greeting, body.strip(), signature)
         message.set_payload(body)
         # For a good measure, send only one email at a time
-        with locker.lock('send_email'):
+        with Locker.get_lock('send_email'):
             # Send the message via our own SMTP server.
             smtp = smtplib.SMTP()
             smtp.connect()

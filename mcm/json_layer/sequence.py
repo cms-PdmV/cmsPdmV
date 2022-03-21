@@ -1,12 +1,12 @@
 import json
 from copy import deepcopy
 from shlex import quote as shell_quote
-from json_layer.json_base import json_base
+from json_layer.model_base import ModelBase
 
 
-class Sequence(json_base):
+class Sequence(ModelBase):
 
-    _json_base__schema = {"beamspot": "",
+    _ModelBase__schema = {"beamspot": "",
                           "conditions": "",
                           "custom_conditions": "",
                           "customise": "",

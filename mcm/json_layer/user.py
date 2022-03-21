@@ -8,7 +8,7 @@ from tools.settings import Settings
 from flask import request
 from flask import g as request_context
 from cachelib import SimpleCache
-from couchdb_layer.mcm_database import database as Database
+from couchdb_layer.mcm_database import Database
 
 
 class RoleMeta(EnumMeta):

@@ -1,10 +1,9 @@
-from couchdb_layer.mcm_database import database as Database
-from json_layer.json_base import json_base
+from json_layer.model_base import ModelBase
 
 
-class Flow(json_base):
+class Flow(ModelBase):
 
-    _json_base__schema = {
+    _ModelBase__schema = {
         '_id': '',
         'prepid': '',
         'next_campaign': '',
@@ -14,6 +13,7 @@ class Flow(json_base):
         'history': [],
         'approval': 'none'
     }
+    database_name = 'flows'
 
     def validate(self):
         prepid = self.get('prepid')
@@ -41,16 +41,6 @@ class Flow(json_base):
         self.set_attribute('approval', new_approval)
         self.update_history('approve', new_approval)
 
-    @classmethod
-    def get_database(cls):
-        """
-        Return shared database instance
-        """
-        if not hasattr(cls, 'database'):
-            cls.database = Database('flows')
-
-        return cls.database
-
     def get_editing_info(self):
         info = super().get_editing_info()
         info['allowed_campaigns'] = True
@@ -58,3 +48,28 @@ class Flow(json_base):
         info['notes'] = True
         info['request_parameters'] = True
         return info
+
+    def build_sequences(self, campaign):
+        """
+        Build sequences from the given campaign and this flow
+        """
+        campaign_sequences = campaign.get('sequences')[sequences_name]
+        request_parameters = self.get('request_parameters')
+        sequences_name = request_parameters.get('sequences_name', 'default')
+        flow_sequences = request_parameters.get('sequences', [])
+        # Add empty sequences to flow, if needed
+        flow_sequences += (len(campaign_sequences) - len(flow_sequences)) * [{}]
+        if len(campaign_sequences) != len(flow_sequences):
+            flow_name = self.get('prepid')
+            campaign_name = campaign.get('prepid')
+            raise Exception(f'Cannot build sequences for {campaign_name} + {flow_name}')
+
+        sequences = []
+        # Iterate through campaign and flow sequences
+        # Apply flow changes over campaign's sequence and add to list
+        for flow_seq, campaign_seq in zip(flow_sequences, campaign_sequences):
+            # Allow all attributes?
+            campaign_seq.update(flow_seq)
+            sequences.append(campaign_seq)
+
+        return sequences

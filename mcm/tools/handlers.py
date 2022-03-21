@@ -9,8 +9,8 @@ from queue import Queue
 
 from tools.ssh_executor import SSHExecutor
 from tools.locator import locator
-from tools.locker import locker, semaphore_events
-from couchdb_layer.mcm_database import database
+from tools.locker import Locker
+from couchdb_layer.mcm_database import Database
 from tools.communicator import Communicator
 from json_layer.request import Request
 from json_layer.chained_request import ChainedRequest
@@ -217,7 +217,7 @@ class SubmissionsBase(Handler):
                     added_request_managers.extend(added)
 
                 # edit the batch object
-                with locker.lock(self.batch_name):
+                with Locker.get_lock(self.batch_name):
                     bdb = database('batches')
                     bat = batch(bdb.get(self.batch_name))
                     bat.add_requests(added_request_managers)
@@ -240,7 +240,7 @@ class SubmissionsBase(Handler):
                 semaphore_events.decrement(self.batch_name)
 
     def internal_run(self):
-        with locker.lock('%s-wait-for-approval' % (self.prepid)):
+        with Locker.get_lock('%s-wait-for-approval' % (self.prepid)):
             self.inject_logger.info('Request injection: %s' % (self.prepid))
             self.inject_logger.info('Will acquire lock for RequestInjector. prepid %s' % (self.prepid))
             if not self.lock.acquire(blocking=False):

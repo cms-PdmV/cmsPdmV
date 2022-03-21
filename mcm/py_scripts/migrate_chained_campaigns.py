@@ -3,7 +3,7 @@ import json
 import hashlib
 from copy import deepcopy
 from tools.config_manager import Config
-from couchdb_layer.mcm_database import database as Database
+from couchdb_layer.mcm_database import Database
 
 
 Config.load('../config.cfg', 'development')

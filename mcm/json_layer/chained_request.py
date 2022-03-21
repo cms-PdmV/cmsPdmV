@@ -1,20 +1,16 @@
-from urllib import request
 from json_layer.chained_campaign import ChainedCampaign
-
-from json_layer.json_base import json_base
+from json_layer.model_base import ModelBase
 from json_layer.request import Request
 from json_layer.campaign import Campaign
 from json_layer.flow import Flow
-from couchdb_layer.mcm_database import database as Database
+from couchdb_layer.mcm_database import Database
 from json_layer.user import Role, User
 from tools.settings import Settings
 
 
-class ChainedRequest(json_base):
+class ChainedRequest(ModelBase):
 
-    _json_base__status = ['new', 'processing', 'done', 'force_done']
-
-    _json_base__schema = {
+    _ModelBase__schema = {
         '_id': '',
         'prepid': '',
         'chain': [],
@@ -30,6 +26,7 @@ class ChainedRequest(json_base):
         'threshold': 0,
         'validate': False,  # Whether the chain should be validated
     }
+    database_name = 'chained_requests'
 
     def __getitem__(self, index):
         """
@@ -54,16 +51,6 @@ class ChainedRequest(json_base):
         Return prepid of current step
         """
         return self[self.get('step')]
-
-    @classmethod
-    def get_database(cls):
-        """
-        Return shared database instance
-        """
-        if not hasattr(cls, 'database'):
-            cls.database = Database('chained_requests')
-
-        return cls.database
 
     def get_editing_info(self):
         info = super().get_editing_info()
