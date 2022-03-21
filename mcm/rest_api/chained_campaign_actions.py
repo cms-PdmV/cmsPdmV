@@ -1,4 +1,4 @@
-from rest_api.RestAPIMethod import (CreateRESTResource,
+from rest_api.api_base import (CreateRESTResource,
                                     DeleteRESTResource,
                                     GetEditableRESTResource,
                                     GetRESTResource,

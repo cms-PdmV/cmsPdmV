@@ -9,7 +9,6 @@ import time
 from email.message import Message
 from email.utils import formatdate
 from tools.config_manager import Config
-from tools.locator import locator
 from tools.locker import Locker
 from tools.utils import clean_split
 from tools.settings import Settings

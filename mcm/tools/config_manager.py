@@ -2,7 +2,7 @@
 Module that contains global config singleton
 """
 import logging
-from configparser import ConfigParser, DEFAULTSECT
+from configparser import ConfigParser
 
 
 class Config():
@@ -11,8 +11,7 @@ class Config():
     """
 
     __config = None
-    __section = DEFAULTSECT
-    logger = logging.getLogger('mcm_error')
+    __logger = logging.getLogger()
 
     @classmethod
     def load(cls, filename, section):
@@ -20,9 +19,18 @@ class Config():
         Get config as a dictionary
         Load only one section
         """
-        Config.__config = ConfigParser()
-        Config.__config.read(filename)
-        Config.__section = section
+        parser = ConfigParser()
+        parser.read(filename)
+        config = dict(parser.items(section))
+        for key, value in dict(config).items():
+            if value.lower() in ('true', 'false'):
+                config[key] = value.lower() == 'true'
+            elif value.isdigit():
+                config[key] = int(value)
+
+        cls.__config = config
+        import json
+        cls.__logger.debug(json.dumps(config, indent=2, sort_keys=True))
 
     @classmethod
     def get(cls, key):
@@ -30,40 +38,18 @@ class Config():
         Get a string from config
         """
         if not cls.__config:
-            cls.logger.warning('Config is not loaded or empty!')
+            cls.__logger.warning('Config is not loaded or empty!')
             return None
 
-        return cls.__config.get(Config.__section, key)
+        return cls.__config[key]
 
     @classmethod
-    def getint(cls, key):
+    def set(cls, key, value):
         """
-        Get an int from config
-        """
-        if not cls.__config:
-            cls.logger.warning('Config is not loaded or empty!')
-            return None
-
-        return cls.__config.getint(Config.__section, key)
-
-    @classmethod
-    def getfloat(cls, key):
-        """
-        Get a float from config
+        Set value in config
         """
         if not cls.__config:
-            cls.logger.warning('Config is not loaded or empty!')
-            return None
+            cls.__logger.warning('Config is not loaded or empty!')
+            return
 
-        return cls.__config.getfloat(Config.__section, key)
-
-    @classmethod
-    def getbool(cls, key):
-        """
-        Get a boolean from config
-        """
-        if not cls.__config:
-            cls.logger.warning('Config is not loaded or empty!')
-            return None
-
-        return cls.__config.getboolean(Config.__section, key)
+        cls.__config[key] = value

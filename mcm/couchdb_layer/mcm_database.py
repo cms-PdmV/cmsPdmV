@@ -1,36 +1,34 @@
 import time
-import os
 import logging
-import sys
 import socket
 import base64
 import json
 import urllib
 from urllib.request import build_opener, Request, HTTPHandler
 from urllib.error import HTTPError
-from tools.locator import locator
 from tools.locker import Locker
 from tools.config_manager import Config
 from cachelib import SimpleCache
 
 
 class Database:
-    logger = logging.getLogger("mcm_error")
+    logger = logging.getLogger()
     # Cache timeout in seconds
-    cache = SimpleCache(default_timeout=3600) # 1h
-    ip_cache = SimpleCache(default_timeout=900) # 15min
+    cache = SimpleCache(default_timeout=3600)  # 1h
+    ip_cache = SimpleCache(default_timeout=900)  # 15min
     serial_number_cache = {}
 
     def __init__(self, db_name, url=None, lucene_url=None, cache_enabled=False):
         if not url:
-            url = locator().database_url()
+            url = Config.get('database_url')
 
         if not lucene_url:
-            lucene_url = locator().lucene_url()
+            lucene_url = Config.get('lucene_url')
 
         if not db_name:
             raise Exception('Missing database name')
 
+        self.logger.debug('Database url %s, lucene url %s', url, lucene_url)
         self.db_name = db_name
         self.cache_enabled = cache_enabled or db_name in {'campaigns', 'chained_campaigns'}
         self.db_url = self.resolve_hostname_to_ip(url)

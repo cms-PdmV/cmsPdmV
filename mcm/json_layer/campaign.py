@@ -1,4 +1,3 @@
-import re
 from json_layer.model_base import ModelBase
 from json_layer.sequence import Sequence
 from tools.exceptions import BadAttributeException
@@ -110,20 +109,6 @@ class Campaign(ModelBase):
         self.logger.info('Toggling %s status to %s', prepid, new_status)
         self.set_attribute('status', new_status)
         self.update_history('set status', new_status)
-
-    def is_release_greater_or_equal_to(self, cmssw_release):
-        """
-        Return whether campaign's CMSSW release is greater or equal to given one
-        """
-        my_release = self.get_attribute('cmssw_release')
-        my_release = tuple(int(x) for x in re.sub('[^0-9_]', '', my_release).split('_') if x)
-        other_release = tuple(int(x) for x in re.sub('[^0-9_]', '', cmssw_release).split('_') if x)
-        # It only compares major and minor version, does not compare the build,
-        # i.e. CMSSW_X_Y_Z, it compares only X and Y parts
-        # Why? Because it was like this for ever
-        my_release = my_release[:2]
-        other_release = other_release[:2]
-        return my_release >= other_release
 
     def is_started(self):
         """

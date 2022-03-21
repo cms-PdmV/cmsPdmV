@@ -8,7 +8,6 @@ from threading import Thread, Lock
 from queue import Queue
 
 from tools.ssh_executor import SSHExecutor
-from tools.locator import locator
 from tools.locker import Locker
 from couchdb_layer.mcm_database import Database
 from tools.communicator import Communicator

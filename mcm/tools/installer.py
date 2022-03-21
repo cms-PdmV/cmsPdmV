@@ -2,7 +2,6 @@ import logging
 import os
 import shutil
 
-from tools.locator import locator
 
 
 class installer:

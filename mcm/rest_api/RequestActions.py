@@ -6,13 +6,17 @@ from flask.globals import request
 from collections import defaultdict
 
 from couchdb_layer.mcm_database import Database
-from rest_api.RestAPIMethod import DeleteRESTResource, GetEditableRESTResource, GetRESTResource, GetUniqueValuesRESTResource, RESTResource, UpdateRESTResource
+from rest_api.api_base import (RESTResource,
+                               DeleteRESTResource,
+                               GetEditableRESTResource,
+                               GetRESTResource,
+                               GetUniqueValuesRESTResource,
+                               UpdateRESTResource)
 from json_layer.request import Request
 from json_layer.campaign import Campaign
 from json_layer.user import Role, User
 from json_layer.chained_request import ChainedRequest
 from tools.exceptions import InvalidActionException, NotFoundException
-from tools.locator import locator
 from tools.locker import Locker
 from tools.handlers import RequestInjector
 from tools.utils import clean_split, expand_range
@@ -37,10 +41,9 @@ class RequestImport(RESTResource):
             return {"results": False,
                     "message": 'Campaign %s could not be found' % (campaign_name)}
 
-        if campaign.get('status') != 'started':
+        if not campaign.is_started():
             return {"results": False,
-                    "message": "Cannot create a request in a campaign that is not started"
-                               "%s is %s" % (campaign_name, campaign.get('status'))}
+                    "message": f"Campaign {campaign_name} is not started"}
 
         pwg = request_json['pwg']
         self.logger.info('Building new request for %s in %s', pwg, campaign_name)
@@ -48,7 +51,7 @@ class RequestImport(RESTResource):
         request.reset_options()
         request.validate()
         # Register a new prepid
-        from rest_api.RequestFactory import RequestFactory
+        from rest_api.request_factory import RequestFactory
         request = RequestFactory.make(request.json())
         prepid = request.get('prepid')
         request.set_attribute('history', [])

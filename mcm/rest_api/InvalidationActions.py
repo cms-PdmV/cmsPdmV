@@ -1,4 +1,4 @@
-from rest_api.RestAPIMethod import RESTResource, DeleteRESTResource
+from rest_api.api_base import RESTResource, DeleteRESTResource
 from json_layer.user import Role, User
 from json_layer.invalidation import Invalidation
 from tools.settings import Settings

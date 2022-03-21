@@ -34,7 +34,7 @@ class ChainedCampaign(ModelBase):
                                 'enabled': True,
                                 'dataset_name': root_request.get('dataset_name'),
                                 'last_status': request_status}
-        from rest_api.ChainedRequestFactory import ChainedRequestFactory
+        from rest_api.chained_request_factory import ChainedRequestFactory
         chained_request = ChainedRequestFactory.make(chained_request_data, root_request)
         chained_request.validate()
         if request_status in {'submitted', 'done'}:

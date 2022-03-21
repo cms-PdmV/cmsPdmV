@@ -15,7 +15,6 @@ from json_layer.campaign import Campaign
 from json_layer.flow import Flow
 from json_layer.batch import Batch
 from json_layer.sequence import Sequence
-from tools.locator import locator
 from tools.installer import installer
 from tools.settings import Settings
 from tools.locker import Locker

@@ -1,7 +1,7 @@
 import flask
 from json import dumps, loads
 from json_layer.user import Role
-from rest_api.RestAPIMethod import DeleteRESTResource, GetEditableRESTResource, GetRESTResource, RESTResource, UpdateRESTResource
+from rest_api.api_base import DeleteRESTResource, GetEditableRESTResource, GetRESTResource, RESTResource, UpdateRESTResource
 from json_layer.chained_request import ChainedRequest
 from json_layer.request import Request
 from tools.exceptions import CouldNotSaveException, InvalidActionException

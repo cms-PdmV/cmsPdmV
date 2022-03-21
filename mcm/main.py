@@ -1,4 +1,4 @@
-from rest_api.ControlActions import Search, CacheClear
+from rest_api.search_actions import Search
 from rest_api.campaign_actions import (CreateCampaign,
                                        GetCampaign,
                                        UpdateCampaign,
@@ -57,48 +57,36 @@ from rest_api.RequestActions import (RequestImport,
                                      GetFragmentForRequest,
                                      GetSubmittedTogetherForRequest,
                                      UpdateStats,
-                                     #GetSetupForRequest,
-                                     #ApproveRequest,
-                                     #SetStatus,
-                                     #GetStatus,
                                      GetStatusAndApproval,
-                                     #GetDefaultGenParams,
-                                     #RegisterUser,
-                                     #GetActors,
-                                     #NotifyUser,
-                                     #InspectStatus,
-                                     #UpdateStats,
-                                     #RequestsFromFile,
-                                     #StalledReminder,
-                                     #RequestsReminder,
-                                     #SearchableRequest,
-                                     #UpdateMany,
-                                     #GetRequestOutput,
-                                     #GetInjectCommand,
-                                     #GetUploadCommand,
-                                     #GetUniqueValues,
-                                     #Reserve_and_ApproveChain,
-                                     #TaskChainRequestDict,
-                                     #RequestsPriorityChange,
-                                     #UpdateEventsFromWorkflow,
                                      GENLogOutput)
 
-
-
-from rest_api.UserActions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser, GetEditableUser
+from rest_api.user_actions import GetUserInfo, AddCurrentUser, GetUser, UpdateUser, GetEditableUser
 from rest_api.InvalidationActions import (GetInvalidation,
                                           DeleteInvalidation,
                                           AnnounceInvalidation,
                                           AcknowledgeInvalidation,
                                           HoldInvalidation,
                                           ResetInvalidation)
-from rest_api.DashboardActions import GetLocksInfo, GetValidationInfo, GetStartTime, GetQueueInfo
-from rest_api.MccmActions import GetMccM, UpdateMccm, CreateMccm, DeleteMccm, GetEditableMccM, GetUniqueMccMValues, GenerateChains, MccMReminderProdManagers, MccMReminderGenConveners, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved, NotifyMccm
-from rest_api.SettingsActions import GetSetting, SetSetting
-# from rest_api.TagActions import GetTags, AddTag, RemoveTag
-# from rest_api.ListActions import GetList, UpdateList
+from rest_api.system_actions import (GetLocksInfo,
+                                     GetValidationInfo,
+                                     GetStartTime,
+                                     GetQueueInfo,
+                                     CacheClear)
+from rest_api.mccm_actions import (GetMccM,
+                                  UpdateMccm,
+                                  CreateMccm,
+                                  DeleteMccm,
+                                  GetEditableMccM,
+                                  GetUniqueMccMValues,
+                                  GenerateChains,
+                                  MccMReminderProdManagers,
+                                  MccMReminderGenConveners,
+                                  MccMReminderGenContacts,
+                                  CalculateTotalEvts,
+                                  CheckIfAllApproved,
+                                  NotifyMccm)
+from rest_api.settings_actions import GetSetting, SetSetting
 
-from json_layer.sequence import Sequence  # to get campaign sequences
 from tools.logger import UserFilter
 from tools.config_manager import Config
 from flask_restful import Api
@@ -107,7 +95,6 @@ from jinja2.exceptions import TemplateNotFound
 from tools.utils import get_api_documentation
 
 import json
-import signal
 import logging
 import logging.handlers
 import sys
@@ -117,11 +104,13 @@ import time
 
 
 app = Flask(__name__)
-app.config.update(LOGGER_NAME="mcm_error")
+app.config.update(LOGGER_NAME='')
 api = Api(app)
 app.url_map.strict_slashes = False
+
 # Set flask logging to warning
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
 # Set paramiko logging to warning
 logging.getLogger('paramiko').setLevel(logging.WARNING)
 
@@ -158,10 +147,6 @@ def priority_change_html():
 def index_html():
     return send_from_directory('HTML', 'index.html')
 
-@app.route('/create')
-def create_html():
-    return send_from_directory('HTML', 'create.html')
-
 @app.route('/users')
 def users_html():
     return send_from_directory('HTML', 'users.html')
@@ -169,10 +154,6 @@ def users_html():
 @app.route('/batches')
 def batches_html():
     return send_from_directory('HTML', 'batches.html')
-
-@app.route('/getDefaultSequences')
-def getDefaultSequences():
-    return json.dumps(Sequence.schema())
 
 @app.route('/mccms')
 def mccms_html():
@@ -206,7 +187,6 @@ def send_static(path):
 def send_HTML(path):
     return send_from_directory('HTML', path)
 
-api.add_resource(Search, '/search')
 
 def setup_api_docs(flask_app):
     """
@@ -227,6 +207,10 @@ def setup_api_docs(flask_app):
 
     flask_app.add_url_rule('/restapi', None, _api_documentation)
     flask_app.add_url_rule('/restapi/<path:api_path>', None, _api_documentation)
+
+
+# REST Search Actions
+api.add_resource(Search, '/search')
 
 
 # REST Campaign Actions
@@ -296,37 +280,8 @@ api.add_resource(GetValidationInfo, '/restapi/system/validation_info')
 api.add_resource(GetStartTime, '/restapi/system/start_time')
 api.add_resource(GetLocksInfo, '/restapi/system/locks_info')
 api.add_resource(GetQueueInfo, '/restapi/system/submission_info')
+api.add_resource(CacheClear, '/restapi/control/cache_clear')
 
-
-# create a restriction-free urls, with limited capabilities
-
-
-# api.add_resource(
-#     GetSetupForRequest,
-#     '/public/restapi/requests/get_test/<string:prepid>/<int:events>',
-#     '/public/restapi/requests/get_test/<string:prepid>',
-#     '/public/restapi/requests/get_setup/<string:prepid>/<int:events>',
-#     '/public/restapi/requests/get_setup/<string:prepid>',
-#     '/public/restapi/requests/get_valid/<string:prepid>/<int:events>',
-#     '/public/restapi/requests/get_valid/<string:prepid>')
-# api.add_resource(GetStatus, '/public/restapi/requests/get_status/<string:request_ids>')
-api.add_resource(GetStatusAndApproval, '/public/restapi/requests/get_status_and_approval/<string:prepid>')
-# api.add_resource(
-#     GetActors,
-#     '/public/restapi/requests/get_actors/<string:request_id>',
-#     '/public/restapi/requests/get_actors/<string:request_id>/<string:what>')
-# api.add_resource(GetRequestByDataset, '/public/restapi/requests/produces/<path:dataset>')
-# api.add_resource(
-#     GetRequestOutput,
-#     '/public/restapi/requests/output/<string:prepid>',
-#     '/public/restapi/requests/output/<string:prepid>/<string:is_chain>')
-# api.add_resource(
-#     GetSetupForChains,
-#     '/public/restapi/chained_requests/get_setup/<string:chained_request_id>',
-#     '/public/restapi/chained_requests/get_test/<string:chained_request_id>',
-#     '/public/restapi/chained_requests/get_valid/<string:chained_request_id>')
-# api.add_resource(TaskChainDict, '/public/restapi/chained_requests/get_dict/<string:chained_request_id>')
-# api.add_resource(TaskChainRequestDict, '/public/restapi/requests/get_dict/<string:request_id>')
 
 # REST Request actions
 api.add_resource(RequestImport, '/restapi/requests/save')
@@ -345,57 +300,18 @@ api.add_resource(GetUniqueRequestValues, '/restapi/requests/unique_values')
 api.add_resource(GetCmsDriverForRequest, '/restapi/requests/get_drivers/<string:prepid>')
 api.add_resource(GetSubmittedTogetherForRequest, '/restapi/requests/submit_plan/<string:prepid>')
 api.add_resource(UpdateStats, '/restapi/requests/update_stats')
+
+
 # Request public APIs
 api.add_resource(GetSetupFileForRequest, '/public/restapi/requests/get_setup/<string:prepid>')
 api.add_resource(GetTestFileForRequest, '/public/restapi/requests/get_test/<string:prepid>')
 api.add_resource(GetValidationFileForRequest, '/public/restapi/requests/get_valid/<string:prepid>')
 api.add_resource(GetFragmentForRequest, '/public/restapi/requests/get_fragment/<string:prepid>')
-# api.add_resource(
-#     ResetRequestApproval,
-#     '/restapi/requests/reset/<string:request_id>',
-#     '/restapi/requests/soft_reset/<string:request_id>')
-# api.add_resource(
-#     SetStatus,
-#     '/restapi/requests/status/<string:request_ids>',
-#     '/restapi/requests/status/<string:request_ids>/<int:step>')
-# api.add_resource(RegisterUser, '/restapi/requests/register/<string:request_ids>')
-# api.add_resource(NotifyUser, '/restapi/requests/notify')
-# api.add_resource(
-#     InspectStatus,
-#     '/restapi/requests/inspect/<string:request_ids>',
-#     '/restapi/requests/inspect/<string:request_ids>/<string:force>')
-# api.add_resource(
-#     UpdateStats,
-#     '/restapi/requests/update_stats/<string:request_id>',
-#     '/restapi/requests/update_stats/<string:request_id>/<string:refresh>',
-#     '/restapi/requests/update_stats/<string:request_id>/<string:refresh>/<string:forced>')
-# api.add_resource(UpdateEventsFromWorkflow, '/restapi/requests/fetch_stats_by_wf/<string:wf_id>')
-# api.add_resource(
-#     RequestsFromFile,
-#     '/restapi/requests/listwithfile',
-#     '/public/restapi/requests/listwithfile')
-# api.add_resource(SearchableRequest, '/restapi/requests/searchable')
-# api.add_resource(
-#     RequestsReminder,
-#     '/restapi/requests/reminder',
-#     '/restapi/requests/reminder/<string:what>',
-#     '/restapi/requests/reminder/<string:what>/<string:who>')
-# api.add_resource(
-#     StalledReminder,
-#     '/restapi/requests/stalled',
-#     '/restapi/requests/stalled/<int:time_since>',
-#     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>',
-#     '/restapi/requests/stalled/<int:time_since>/<int:time_remaining>/<float:below_completed>')
-# api.add_resource(UpdateMany, '/restapi/requests/update_many')
-# api.add_resource(GetInjectCommand, '/restapi/requests/get_inject/<string:request_id>')
-# api.add_resource(GetUploadCommand, '/restapi/requests/get_upload/<string:request_id>')
-# api.add_resource(Reserve_and_ApproveChain, '/restapi/requests/reserveandapprove/<string:chain_id>')
-# api.add_resource(RequestsPriorityChange, '/restapi/requests/priority_change')
+api.add_resource(GetStatusAndApproval, '/public/restapi/requests/get_status_and_approval/<string:prepid>')
 api.add_resource(GENLogOutput, '/restapi/requests/gen_log/<string:request_id>')
 
 
-
-# REST invalidation Actions
+# REST Invalidation Actions
 api.add_resource(GetInvalidation, '/restapi/invalidations/get/<string:prepid>')
 api.add_resource(DeleteInvalidation, '/restapi/invalidations/delete/<string:prepid>')
 api.add_resource(AnnounceInvalidation, '/restapi/invalidations/announce')
@@ -406,11 +322,8 @@ api.add_resource(HoldInvalidation, '/restapi/invalidations/hold')
 api.add_resource(ResetInvalidation, '/restapi/invalidations/reset')
 
 
-# REST mccms Actions
-api.add_resource(
-    GetMccM,
-    '/restapi/mccms/get/<string:prepid>',
-    '/public/restapi/mccms/get/<string:prepid>')
+# REST MccM Actions
+api.add_resource(GetMccM, '/restapi/mccms/get/<string:prepid>')
 api.add_resource(UpdateMccm, '/restapi/mccms/update')
 api.add_resource(CreateMccm, '/restapi/mccms/save')
 api.add_resource(DeleteMccm, '/restapi/mccms/delete/<string:prepid>')
@@ -426,15 +339,6 @@ api.add_resource(MccMReminderGenContacts, '/restapi/mccms/reminder_gen_contacts'
 # REST settings Actions
 api.add_resource(GetSetting, '/restapi/settings/get/<string:key>')
 api.add_resource(SetSetting, '/restapi/settings/set')
-# REST list Actions
-# api.add_resource(GetList, '/restapi/lists/get/<string:list_id>')
-# api.add_resource(UpdateList, '/restapi/lists/update')
-# REST tags Actions
-# api.add_resource(GetTags, '/restapi/tags/get_all')
-# api.add_resource(AddTag, '/restapi/tags/add')
-# api.add_resource(RemoveTag, '/restapi/tags/remove')
-# REST control Actions
-api.add_resource(CacheClear, '/restapi/control/cache_clear')
 
 
 def setup_error_logger(debug):
@@ -443,7 +347,7 @@ def setup_error_logger(debug):
     Log to file and rotate for production or log to console in debug mode
     Automatically log user email
     """
-    logger = logging.getLogger('mcm_error')
+    logger = logging.getLogger()
     if debug:
         # If debug - log to console
         handler = logging.StreamHandler(sys.stdout)
@@ -559,7 +463,10 @@ def setup_access_logging(app, logger, debug):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='The McM - Monte Carlo Management tool')
+    """
+    Main function
+    """
+    parser = argparse.ArgumentParser(description='McM - Monte Carlo Management tool')
     parser.add_argument('--port', help='Port, default is 8000', type=int)
     parser.add_argument('--host', help='Host IP, default is 0.0.0.0')
     parser.add_argument('--debug', help='Run McM in debug mode', action='store_true')
@@ -582,7 +489,10 @@ def main():
 
     # Read config
     prod = args.get('prod')
+    dev = not prod
     Config.load('config.cfg', 'production' if prod else 'development')
+    Config.set('dev', dev)
+    assert dev == Config.get('dev')
     # Run flask
     port = args.get('port') or Config.getint('port')
     host = args.get('host') or Config.get('host')

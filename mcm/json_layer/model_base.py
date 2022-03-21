@@ -13,7 +13,6 @@ from couchdb_layer.mcm_database import Database
 class ModelBase:
     __json = {}
     __schema = {}
-    __database = None
     logger = logging.getLogger("mcm_error")
 
     # String pattern checkers
@@ -130,6 +129,9 @@ class ModelBase:
         Return shared database instance
         """
         if not hasattr(cls, 'database'):
+            if not hasattr(cls, 'database_name') or not cls.database_name:
+                raise Exception('Database name not set')
+
             cls.database = Database(cls.database_name)
 
         return cls.database

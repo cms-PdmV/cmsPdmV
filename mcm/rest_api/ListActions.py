@@ -1,4 +1,4 @@
-from rest_api.RestAPIMethod import RESTResource
+from rest_api.api_base import RESTResource
 from couchdb_layer.mcm_database import Database
 from tools.user_management import access_rights
 from flask import request

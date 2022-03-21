@@ -2,7 +2,7 @@ import json
 import flask
 from json_layer.user import Role
 
-from rest_api.RestAPIMethod import RESTResource
+from rest_api.api_base import RESTResource
 from tools.settings import Settings
 
 

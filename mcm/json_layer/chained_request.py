@@ -315,7 +315,7 @@ class ChainedRequest(ModelBase):
                              request_data['pwg'],
                              request_data['flown_with'],
                              request_data['member_of_campaign'])
-            from rest_api.RequestFactory import RequestFactory
+            from rest_api.request_factory import RequestFactory
             # Create new request from the data for the next request
             next_request = RequestFactory.make(request_data)
             next_request_id = next_request.get('prepid')

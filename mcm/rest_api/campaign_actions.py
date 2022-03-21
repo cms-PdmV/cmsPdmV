@@ -2,13 +2,13 @@ import time
 import traceback
 import flask
 from couchdb_layer.mcm_database import Database
-from rest_api.RestAPIMethod import (CloneRESTResource, CreateRESTResource,
-                                    GetRESTResource,
-                                    UpdateRESTResource,
-                                    DeleteRESTResource,
-                                    GetEditableRESTResource,
-                                    GetUniqueValuesRESTResource,
-                                    RESTResource)
+from rest_api.api_base import (CloneRESTResource, CreateRESTResource,
+                               GetRESTResource,
+                               UpdateRESTResource,
+                               DeleteRESTResource,
+                               GetEditableRESTResource,
+                               GetUniqueValuesRESTResource,
+                               RESTResource)
 from json_layer.campaign import Campaign
 from json_layer.request import Request
 from json_layer.sequence import Sequence
@@ -229,7 +229,7 @@ class InspectCampaign(RESTResource):
         return flask.Response(flask.stream_with_context(self.inspect(prepid)))
 
     def inspect(self, campaign_id):
-        request_db = Database('requests')
+        request_db = Request.get_database()
         try:
             self.logger.info('Starting campaign inspect of %s', campaign_id)
             yield f'Starting campaign inspect of {campaign_id}\n'

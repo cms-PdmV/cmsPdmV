@@ -1,9 +1,11 @@
 import datetime
-from rest_api.RestAPIMethod import RESTResource
-from json_layer.user import Role
+from couchdb_layer.mcm_database import Database
+from rest_api.api_base import RESTResource
 from tools.locker import Locker
 from tools.ssh_executor import SSHExecutor
 from tools.config_manager import Config
+from json_layer.user import User, Role
+from tools.settings import Settings
 from cachelib import SimpleCache
 
 
@@ -65,3 +67,15 @@ class GetQueueInfo(RESTResource):
         from tools.handlers import submit_pool
         data = {"submission_len": submit_pool.get_queue_length()}
         return data
+
+
+class CacheClear(RESTResource):
+
+    def get(self):
+        """
+        Clear McM cache
+        """
+        Database.clear_cache()
+        Settings.clear_cache()
+        User.clear_cache()
+        return {'results': True}

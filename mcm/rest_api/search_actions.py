@@ -1,7 +1,6 @@
 import flask
-from rest_api.RestAPIMethod import RESTResource
-from json_layer.user import User
-from tools.settings import Settings
+from rest_api.api_base import RESTResource
+
 from couchdb_layer.mcm_database import Database
 from tools.utils import clean_split, expand_range
 
@@ -116,15 +115,3 @@ class Search(RESTResource):
 
         response['results'] = response.pop('rows', [])
         return response
-
-
-class CacheClear(RESTResource):
-
-    def get(self):
-        """
-        Clear McM cache
-        """
-        Database.clear_cache()
-        Settings.clear_cache()
-        User.clear_cache()
-        return {'results': True}

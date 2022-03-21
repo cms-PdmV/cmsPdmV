@@ -1,12 +1,11 @@
 import logging
 from json_layer.chained_request import ChainedRequest
-from couchdb_layer.mcm_database import Database
-from tools.locker import locker
+from tools.locker import Locker
 
 
 class ChainedRequestFactory():
 
-    logger = logging.getLogger('mcm_error')
+    logger = logging.getLogger()
 
     @classmethod
     def make(cls, data, root_request):
@@ -18,9 +17,9 @@ class ChainedRequestFactory():
         if not pwg or not campaign_name:
             return None
 
-        chained_request_db = Database('chained_requests')
-        prepid_part = '%s-%s' % (pwg, campaign_name)
-        with Locker.get_lock('chained-request-prepid-%s' % (pwg)):
+        chained_request_db = ChainedRequest.get_database()
+        prepid_part = f'{pwg}-{campaign_name}'
+        with Locker.get_lock(f'chained-request-prepid-{prepid_part}'):
             prepid = chained_request_db.get_next_prepid(prepid_part, [campaign_name, pwg])
             data['_id'] = prepid
             data['prepid'] = prepid
