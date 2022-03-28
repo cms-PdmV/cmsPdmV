@@ -1,7 +1,11 @@
 """
 Module that contains ConnectionWrapper class
 """
-import http.client as client
+try:
+    import http.client as client
+except ImportError:
+    import httplib as client
+
 import logging
 import os
 import json
@@ -37,8 +41,8 @@ class ConnectionWrapper():
             self.https = False
             self.port = 80
 
-        self.cert_file = cert_file or os.getenv('USERCRT', None)
-        self.key_file = key_file or os.getenv('USERKEY', None)
+        self.cert_file = cert_file or os.getenv('USERCRT', '/home/pdmvserv/private/usercert.pem')
+        self.key_file = key_file or os.getenv('USERKEY', '/home/pdmvserv/private/userkey.pem')
         self.keep_open = keep_open
         self.connection_attempts = 3
         self.timeout = 120

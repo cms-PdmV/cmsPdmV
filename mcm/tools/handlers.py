@@ -191,7 +191,7 @@ class SubmissionsBase(Handler):
                 if error and not output:  # money on the table that it will break as well?
                     self.notify('Request injection failed for %s' % (self.prepid),
                                 'Error in wmcontrol: %s' % (error),
-                                mcm_r)
+                                self.requests)
                     return False
 
                 output_lines = output.split('\n')
@@ -201,7 +201,7 @@ class SubmissionsBase(Handler):
                     self.notify('Request injection happened but no request manager names for %s' % (self.prepid),
                                 'Injection has succeeded but no request manager names were registered. ' +
                                 'Check with administrators.\nOutput:\n%s\n\nError:\n%s' % (output, error),
-                                mcm_r)
+                                self.requests)
                     return False
                 else:
                     self.inject_logger.info('Injected workflows: %s' % (injected_workflows))
@@ -339,8 +339,17 @@ class SubmissionsBase(Handler):
 
     def notify(self, subject, message, req):
         self.inject_logger.info('Notify:\n  Subject: %s\n\n  Message: %s' % (subject, message))
+        if not isinstance(req, list):
+            req = [req]
+
+        recipients = []
+        for r in req:
+            recipients.extend(r.get_actors(what='author_email'))
+
+        recipients = sorted(list(set(recipients)))
+        req = req[-1]
         if req is not None:
-            req.notify(subject, message)
+            req.notify(subject, message, who=recipients)
         else:
             self.logger.error('Could not notify because request object is None. Subject: %s' % (subject))
 
@@ -431,6 +440,7 @@ class ChainRequestInjector(SubmissionsBase):
             mcm_cr = chained_request(cr)
             chain = mcm_cr.get_attribute('chain')[mcm_cr.get_attribute('step'):]
             message = 'Following requests in %s chain were injected:\n\n' % (cr.get('prepid', '* no-prepid *'))
+            reqs = []
             for rn in chain:
                 if rn in seen:
                     continue  # don't do it twice
@@ -448,6 +458,8 @@ class ChainRequestInjector(SubmissionsBase):
                 mcm_r.set_status(step=mcm_r._json_base__status.index('submitted'), with_notification=False)
                 mcm_r.reload()
                 mcm_cr.set_attribute('last_status', mcm_r.get_attribute('status'))
+                reqs.append(mcm_r)
+
             # re-get the object
             mcm_cr = chained_request(self.chained_requests_db.get(cr['prepid']))
             # take care of changes to the chain
@@ -455,7 +467,7 @@ class ChainRequestInjector(SubmissionsBase):
             mcm_cr.set_attribute('step', len(mcm_cr.get_attribute('chain')) - 1)
             mcm_cr.set_attribute('status', 'processing')
             subject = 'Injection succeeded for %s' % (cr.get('prepid', '* no-prepid *'))
-            self.notify(subject, message, mcm_cr)
+            self.notify(subject, message, reqs)
             mcm_cr.reload()
 
         return True

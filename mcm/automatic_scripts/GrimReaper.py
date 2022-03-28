@@ -369,10 +369,10 @@ for ticket in tickets:
             print(mcm._McM__put('restapi/mccms/notify', {'prepid': prepid, 'subject': subject, 'message': message}))
         elif now - ticket_timestamp > threshold_delete_tickets:
             print('%s: %s will be deleted' % (prepid, last_history_item['updater']['submission_date']))
-            if not dry_run:
-                subject = 'MccM ticket %s is deleted' % (prepid)
-                message = 'MccM ticket %s is deleted due to inactivity.' % (prepid)
-                message += 'It was inactive for %.2f days.' % (ticket_age / 86400)
-                print(mcm._McM__put('restapi/mccms/notify', {'prepid': prepid, 'subject': subject, 'message': message}))
-                time.sleep(3)
-                print('Deleting %s: %s' % (prepid, mcm._McM__delete('restapi/mccms/delete/%s' % (prepid))))
+            # if not dry_run:
+            #     subject = 'MccM ticket %s is deleted' % (prepid)
+            #     message = 'MccM ticket %s is deleted due to inactivity.' % (prepid)
+            #     message += 'It was inactive for %.2f days.' % (ticket_age / 86400)
+            #     print(mcm._McM__put('restapi/mccms/notify', {'prepid': prepid, 'subject': subject, 'message': message}))
+            #     time.sleep(3)
+            #     print('Deleting %s: %s' % (prepid, mcm._McM__delete('restapi/mccms/delete/%s' % (prepid))))
