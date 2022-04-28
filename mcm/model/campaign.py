@@ -1,5 +1,5 @@
-from json_layer.model_base import ModelBase
-from json_layer.sequence import Sequence
+from model.model_base import ModelBase
+from model.sequence import Sequence
 from tools.exceptions import BadAttributeException
 
 

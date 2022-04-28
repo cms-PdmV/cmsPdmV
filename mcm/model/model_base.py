@@ -5,13 +5,12 @@ import time
 from tools.communicator import Communicator
 from tools.locker import Locker
 from copy import deepcopy
-from json_layer.user import Role, User
+from model.user import Role, User
 from tools.utils import make_regex_matcher
 from couchdb_layer.mcm_database import Database
 
 
 class ModelBase:
-    __json = {}
     __schema = {}
     logger = logging.getLogger("mcm_error")
 
@@ -52,7 +51,7 @@ class ModelBase:
         Called after attrubte validation
         """
 
-    def ensure_schema_attributes(self, data_dict=None, schema=None):
+    def ensure_schema_attributes(self, data_dict=None, schema=None, key_prefix=None):
         """
         Recursively iterate through data_dict and ensure that all atributes
         that are in given schema are present in data_dict and all that are not
@@ -64,12 +63,16 @@ class ModelBase:
         if schema is None:
             schema = self.schema()
 
+        if key_prefix is None:
+            key_prefix = ''
+
         data_keys = set(data_dict.keys())
         data_keys -= {'_rev', '_id'}
-        obj_id = self.__json['_id'] if '_id' in self.__json else '<no-id>'
+        obj_id = self.get_id()
         for key, default_value in schema.items():
+            key_path = f'{key_prefix}.{key}'.lstrip('.')
             if key not in data_dict:
-                self.logger.debug('Adding "%s"="%s" to %s', key, default_value, obj_id)
+                self.logger.debug('Adding "%s"="%s" to %s', key_path, default_value, obj_id)
                 data_dict[key] = deepcopy(default_value)
             else:
                 data_keys.discard(key)
@@ -77,13 +80,14 @@ class ModelBase:
                     # Only check if dictionary in schema is not empty,
                     # otherwise it would delete user-defined dictionary keys
                     if default_value:
-                        self.ensure_schema_attributes(data_dict[key], default_value)
+                        self.ensure_schema_attributes(data_dict[key], default_value, key_path)
 
         for key in data_keys:
+            key_path = f'{key_prefix}.{key}'.lstrip('.')
             if data_dict[key]:
-                self.logger.debug('Removing "%s"="%s" of %s', key, data_dict[key], obj_id)
+                self.logger.debug('Removing "%s"="%s" of %s', key_path, data_dict[key], obj_id)
             else:
-                self.logger.debug('Removing "%s" of %s', key, obj_id)
+                self.logger.debug('Removing "%s" of %s', key_path, obj_id)
 
             del data_dict[key]
 
@@ -114,7 +118,7 @@ class ModelBase:
           }
         }
         """
-        self.logger.debug('Getting default editing info for %s', self.get('_id'))
+        self.logger.debug('Getting default editing info for %s', self.get_id())
         return {k: False for k in self.keys()}
 
     def validate(self):
@@ -169,7 +173,7 @@ class ModelBase:
         recipients = [actor[1] for actor in self.get_actors() if actor[1]]
         user = User()
         sender = sender if sender else user.get_email()
-        prepid = self.get_attribute('prepid')
+        prepid = self.get_id()
         self.logger.info('Notification on %s from %s about "%s" body length %s',
                          prepid,
                          sender,
@@ -184,7 +188,7 @@ class ModelBase:
         If `save` is set, save object to database first
         Re-fecth object from database and update the attributes
         """
-        object_id = self.get_attribute('_id')
+        object_id = self.get_id()
         database = self.get_database()
         with Locker.get_lock(object_id):
             if save:
@@ -192,7 +196,7 @@ class ModelBase:
                     return False
 
             object_json = database.get(object_id)
-            self.__init__(object_json)
+            self.__init__(data=object_json, validate=False)
 
         return True
 
@@ -200,7 +204,7 @@ class ModelBase:
         """
         Update if exists or create document in the database
         """
-        object_id = self.get_attribute('_id')
+        object_id = self.get_id()
         database = self.get_database()
         with Locker.get_lock(object_id):
             object_json = self.json()
@@ -251,6 +255,19 @@ class ModelBase:
 
     def get(self, attribute):
         return self.get_attribute(attribute)
+
+    def get_id(self):
+        """
+        Attempt to return an object id
+        """
+        if 'prepid' in self.__json:
+            return self.__json['prepid']
+
+        if '_id' in self.__json:
+            return self.__json['_id']
+
+        class_name = self.__class__.__name__
+        return f'<no-id-{class_name}>'
 
     def json(self):
         return self.__json

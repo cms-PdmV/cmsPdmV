@@ -1,4 +1,4 @@
-from json_layer.model_base import ModelBase
+from model.model_base import ModelBase
 from tools.connection_wrapper import ConnectionWrapper
 from tools.config_manager import Config
 from tools.locker import Locker
@@ -87,7 +87,7 @@ class Batch(ModelBase):
         If last batch is full, start a new one and add there
         Return batch that request was added to
         """
-        batch_db = Batch.get_database()
+        batch_db = cls.get_database()
         batch_threshold = Settings.get('max_in_batch')
         with Locker.get_lock(f'batch-{campaign}'):
             # Get the newest batch, any status
@@ -113,7 +113,7 @@ class Batch(ModelBase):
         """
         Create a new batch with a unique prepid and return it
         """
-        batch_db = Batch.get_database()
+        batch_db = cls.get_database()
         with Locker.get_lock('batch-prepid-%s' % (campaign)):
             prepid = batch_db.get_next_prepid(campaign, [campaign])
             batch = Batch({'_id': prepid,

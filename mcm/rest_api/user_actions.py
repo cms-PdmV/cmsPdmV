@@ -3,7 +3,7 @@ from couchdb_layer.mcm_database import Database
 from tools.exceptions import BadAttributeException, NotFoundException
 from tools.locker import Locker
 from tools.settings import Settings
-from json_layer.user import Role, User
+from model.user import Role, User
 
 
 class AddCurrentUser(RESTResource):

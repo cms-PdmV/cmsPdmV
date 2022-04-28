@@ -1,5 +1,5 @@
 import logging
-from json_layer.request import Request
+from model.request import Request
 from tools.locker import Locker
 
 

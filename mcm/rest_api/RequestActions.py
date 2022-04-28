@@ -12,10 +12,10 @@ from rest_api.api_base import (RESTResource,
                                GetRESTResource,
                                GetUniqueValuesRESTResource,
                                UpdateRESTResource)
-from json_layer.request import Request
-from json_layer.campaign import Campaign
-from json_layer.user import Role, User
-from json_layer.chained_request import ChainedRequest
+from model.request import Request
+from model.campaign import Campaign
+from model.user import Role, User
+from model.chained_request import ChainedRequest
 from tools.exceptions import InvalidActionException, NotFoundException
 from tools.locker import Locker
 from tools.handlers import RequestInjector

@@ -10,14 +10,14 @@ class Search(RESTResource):
     Super-generic search through database (uses __all__ attribute in __init__.py of json_layer package)
     """
 
-    from json_layer.batch import Batch
-    from json_layer.campaign import Campaign
-    from json_layer.flow import Flow
-    from json_layer.mccm import MccM
-    from json_layer.chained_campaign import ChainedCampaign
-    from json_layer.request import Request
-    from json_layer.chained_request import ChainedRequest
-    from json_layer.invalidation import Invalidation
+    from model.batch import Batch
+    from model.campaign import Campaign
+    from model.flow import Flow
+    from model.mccm import MccM
+    from model.chained_campaign import ChainedCampaign
+    from model.request import Request
+    from model.chained_request import ChainedRequest
+    from model.invalidation import Invalidation
     modules = {'batches': Batch,
                'campaigns': Campaign,
                'chained_campaigns': ChainedCampaign,

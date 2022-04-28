@@ -1,6 +1,6 @@
 import json
 import flask
-from json_layer.user import Role
+from model.user import Role
 
 from rest_api.api_base import RESTResource
 from tools.settings import Settings

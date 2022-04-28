@@ -11,9 +11,9 @@ from tools.ssh_executor import SSHExecutor
 from tools.locker import Locker
 from couchdb_layer.mcm_database import Database
 from tools.communicator import Communicator
-from json_layer.request import Request
-from json_layer.chained_request import ChainedRequest
-from json_layer.batch import Batch as batch
+from model.request import Request
+from model.chained_request import ChainedRequest
+from model.batch import Batch as batch
 from tools.logger import InjectionLogAdapter
 
 

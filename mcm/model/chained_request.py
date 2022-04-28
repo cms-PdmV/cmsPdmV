@@ -1,10 +1,10 @@
-from json_layer.chained_campaign import ChainedCampaign
-from json_layer.model_base import ModelBase
-from json_layer.request import Request
-from json_layer.campaign import Campaign
-from json_layer.flow import Flow
+from model.chained_campaign import ChainedCampaign
+from model.model_base import ModelBase
+from model.request import Request
+from model.campaign import Campaign
+from model.flow import Flow
 from couchdb_layer.mcm_database import Database
-from json_layer.user import Role, User
+from model.user import Role, User
 from tools.settings import Settings
 
 

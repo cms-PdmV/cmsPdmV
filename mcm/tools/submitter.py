@@ -7,6 +7,7 @@ import traceback
 import json
 from threading import Thread
 from queue import Queue, Empty
+from tools.locker import Locker, LockedException
 
 
 class Worker(Thread):
@@ -19,7 +20,7 @@ class Worker(Thread):
         self.name = name
         self.worker_pool = worker_pool
         self.queue = self.worker_pool.task_queue
-        self.logger = logging.getLogger('mcm_error')
+        self.logger = logging.getLogger()
         self.logger.debug('Worker "%s" is being created', self.name)
         self.job_name = None
         self.job_start_time = None
@@ -70,7 +71,7 @@ class WorkerPool:
     """
 
     def __init__(self, max_workers, task_queue):
-        self.logger = logging.getLogger('mcm_error')
+        self.logger = logging.getLogger()
         self.workers = []
         self.max_workers = max_workers
         self.task_queue = task_queue
@@ -133,7 +134,7 @@ class Submitter:
                                task_queue=__task_queue)
 
     def __init__(self):
-        self.logger = logging.getLogger('mcm_error')
+        self.logger = logging.getLogger()
 
     def add_task(self, name, function, *args, **kwargs):
         """
@@ -232,6 +233,55 @@ class Submitter:
 
 class RequestSumbmitter(Submitter):
 
-
     def add(self, request):
-        pass
+        prepid = request.get('prepid')
+        self.logger.info('Acquiring locks and adding %s to submission queue', prepid)
+        # Get locks for all objects
+        # Add them to queue together with locks
+        submitted_together = request.to_be_submitted_together()
+        locks = {}
+        try:
+            for chain, requests in submitted_together.items():
+                for request_prepid in requests:
+                    if request_prepid in locks:
+                        self.logger.debug('%s already acquired', request_prepid)
+                        continue
+
+                    self.logger.debug('Acquiring lock for %s in %s', request_prepid, chain)
+                    lock = Locker.get_nonblocking_lock(request_prepid)
+                    locks[request_prepid] = lock
+                    lock.acquire()
+
+            self.logger.info('%s locks acquired for %s, adding to queue', len(locks), prepid)
+            self.add_task(prepid, self.submit, request, submitted_together, locks)
+            # self.logger.info('Added %s to queue, queue size %s', prepid, self.get_queue_size())
+            # time.sleep(5)
+            # self.release_locks(request, locks)
+        except LockedException as le:
+            self.logger.warning('Caught locked exception %s', le)
+            self.release_locks(request, locks)
+
+    def release_locks(self, request, locks):
+        """
+        Release all locks in the lock dictionary, ignore errors
+        """
+        prepid = request.get('prepid')
+        self.logger.debug('Releasing all locks of %s', prepid)
+        for request_prepid, lock in locks.items():
+            try:
+                self.logger.debug('Releasing %s of %s', request_prepid, prepid)
+                lock.release()
+            except Exception as ex:
+                self.logger.error('Error releasing %s: %s', request_prepid, ex)
+
+    def submit(self, request, submitted_together, locks):
+        try:
+            prepid = request.get('prepid')
+            self.logger.info('Starting %s submission, submitted together: %s, locks: %s', prepid, submitted_together, locks)
+            for _ in range(2):
+                self.logger.info('Submitting %s...', prepid)
+                time.sleep(5)
+
+        finally:
+            self.logger.info('Will release locks after %s submission: %s', prepid, locks)
+            self.release_locks(request, locks)

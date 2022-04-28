@@ -8,20 +8,20 @@ import math
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import Database
-from json_layer.chained_campaign import ChainedCampaign
-from json_layer.invalidation import Invalidation
-from json_layer.model_base import ModelBase
-from json_layer.campaign import Campaign
-from json_layer.flow import Flow
-from json_layer.batch import Batch
-from json_layer.sequence import Sequence
+from model.chained_campaign import ChainedCampaign
+from model.invalidation import Invalidation
+from model.model_base import ModelBase
+from model.campaign import Campaign
+from model.flow import Flow
+from model.batch import Batch
+from model.sequence import Sequence
 from tools.installer import installer
 from tools.settings import Settings
 from tools.locker import Locker
 from tools.logger import InjectionLogAdapter
 from tools.utils import cmssw_setup, get_scram_arch as fetch_scram_arch, get_workflows_from_stats, get_workflows_from_stats_for_prepid, run_commands_in_singularity, sort_workflows_by_name
 from tools.connection_wrapper import ConnectionWrapper
-from json_layer.user import User, Role
+from model.user import User, Role
 from tools.submitter import RequestSumbmitter
 
 
@@ -285,7 +285,7 @@ class Request(ModelBase):
         if not chained_request_ids:
             return []
 
-        from json_layer.chained_request import ChainedRequest
+        from model.chained_request import ChainedRequest
         chained_request_db = ChainedRequest.get_database()
         chains = chained_request_db.bulk_get(chained_request_ids)
         if only_enabled:
@@ -320,7 +320,7 @@ class Request(ModelBase):
             return None
 
         prepid = self.get_attribute('prepid')
-        from json_layer.chained_request import ChainedRequest
+        from model.chained_request import ChainedRequest
         chained_request_db = ChainedRequest.get_database()
         # Take first chained request as all of them should be identical
         chained_request = chained_request_db.get(chained_request_ids[0])
@@ -349,7 +349,7 @@ class Request(ModelBase):
             return []
 
         prepid = self.get_attribute('prepid')
-        from json_layer.chained_request import ChainedRequest
+        from model.chained_request import ChainedRequest
         chained_request_db = ChainedRequest.get_database()
         # Take first chained request as all of them should be identical
         chained_request = chained_request_db.get(chained_request_ids[0])
@@ -400,7 +400,7 @@ class Request(ModelBase):
         if not chained_requests:
             return
 
-        from json_layer.chained_request import ChainedRequest
+        from model.chained_request import ChainedRequest
         for chained_request_json in chained_requests:
             chained_request = ChainedRequest(chained_request_json)
             if chained_request.set_last_status(status):
@@ -848,7 +848,7 @@ class Request(ModelBase):
         self.check_for_collisions()
 
         # Set new status
-        self.set_approval_status('submit', 'approved')
+        # self.set_approval_status('submit', 'approved')
 
         chained_requests = self.get_chained_requests()
         # Check status of requests leading to this one
@@ -869,19 +869,8 @@ class Request(ModelBase):
 
         # Collect chains and requests that should be submitted together
         submitted_together = self.to_be_submitted_together()
-        raise NotImplementedError('Submission is not implemented')
-        # TODO: submit
-        # from tools.handlers import ChainRequestInjector, submit_pool
-        # _q_lock = locker.thread_lock(prepid)
-        # if not locker.thread_acquire(prepid, blocking=False):
-        #     return {'prepid': self.get_attribute('prepid'),
-        #             'results': False,
-        #             'message': 'Request %s is being handled already' % (prepid)}
-        # threaded_submission = ChainRequestInjector(prepid=prepid,
-        #                                            check_approval=False,
-        #                                            lock=locker.lock(prepid),
-        #                                            queue_lock=_q_lock)
-        # submit_pool.add_task(threaded_submission.internal_run)
+        from tools.submitter import RequestSumbmitter
+        RequestSumbmitter().add(self)
 
     def retrieve_fragment_command(self):
         """
@@ -2246,7 +2235,7 @@ class Request(ModelBase):
 
         chained_requests = self.get_chained_requests()
         # Check if requests further down the chain are none-new
-        derived_requests = self.get_derived_requests(chained_requests)
+        derived_requests = self.get_derived_requests()
         for chain_prepid, requests in derived_requests.items():
             for request in requests:
                 other_prepid = request['prepid']

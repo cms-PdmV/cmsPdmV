@@ -1,5 +1,5 @@
 import logging
-from json_layer.chained_request import ChainedRequest
+from model.chained_request import ChainedRequest
 from tools.locker import Locker
 
 

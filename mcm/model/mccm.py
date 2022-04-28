@@ -1,9 +1,9 @@
 import datetime
-from json_layer.user import Role, User
+from model.user import Role, User
 from tools.exceptions import BadAttributeException
 
 from tools.settings import Settings
-from json_layer.model_base import ModelBase
+from model.model_base import ModelBase
 from couchdb_layer.mcm_database import Database
 from tools.utils import expand_range
 

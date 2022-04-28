@@ -1,4 +1,4 @@
-from json_layer.model_base import ModelBase
+from model.model_base import ModelBase
 
 
 class ChainedCampaign(ModelBase):

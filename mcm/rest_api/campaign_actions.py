@@ -9,11 +9,11 @@ from rest_api.api_base import (CloneRESTResource, CreateRESTResource,
                                GetEditableRESTResource,
                                GetUniqueValuesRESTResource,
                                RESTResource)
-from json_layer.campaign import Campaign
-from json_layer.request import Request
-from json_layer.sequence import Sequence
-from json_layer.chained_campaign import ChainedCampaign
-from json_layer.user import Role
+from model.campaign import Campaign
+from model.request import Request
+from model.sequence import Sequence
+from model.chained_campaign import ChainedCampaign
+from model.user import Role
 from tools.exceptions import InvalidActionException, NotFoundException
 
 

@@ -4,7 +4,7 @@ from rest_api.api_base import RESTResource
 from tools.locker import Locker
 from tools.ssh_executor import SSHExecutor
 from tools.config_manager import Config
-from json_layer.user import User, Role
+from model.user import User, Role
 from tools.settings import Settings
 from cachelib import SimpleCache
 

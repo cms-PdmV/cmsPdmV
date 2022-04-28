@@ -4,8 +4,8 @@ from rest_api.api_base import (CreateRESTResource,
                                     GetRESTResource,
                                     UpdateRESTResource,
                                     RESTResource)
-from json_layer.chained_campaign import ChainedCampaign
-from json_layer.user import Role
+from model.chained_campaign import ChainedCampaign
+from model.user import Role
 from tools.exceptions import BadAttributeException, InvalidActionException
 
 
@@ -36,8 +36,8 @@ class CreateChainedCampaign(CreateRESTResource):
 
     def before_create(self, obj):
         # Check if all chains and campaigns exist
-        from json_layer.campaign import Campaign
-        from json_layer.flow import Flow
+        from model.campaign import Campaign
+        from model.flow import Flow
         campaigns = obj.get('campaigns')
         used_ids = set()
         for i, (campaign_id, flow_id) in enumerate(campaigns):
@@ -80,7 +80,7 @@ class DeleteChainedCampaign(DeleteRESTResource):
     def delete_check(self, obj):
         prepid = obj.get('prepid')
         # Check chained requests created in chained campaign
-        from json_layer.chained_request import ChainedRequest
+        from model.chained_request import ChainedRequest
         chained_request_db =ChainedRequest.get_database()
         chained_requests = chained_request_db.query_view('member_of_campaign', prepid, limit=1)
         if chained_requests:

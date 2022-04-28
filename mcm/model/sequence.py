@@ -1,7 +1,7 @@
 import json
 from copy import deepcopy
 from shlex import quote as shell_quote
-from json_layer.model_base import ModelBase
+from model.model_base import ModelBase
 
 
 class Sequence(ModelBase):

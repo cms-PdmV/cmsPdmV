@@ -1,8 +1,8 @@
 from couchdb_layer.mcm_database import Database
 from rest_api.api_base import CloneRESTResource, CreateRESTResource, DeleteRESTResource, GetEditableRESTResource, GetRESTResource, GetUniqueValuesRESTResource, RESTResource, UpdateRESTResource
-from json_layer.campaign import Campaign
-from json_layer.flow import Flow
-from json_layer.user import Role
+from model.campaign import Campaign
+from model.flow import Flow
+from model.user import Role
 from tools.exceptions import BadAttributeException
 
 

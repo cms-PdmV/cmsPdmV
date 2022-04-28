@@ -6,10 +6,10 @@ import time
 from tools.exceptions import BadAttributeException, CouldNotSaveException, McMException, NotFoundException
 
 import flask
-from tools.locker import Locker
+from tools.locker import LockedException, Locker
 from flask_restful import Resource
 from flask import request, make_response, current_app, render_template
-from json_layer.user import User, Role
+from model.user import User, Role
 
 
 class RESTResource(Resource):
@@ -27,9 +27,13 @@ class RESTResource(Resource):
                     try:
                         result = attr(*args, **kwargs)
                         if isinstance(result, (list, dict)):
-                            result = RESTResource.build_response(result)
+                            result = self.build_response(result)
 
                         status_code = result.status_code
+                    except McMException as mex:
+                        status_code = 400
+                        return {'results': False,
+                                'message': str(mex)}
                     except Exception as ex:
                         status_code = 500
                         import traceback
@@ -147,10 +151,7 @@ class RESTResource(Resource):
         resp.headers['Access-Control-Allow-Origin'] = '*'
         return resp
 
-    def fullmatch(self, pattern, string):
-        return re.match("(?:" + pattern + r")\Z", string)
-
-    def do_multiple_items(self, prepids, object_class, func):
+    def do_multiple_items(self, prepids, object_class, func, blocking=False):
         """
         Call the func function with an objects of object_class for each prepid
         "prepids" can be either a single prepid or a list of prepids
@@ -161,28 +162,40 @@ class RESTResource(Resource):
             prepids = [prepids]
 
         results = []
-        for prepid in prepids:
-            object_instance = object_class.fetch(prepid)
-            if not object_instance:
-                results.append({"results": False,
-                                "prepid": prepid,
-                                'message': 'Object "%s" does not exist' % (prepid)})
-                continue
+        if blocking:
+            lock_func = Locker.get_lock
+        else:
+            lock_func = Locker.get_nonblocking_lock
 
+        for prepid in prepids:
             try:
-                func(object_instance)
-                if not object_instance.save():
-                    results.append({'results': False,
-                                    'prepid': prepid,
-                                    'message': 'Could not save %s to database' % (prepid)})
-                else:
-                    results.append({'results': True, 'prepid': prepid})
-            except Exception as ex:
-                import traceback
-                self.logger.error(traceback.format_exc())
+                with lock_func(prepid):
+                    object_instance = object_class.fetch(prepid)
+                    if not object_instance:
+                        results.append({'results': False,
+                                        'prepid': prepid,
+                                        'message': f'Object "{prepid}" does not exist'})
+
+                    try:
+                        func(object_instance)
+                        if not object_instance.save():
+                            results.append({'results': False,
+                                            'prepid': prepid,
+                                            'message': f'Could not save "{prepid}" to database'})
+
+                        results.append({'results': True,
+                                        'prepid': prepid})
+                    except Exception as ex:
+                        import traceback
+                        self.logger.error(traceback.format_exc())
+                        results.append({'results': False,
+                                        'prepid': prepid,
+                                        'message': str(ex)})
+
+            except LockedException:
                 results.append({'results': False,
                                 'prepid': prepid,
-                                'message': str(ex)})
+                                'message': f'"{prepid}" is locked'})
 
         if not prepids_list and results:
             return results[0]
@@ -326,6 +339,7 @@ class CreateRESTResource(RESTResource):
         # Validate
         obj.validate()
         # Mandatory attributes
+        obj.set('prepid', prepid)
         obj.set('_id', prepid)
         obj.update_history('created')
         # Allow updates
@@ -363,48 +377,49 @@ class UpdateRESTResource(RESTResource):
                     'prepid': prepid,
                     'message': 'Missing "prepid" attribute'}
 
-        old_obj = object_class.fetch(prepid)
-        if not old_obj:
-            self.logger.error('%s could not be found', prepid)
-            return {'results': False,
-                    'prepid': prepid,
-                    'message': '%s could not be found' % (prepid)}
+        with Locker.get_nonblocking_lock(prepid):
+            old_obj = object_class.fetch(prepid)
+            if not old_obj:
+                self.logger.error('%s could not be found', prepid)
+                return {'results': False,
+                        'prepid': prepid,
+                        'message': '%s could not be found' % (prepid)}
 
-        self.logger.info('Updating object "%s"', prepid)
-        new_obj = object_class(data)
-        if new_obj.get('_rev') != old_obj.get('_rev'):
-            self.logger.error('Provided revision does not match revision in database')
-            return {'results': False,
-                    'prepid': prepid,
-                    'message': 'Provided revision does not match revision in database'}
+            self.logger.info('Updating object "%s"', prepid)
+            new_obj = object_class(data)
+            if new_obj.get('_rev') != old_obj.get('_rev'):
+                self.logger.error('Provided revision does not match revision in database')
+                return {'results': False,
+                        'prepid': prepid,
+                        'message': 'Provided revision does not match revision in database'}
 
-        # Validate
-        new_obj.validate()
-        # Allow updates
-        self.before_update(old_obj, new_obj)
-        # Difference
-        changes = self.get_changes(old_obj.json(), new_obj.json())
-        if not changes:
-            self.logger.info('No updates for "%s"', prepid)
-            return {'results': True,
-                    'prepid': prepid,
-                    'message': 'Nothing changed'}
+            # Validate
+            new_obj.validate()
+            # Allow updates
+            self.before_update(old_obj, new_obj)
+            # Difference
+            changes = self.get_changes(old_obj.json(), new_obj.json())
+            if not changes:
+                self.logger.info('No updates for "%s"', prepid)
+                return {'results': True,
+                        'prepid': prepid,
+                        'message': 'Nothing changed'}
 
-        editing_info = old_obj.get_editing_info()
-        self.logger.info('Changes of %s update: %s', prepid, changes)
-        self.logger.debug('Editing info %s', editing_info)
-        self.check_if_edits_are_allowed(changes, editing_info)
-        new_obj.set('history', old_obj.get('history'))
-        changes_str = ', '.join(sorted(self.stringify_changes(changes)))
-        new_obj.update_history('update', changes_str)
+            editing_info = old_obj.get_editing_info()
+            self.logger.info('Changes of %s update: %s', prepid, changes)
+            self.logger.debug('Editing info %s', editing_info)
+            self.check_if_edits_are_allowed(changes, editing_info)
+            new_obj.set('history', old_obj.get('history'))
+            changes_str = ', '.join(sorted(self.stringify_changes(changes)))
+            new_obj.update_history('update', changes_str)
 
-        # Save to DB
-        self.logger.info('Saving updated object "%s"', prepid)
-        if not new_obj.reload(save=True):
-            self.logger.error('Could not save %s to database', prepid)
-            return {'results': False,
-                    'prepid': prepid,
-                    'message': 'Could not save %s to database' % (prepid)}
+            # Save to DB
+            self.logger.info('Saving updated object "%s"', prepid)
+            if not new_obj.reload(save=True):
+                self.logger.error('Could not save %s to database', prepid)
+                return {'results': False,
+                        'prepid': prepid,
+                        'message': 'Could not save %s to database' % (prepid)}
 
         # After update callback
         self.after_update(old_obj, new_obj, changes)
@@ -427,34 +442,35 @@ class DeleteRESTResource(RESTResource):
         Delete an object
         """
         database = object_class.get_database()
-        object = object_class.fetch(prepid)
-        if not object:
-            self.logger.error('%s could not be found', prepid)
-            return {'results': False,
-                    'prepid': prepid,
-                    'message': '%s could not be found' % (prepid)}
+        with Locker.get_nonblocking_lock(prepid):
+            object = object_class.fetch(prepid)
+            if not object:
+                self.logger.error('%s could not be found', prepid)
+                return {'results': False,
+                        'prepid': prepid,
+                        'message': '%s could not be found' % (prepid)}
 
-        try:
-            self.logger.info('Performing pre-delete checks for %s', prepid)
-            self.delete_check(object)
-            self.logger.info('%s passed pre-delete checks', prepid)
-        except McMException as mex:
-            return {'results': False,
-                    'prepid': prepid,
-                    'message': str(mex)}
-        except Exception as ex:
-            import traceback
-            self.logger.error(traceback.format_exc())
-            return {'results': False,
-                    'prepid': prepid,
-                    'message': str(ex)}
+            try:
+                self.logger.info('Performing pre-delete checks for %s', prepid)
+                self.delete_check(object)
+                self.logger.info('%s passed pre-delete checks', prepid)
+            except McMException as mex:
+                return {'results': False,
+                        'prepid': prepid,
+                        'message': str(mex)}
+            except Exception as ex:
+                import traceback
+                self.logger.error(traceback.format_exc())
+                return {'results': False,
+                        'prepid': prepid,
+                        'message': str(ex)}
 
-        self.before_delete(object)
-        if not database.delete(prepid):
-            self.logger.error('Could not delete %s from database', prepid)
-            return {'results': False,
-                    'prepid': prepid,
-                    'message': 'Could not delete %s from database' % (prepid)}
+            self.before_delete(object)
+            if not database.delete(prepid):
+                self.logger.error('Could not delete %s from database', prepid)
+                return {'results': False,
+                        'prepid': prepid,
+                        'message': 'Could not delete %s from database' % (prepid)}
 
         self.after_delete(object)
         return {'results': True, 'prepid': prepid}

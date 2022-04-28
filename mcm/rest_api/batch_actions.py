@@ -1,6 +1,6 @@
 from rest_api.api_base import GetRESTResource, RESTResource, DeleteRESTResource
-from json_layer.batch import Batch
-from json_layer.user import Role
+from model.batch import Batch
+from model.user import Role
 
 
 class GetBatch(GetRESTResource):

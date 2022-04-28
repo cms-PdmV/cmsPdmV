@@ -2,13 +2,13 @@ import flask
 import time
 
 import json
-from json_layer.chained_request import ChainedRequest
+from model.chained_request import ChainedRequest
 from rest_api.api_base import DeleteRESTResource, RESTResource, UpdateRESTResource
 from couchdb_layer.mcm_database import Database
-from json_layer.mccm import MccM
-from json_layer.user import Role, User
-from json_layer.chained_campaign import ChainedCampaign
-from json_layer.request import Request
+from model.mccm import MccM
+from model.user import Role, User
+from model.chained_campaign import ChainedCampaign
+from model.request import Request
 from tools.exceptions import BadAttributeException, InvalidActionException, McMException, NotFoundException
 from tools.locker import Locker
 from tools.communicator import Communicator
