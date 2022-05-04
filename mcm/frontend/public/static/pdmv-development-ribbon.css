@@ -1,0 +1,21 @@
+body.dev-ribbon:after {
+  content: "Development";
+  position: fixed;
+  width: 400px;
+  height: 50px;
+  background: red;
+  top: 85px;
+  right: -85px;
+  text-align: center;
+  font-size: 32px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #fff;
+  line-height: 50px;
+  opacity: .8;
+  -ms-transform: rotate(45deg);
+  -webkit-transform: rotate(45deg);
+  transform: rotate(45deg);
+  z-index: 9999;
+  font-family: "Roboto", sans-serif;
+}

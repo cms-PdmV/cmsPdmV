@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <base href="/mcm/">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link id="favicon" rel="icon" href="static/mcm.png">
+    <title>McM</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@4.9.95/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="static/pdmv-development-ribbon.css">
+  </head>
+  <body style="background: var(--v-backBackground-base);">
+    <noscript>
+      <strong>We're sorry but McM doesn't work without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <div id="app"></div>
+    <!-- built files will be auto injected -->
+    <script>
+      const domain = document.location.origin;
+      if (domain && domain.includes('dev')) {
+        document.body.className += ' dev-ribbon';
+        document.getElementById('favicon').href = 'static/mcm.png';
+        document.title += ' Dev';
+      }
+    </script>
+  </body>
+</html>

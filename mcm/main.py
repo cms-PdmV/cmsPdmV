@@ -90,7 +90,7 @@ from rest_api.settings_actions import GetSetting, SetSetting
 from tools.logger import UserFilter
 from tools.config_manager import Config
 from flask_restful import Api
-from flask import Flask, send_from_directory, request, g, render_template_string
+from flask import Flask, render_template, request, g, render_template_string
 from jinja2.exceptions import TemplateNotFound
 from tools.utils import get_api_documentation
 
@@ -103,7 +103,9 @@ import argparse
 import time
 
 
-app = Flask(__name__)
+app = Flask(__name__,
+            static_folder='./frontend/dist/static',
+            template_folder='./frontend/dist')
 app.config.update(LOGGER_NAME='')
 api = Api(app)
 app.url_map.strict_slashes = False
@@ -115,85 +117,29 @@ logging.getLogger('werkzeug').setLevel(logging.WARNING)
 logging.getLogger('paramiko').setLevel(logging.WARNING)
 
 
-@app.route('/campaigns')
-def campaigns_html():
-    return send_from_directory('HTML', 'campaigns.html')
-
-@app.route('/requests')
-def requests_html():
-   return send_from_directory('HTML', 'requests.html')
-
-@app.route('/edit')
-def edit_html():
-    return send_from_directory('HTML', 'edit.html')
-
-@app.route('/flows')
-def flows_html():
-    return send_from_directory('HTML', 'flows.html')
-
-@app.route('/chained_campaigns')
-def chained_campaigns_html():
-    return send_from_directory('HTML', 'chained_campaigns.html')
-
-@app.route('/chained_requests')
-def chained_requests_html():
-    return send_from_directory('HTML', 'chained_requests.html')
-
-@app.route('/priority_change')
-def priority_change_html():
-    return send_from_directory('HTML', 'priority_change.html')
-
-@app.route('/')
-def index_html():
-    return send_from_directory('HTML', 'index.html')
-
-@app.route('/users')
-def users_html():
-    return send_from_directory('HTML', 'users.html')
-
-@app.route('/batches')
-def batches_html():
-    return send_from_directory('HTML', 'batches.html')
-
-@app.route('/mccms')
-def mccms_html():
-    return send_from_directory('HTML', 'mccms.html')
-
-@app.route('/settings')
-def settings_html():
-    return send_from_directory('HTML', 'settings.html')
-
-@app.route('/invalidations')
-def invalidations_html():
-    return send_from_directory('HTML', 'invalidations.html')
-
-@app.route('/edit_many')
-def edit_many_html():
-    return send_from_directory('HTML', 'edit_many.html')
-
-@app.route('/dashboard')
-def dashboard_html():
-    return send_from_directory('HTML', 'dashboard.html')
-
-@app.route('/lists')
-def stalled_html():
-    return send_from_directory('HTML', 'lists.html')
-
-@app.route('/scripts/<path:path>')
-def send_static(path):
-    return send_from_directory('scripts', path)
-
-@app.route('/HTML/<path:path>')
-def send_HTML(path):
-    return send_from_directory('HTML', path)
+@app.route('/', defaults={'_path': ''})
+@app.route('/<path:_path>')
+def catch_all(_path):
+    """
+    Return index.html for all paths except API
+    """
+    try:
+        return render_template('index.html')
+    except TemplateNotFound:
+        response = '<script>setTimeout(function() {location.reload();}, 5000);</script>'
+        response += 'Webpage is starting, please wait a few minutes...'
+        return response
 
 
 def setup_api_docs(flask_app):
     """
     Setup an enpoint for getting API documentation
     """
-    with open('HTML/api.html') as template_file:
-        api_template = template_file.read()
+    try:
+        with open('frontend/dist/api.html') as template_file:
+            api_template = template_file.read()
+    except:
+        api_template = '<html>No template</html>'
 
     def _api_documentation(api_path=None):
         """
@@ -357,7 +303,7 @@ def setup_error_logger(debug):
         if not os.path.isdir('logs'):
             os.mkdir('logs')
 
-        log_size = 1024 ** 3  # 10MB
+        log_size = 1024 ** 2  # 10MB
         log_count = 500  # 500 files
         log_name = 'logs/error.log'
         handler = logging.handlers.RotatingFileHandler(log_name, 'a', log_size, log_count)
@@ -386,7 +332,7 @@ def setup_injection_logger(debug):
         if not os.path.isdir('logs'):
             os.mkdir('logs')
 
-        log_size = 1024 ** 3  # 10MB
+        log_size = 1024 ** 2  # 10MB
         log_count = 500  # 500 files
         log_name = 'logs/inject.log'
         handler = logging.handlers.RotatingFileHandler(log_name, 'a', log_size, log_count)
@@ -413,7 +359,7 @@ def setup_access_logger(debug):
         if not os.path.isdir('logs'):
             os.mkdir('logs')
 
-        log_size = 1024 ** 3  # 10MB
+        log_size = 1024 ** 2  # 10MB
         log_count = 500  # 500 files
         log_name = 'logs/access.log'
         handler = logging.handlers.RotatingFileHandler(log_name, 'a', log_size, log_count)
