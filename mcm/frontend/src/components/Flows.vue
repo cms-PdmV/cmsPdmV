@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div>
+    <div class="page-header">
       <div>
         <h1 class="page-title">Flows</h1>
         <ColumnSelector :columns="columns" v-on:updateHeaders="updateTableHeaders" />

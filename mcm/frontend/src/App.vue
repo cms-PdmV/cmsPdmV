@@ -19,7 +19,7 @@
         <span :title="'Username: ' + user.username + '\nRole: ' + user.role"
           ><small>Logged in as</small> {{ user.user_name }}
         </span>
-         <img class="role-star" :title="user.role" :src="userRolePicture"/>
+        <img class="role-star" :title="user.role" :src="userRolePicture" />
       </div>
     </v-app-bar>
     <v-main class="content-container">
@@ -37,7 +37,7 @@ export default {
     this.fetchUserInfo();
   },
   computed: {
-    userRolePicture: function() {
+    userRolePicture: function () {
       const role = this.user.role;
       if (role === 'user') {
         return 'static/user_star.png';
@@ -84,13 +84,28 @@ a.no-decoration {
 </style>
 
 <style>
+.v-data-table__wrapper,
+.v-data-table__wrapper > table,
+.v-data-table,
+.content-container,
+.v-application,
+.v-application > div {
+  min-width: 100%;
+  width: fit-content !important;
+}
+
+.page-header {
+  width: calc(100vw - 16px); /* Ugly fix */
+  max-width: 100%;
+  position: sticky;
+  left: 0;
+}
 
 .page-title {
   margin: 4px 8px;
 }
 
 footer {
-  opacity: 0.6;
   padding: 0 12px;
   height: 42px;
   left: 0px;
@@ -98,7 +113,8 @@ footer {
   bottom: 0px;
   position: fixed;
   background: var(--v-background-base) !important;
-  box-shadow: 0px -2px 4px -1px rgba(0, 0, 0, 0.2), 0px -4px 5px 0px rgba(0, 0, 0, 0.14), 0px -1px 10px 0px rgba(0, 0, 0, 0.12);
+  box-shadow: 0px -2px 4px -1px rgba(0, 0, 0, 0.2), 0px -4px 5px 0px rgba(0, 0, 0, 0.14),
+    0px -1px 10px 0px rgba(0, 0, 0, 0.12);
 }
 
 .actions > a {
@@ -110,6 +126,19 @@ footer {
 .actions > a:hover {
   text-decoration: none;
   font-weight: 600;
+}
+
+.notes {
+  max-width: 450px;
+  min-width: 350px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.25em;
+  background: rgba(255,255,0,0.15);
+  border: 1px solid gray;
+  margin: 4px;
+  padding: 2px;
+  font-family: 'Schoolbell', monospace;
 }
 
 </style>
