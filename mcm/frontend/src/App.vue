@@ -125,7 +125,7 @@ footer {
 
 .actions > a:hover {
   text-decoration: none;
-  font-weight: 600;
+  text-shadow: .25px 0px .1px, -.25px 0px .1px;
 }
 
 .notes {
