@@ -65,12 +65,11 @@ export default {
 
 <style scoped>
 header {
-  /* background: var(--v-background-base) !important; */
-  background: white;
+  background: var(--v-background-base) !important;
 }
 .content-container {
-  /* background: var(--v-backBackground-base); */
-  background: #FAFAFA;
+  background: var(--v-backBackground-base);
+  margin-bottom: 46px;
 }
 .headline {
   color: rgba(0, 0, 0, 0.87) !important;
@@ -82,4 +81,35 @@ a.no-decoration {
   width: 16px;
   height: 16px;
 }
+</style>
+
+<style>
+
+.page-title {
+  margin: 4px 8px;
+}
+
+footer {
+  opacity: 0.6;
+  padding: 0 12px;
+  height: 42px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  position: fixed;
+  background: var(--v-background-base) !important;
+  box-shadow: 0px -2px 4px -1px rgba(0, 0, 0, 0.2), 0px -4px 5px 0px rgba(0, 0, 0, 0.14), 0px -1px 10px 0px rgba(0, 0, 0, 0.12);
+}
+
+.actions > a {
+  text-decoration: none;
+  margin-left: 2px;
+  margin-right: 2px;
+}
+
+.actions > a:hover {
+  text-decoration: none;
+  font-weight: 600;
+}
+
 </style>

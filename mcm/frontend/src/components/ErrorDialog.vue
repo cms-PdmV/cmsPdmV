@@ -2,7 +2,7 @@
   <div>
     <v-dialog v-model="visible" width="500">
       <v-card>
-        <v-card-title>Error :(</v-card-title>
+        <v-card-title>Oopsie woopsie :(</v-card-title>
         <v-card-text>{{ errorMessage }}</v-card-text>
         <v-divider></v-divider>
         <v-card-actions>

@@ -32,12 +32,18 @@ export default {
   },
   data() {
     return {
-      columnsLocal: this.columns,
+      columnsLocal: undefined,
       headers: [],
       shown: 0,
     };
   },
   created() {
+    const columns = JSON.parse(JSON.stringify(this.columns));
+    for (const column of columns) {
+      column.displayName = this.getDisplayName(column);
+      column.visible = column.visible ? true : false;
+    }
+    this.columnsLocal = columns;
     const query = Object.assign({}, this.$route.query);
     if (!('shown' in query)) {
       this.updateShownFromVisible();
@@ -49,8 +55,16 @@ export default {
     this.$router.replace({ query: query }).catch(() => {});
   },
   watch: {
+    columns: function (newValue, oldValue) {
+      const columns = JSON.parse(JSON.stringify(this.columns));
+      for (const column of columns) {
+        column.displayName = this.getDisplayName(column);
+        column.visible = column.visible ? true : false;
+      }
+      this.columnsLocal = columns;
+    },
     columnsLocal: {
-      handler: function() {
+      handler: function (newValue, oldValue) {
         this.updateShownFromVisible();
         this.updateTableHeaders();
       },
@@ -58,28 +72,28 @@ export default {
     },
   },
   computed: {
-    columnsLocalWithoutPrepID: function() {
+    columnsLocalWithoutPrepID: function () {
       return this.columnsLocal.filter((entry) => entry.dbName !== 'prepid');
     },
   },
   methods: {
-    updateTableHeaders: function() {
+    updateTableHeaders: function () {
       this.headers = [];
       this.columnsLocal.forEach((entry) => {
         if (entry.visible || entry.dbName === 'prepid') {
           this.headers.push({ text: entry.displayName, value: entry.dbName, sortable: !!entry.sortable });
         }
       });
-      this.$emit('updateColumns', this.columnsLocal, this.headers);
+      this.$emit('updateHeaders', this.headers);
     },
-    updateVisibleFromShown: function() {
+    updateVisibleFromShown: function () {
       let shown = this.shown;
       this.columnsLocal.forEach((entry) => {
         entry.visible = (shown & 1) !== 0;
         shown = shown >> 1;
       });
     },
-    updateShownFromVisible: function() {
+    updateShownFromVisible: function () {
       let shown = 0;
       this.columnsLocal
         .slice()
@@ -93,10 +107,16 @@ export default {
       this.shown = shown;
       this.updateQuery('shown', this.shown);
     },
-    updateQuery: function(name, value) {
+    updateQuery: function (name, value) {
       const query = Object.assign({}, this.$route.query);
       query[name] = value;
       this.$router.replace({ query: query }).catch(() => {});
+    },
+    getDisplayName: function (info) {
+      if (info.displayName) {
+        return info.displayName;
+      }
+      return info.dbName.charAt(0).toUpperCase() + info.dbName.slice(1).replaceAll('_', ' ');
     },
   },
 };
