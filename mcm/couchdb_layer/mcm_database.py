@@ -476,7 +476,7 @@ class Database:
         url = 'local/%s/_design/lucene/search' % (self.db_name)
         options = {'skip': skip,
                    'include_docs': True,
-                   'sort': '_id<string>' if not sort else sort,
+                   'sort': 'notes<string>' if not sort else sort,
                    'q': query}
         if limit is not None:
             options['limit'] = limit

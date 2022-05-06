@@ -11,10 +11,12 @@
       :headers="headers"
       :items="items"
       :loading="loading"
+      :options.sync="optionsSync"
+      :server-items-length="totalItems"
       hide-default-footer
       class="elevation-1"
       dense
-      :items-per-page="items.length"
+      :items-per-page="itemsPerPage"
     >
       <template v-slot:[`item._actions`]="{ item }">
         <div class="actions">
@@ -26,6 +28,9 @@
       </template>
       <template v-slot:[`item.prepid`]="{ item }">
         <a :href="databaseName + '?prepid=' + item.prepid" title="Show only this item">{{ item.prepid }}</a>
+      </template>
+      <template v-slot:[`item.history`]="{ item }">
+        <HistoryCell :data="item.history"/>
       </template>
       <template v-slot:[`item.notes`]="{ item }">
         <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
@@ -45,8 +50,10 @@ import ColumnSelector from './ColumnSelector';
 import DeletePrompt from './DeletePrompt.vue';
 import ErrorDialog from './ErrorDialog.vue';
 import Paginator from './Paginator.vue';
+import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js';
 import { utilsMixin } from '../mixins/UtilsMixin.js';
+import { sortingMixin } from '../mixins/SortingMixin.js';
 
 export default {
   name: 'chained_campaigns',
@@ -55,8 +62,9 @@ export default {
     DeletePrompt,
     ErrorDialog,
     Paginator,
+    HistoryCell,
   },
-  mixins: [roleMixin, utilsMixin],
+  mixins: [roleMixin, utilsMixin, sortingMixin],
   data() {
     return {
       databaseName: 'chained_campaigns',
@@ -65,15 +73,28 @@ export default {
         { dbName: '_actions', displayName: 'Actions', visible: 1 },
         { dbName: 'enabled', visible: 1 },
         { dbName: 'notes', visible: 1 },
-        { dbName: 'history' },
+        { dbName: 'history', sortable: true },
         { dbName: 'campaigns', visible: 1 },
         { dbName: 'check_cmssw_version'},
       ],
       headers: [],
       items: [],
       totalItems: 0,
+      itemsPerPage: 1,
       loading: false,
+      optionsSync: {},
     };
+  },
+  watch: {
+    optionsSync: {
+      handler (newOptions, oldOptions) {
+        let query = Object.assign({}, this.$route.query);
+        this.handleSort(query, oldOptions, newOptions);
+        this.$router.replace({query: query}).catch(() => {});
+        this.fetchObjects();
+      },
+      deep: true,
+    },
   },
   methods: {
     fetchObjects: function() {

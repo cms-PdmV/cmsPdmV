@@ -11,10 +11,12 @@
       :headers="headers"
       :items="items"
       :loading="loading"
+      :options.sync="optionsSync"
+      :server-items-length="totalItems"
       hide-default-footer
       class="elevation-1"
       dense
-      :items-per-page="items.length"
+      :items-per-page="itemsPerPage"
     >
       <template v-slot:[`item._actions`]="{ item }">
         <div class="actions">
@@ -28,6 +30,9 @@
       </template>
       <template v-slot:[`item.prepid`]="{ item }">
         <a :href="databaseName + '?prepid=' + item.prepid" title="Show only this item">{{ item.prepid }}</a>
+      </template>
+      <template v-slot:[`item.history`]="{ item }">
+        <HistoryCell :data="item.history"/>
       </template>
       <template v-slot:[`item.notes`]="{ item }">
         <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
@@ -47,8 +52,10 @@ import ColumnSelector from './ColumnSelector';
 import DeletePrompt from './DeletePrompt.vue';
 import ErrorDialog from './ErrorDialog.vue';
 import Paginator from './Paginator.vue';
+import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js';
 import { utilsMixin } from '../mixins/UtilsMixin.js';
+import { sortingMixin } from '../mixins/SortingMixin.js';
 
 export default {
   name: 'campaigns',
@@ -57,19 +64,20 @@ export default {
     DeletePrompt,
     ErrorDialog,
     Paginator,
+    HistoryCell,
   },
-  mixins: [roleMixin, utilsMixin],
+  mixins: [roleMixin, utilsMixin, sortingMixin],
   data() {
     return {
       databaseName: 'campaigns',
       columns: [
         { dbName: 'prepid', displayName: 'PrepID', visible: true, sortable: true },
         { dbName: '_actions', displayName: 'Actions', visible: true },
-        { dbName: 'cmssw_release', displayName: 'CMSSW release', visible: true },
-        { dbName: 'energy' },
+        { dbName: 'cmssw_release', displayName: 'CMSSW release', visible: true, sortable: true },
+        { dbName: 'energy', sortable: true },
         { dbName: 'events_per_lumi', visible: true },
         { dbName: 'generators', visible: true },
-        { dbName: 'history' },
+        { dbName: 'history', sortable: true },
         { dbName: 'input_dataset' },
         { dbName: 'keep_output', visible: true },
         { dbName: 'memory', visible: true },
@@ -78,15 +86,28 @@ export default {
         { dbName: 'pileup_dataset_name', displayName: 'Pileup dataset' },
         { dbName: 'root', visible: true },
         { dbName: 'sequences', visible: true },
-        { dbName: 'status', visible: true },
+        { dbName: 'status', visible: true, sortable: true },
         { dbName: 'type', visible: true },
         { dbName: 'www', displayName: 'WWW' },
       ],
       headers: [],
       items: [],
       totalItems: 0,
+      itemsPerPage: 1,
       loading: false,
+      optionsSync: {},
     };
+  },
+  watch: {
+    optionsSync: {
+      handler (newOptions, oldOptions) {
+        let query = Object.assign({}, this.$route.query);
+        this.handleSort(query, oldOptions, newOptions);
+        this.$router.replace({query: query}).catch(() => {});
+        this.fetchObjects();
+      },
+      deep: true,
+    },
   },
   methods: {
     fetchObjects: function() {

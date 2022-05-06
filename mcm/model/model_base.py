@@ -12,7 +12,7 @@ from couchdb_layer.mcm_database import Database
 
 class ModelBase:
     __schema = {}
-    logger = logging.getLogger("mcm_error")
+    logger = logging.getLogger('mcm_error')
 
     # String pattern checkers
     __campaign_prepid_pattern = '[a-zA-Z0-9]{3,60}'

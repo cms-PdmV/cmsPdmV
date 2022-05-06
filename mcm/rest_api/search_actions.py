@@ -110,6 +110,12 @@ class Search(RESTResource):
         else:
             # Add types to arguments
             args = {self.casting[db_name].get(k, k): v for k, v in args.items()}
+            if not args:
+                args = {'_id': '*'}
+
+            if sort_on:
+                sort_on = self.casting[db_name].get(sort_on, f'{sort_on}<string>')
+
             # Construct the complex query
             response = database.search(args, page, limit, include_fields, True, sort_on, sort_asc)
 
