@@ -99,6 +99,8 @@
                         target="_self">{{elem}}</a>
                       <a ng-href='chained_requests?contains={{elem}}' rel="tooltip" title="View chains from {{elem}}"
                         target="_self"><i class="icon-indent-left"></i></a>
+                      <a ng-href='mccms?contains={{elem}}' rel="tooltip" title="View tickets with {{elem}}"
+                        target="_self"><i class="icon-tasks"></i></a>
                     </li>
                     <li ng-show="isArray(elem);">
                       <a ng-href='requests?range={{elem[0]}},{{ elem[1] }}' rel="tooltip" title="View range of rqeuests"
