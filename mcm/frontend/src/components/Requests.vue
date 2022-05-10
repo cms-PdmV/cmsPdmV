@@ -25,7 +25,7 @@
         </div>
       </template>
       <template v-slot:[`item.prepid`]="{ item }">
-        <a :href="databaseName + '?prepid=' + item.prepid" title="Show only this item">{{ item.prepid }}</a>
+        <router-link :to="databaseName + '?prepid=' + item.prepid" custom :title="'Show only ' + item.prepid" class="bold-hover">{{item.prepid}}</router-link>
       </template>
       <template v-slot:[`item.history`]="{ item }">
         <HistoryCell :data="item.history"/>
@@ -52,6 +52,7 @@ import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js';
 import { utilsMixin } from '../mixins/UtilsMixin.js';
 import { sortingMixin } from '../mixins/SortingMixin.js';
+import { navigationMixin } from '../mixins/NavigationMixin.js';
 
 export default {
   name: 'requests',
@@ -62,7 +63,7 @@ export default {
     Paginator,
     HistoryCell,
   },
-  mixins: [roleMixin, utilsMixin, sortingMixin],
+  mixins: [roleMixin, utilsMixin, sortingMixin, navigationMixin],
   data() {
     return {
       databaseName: 'requests',
@@ -82,19 +83,7 @@ export default {
       totalItems: 0,
       itemsPerPage: 1,
       loading: false,
-      optionsSync: {},
     };
-  },
-  watch: {
-    optionsSync: {
-      handler (newOptions, oldOptions) {
-        let query = Object.assign({}, this.$route.query);
-        this.handleSort(query, oldOptions, newOptions);
-        this.$router.replace({query: query}).catch(() => {});
-        this.fetchObjects();
-      },
-      deep: true,
-    },
   },
   methods: {
     fetchObjects: function() {
@@ -106,6 +95,7 @@ export default {
             for (const item of items) {
               item._actions = '';
             }
+            this.checkAttributes(this.columns, items);
             this.items = items;
             this.totalItems = response.data.total_rows;
             this.loading = false;

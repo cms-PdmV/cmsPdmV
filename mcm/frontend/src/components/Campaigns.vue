@@ -29,13 +29,48 @@
         </div>
       </template>
       <template v-slot:[`item.prepid`]="{ item }">
-        <a :href="databaseName + '?prepid=' + item.prepid" title="Show only this item">{{ item.prepid }}</a>
+        <router-link :to="databaseName + '?prepid=' + item.prepid" custom :title="'Show only ' + item.prepid" class="bold-hover">{{item.prepid}}</router-link>
       </template>
       <template v-slot:[`item.history`]="{ item }">
         <HistoryCell :data="item.history"/>
       </template>
       <template v-slot:[`item.notes`]="{ item }">
         <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
+      </template>
+      <template v-slot:[`item.cmssw_release`]="{ item }">
+        <router-link :to="'campaigns?cmssw_release=' + item.cmssw_release" custom title="Campaigns with this CMSSW release" class="bold-hover">{{item.cmssw_release}}</router-link>
+      </template>
+      <template v-slot:[`item.next`]="{ item }">
+        <ul>
+          <li v-for="nextCampaign in item.next" :key="nextCampaign">
+            <router-link :to="databaseName + '?prepid=' + nextCampaign" custom :title="'Show only ' + nextCampaign" class="bold-hover">{{nextCampaign}}</router-link>
+          </li>
+        </ul>
+      </template>
+      <template v-slot:[`item.generators`]="{ item }">
+        <ul>
+          <li v-for="generator in item.generators" :key="generator">{{generator}}</li>
+        </ul>
+      </template>
+      <template v-slot:[`item.events_per_lumi`]="{ item }">
+        <ul>
+          <li v-for="(value, core) in item.events_per_lumi" :key="core">{{core}}:&nbsp;{{value}}</li>
+        </ul>
+      </template>
+      <template v-slot:[`item.keep_output`]="{ item }">
+        <ul>
+          <li v-for="(values, name) in item.keep_output" :key="name">{{name}}:
+            <ol>
+              <li v-for="(value, index) in values" :key="index">{{value}}</li>
+            </ol>
+          </li>
+        </ul>
+      </template>
+      <template v-slot:[`item.sequences`]="{ item }">
+        {{item.sequences}}
+      </template>
+      <template v-slot:[`item.pileup_dataset_name`]="{ item }">
+        <a :href="dasLink(item.pileup_dataset_name)" title="Open in DAS" target="_blank" class="bold-hover">{{item.pileup_dataset_name}}</a>
       </template>
     </v-data-table>
     <delete-prompt ref="delete-prompt"></delete-prompt>
@@ -56,6 +91,7 @@ import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js';
 import { utilsMixin } from '../mixins/UtilsMixin.js';
 import { sortingMixin } from '../mixins/SortingMixin.js';
+import { navigationMixin } from '../mixins/NavigationMixin.js';
 
 export default {
   name: 'campaigns',
@@ -66,7 +102,7 @@ export default {
     Paginator,
     HistoryCell,
   },
-  mixins: [roleMixin, utilsMixin, sortingMixin],
+  mixins: [roleMixin, utilsMixin, sortingMixin, navigationMixin],
   data() {
     return {
       databaseName: 'campaigns',
@@ -98,19 +134,9 @@ export default {
       optionsSync: {},
     };
   },
-  watch: {
-    optionsSync: {
-      handler (newOptions, oldOptions) {
-        let query = Object.assign({}, this.$route.query);
-        this.handleSort(query, oldOptions, newOptions);
-        this.$router.replace({query: query}).catch(() => {});
-        this.fetchObjects();
-      },
-      deep: true,
-    },
-  },
   methods: {
     fetchObjects: function() {
+      console.log('Fetch objects');
       this.loading = true;
       this.fetchItems(this.databaseName)
         .then(
@@ -119,6 +145,7 @@ export default {
             for (const item of items) {
               item._actions = '';
             }
+            this.checkAttributes(this.columns, items);
             this.items = items;
             this.totalItems = response.data.total_rows;
             this.loading = false;
@@ -138,6 +165,7 @@ export default {
     },
     onPaginatorUpdate: function(page, itemsPerPage) {
       this.itemsPerPage = itemsPerPage;
+      console.log('Paginator update: page ' + page + ', items per page ' + itemsPerPage);
       this.fetchObjects();
     },
     promptDelete: function(item) {

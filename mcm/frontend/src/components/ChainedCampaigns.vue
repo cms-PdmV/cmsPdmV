@@ -27,13 +27,22 @@
         </div>
       </template>
       <template v-slot:[`item.prepid`]="{ item }">
-        <a :href="databaseName + '?prepid=' + item.prepid" title="Show only this item">{{ item.prepid }}</a>
+        <router-link :to="databaseName + '?prepid=' + item.prepid" custom :title="'Show only ' + item.prepid" class="bold-hover">{{item.prepid}}</router-link>
       </template>
       <template v-slot:[`item.history`]="{ item }">
         <HistoryCell :data="item.history"/>
       </template>
       <template v-slot:[`item.notes`]="{ item }">
         <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
+      </template>
+      <template v-slot:[`item.campaigns`]="{ item }">
+        <div v-for="pair in item.campaigns" :key="pair[1]" style="white-space: nowrap;">
+          <template v-if="pair[1]">
+            <router-link :to="'flows?prepid=' + pair[1]" custom :title="'Show ' + pair[1]" class="bold-hover">{{pair[1]}}</router-link>
+            &#8658;
+          </template>
+          <router-link :to="'campaigns?prepid=' + pair[0]" custom :title="'Show ' + pair[0]" class="bold-hover">{{pair[0]}}</router-link>
+        </div>
       </template>
     </v-data-table>
     <delete-prompt ref="delete-prompt"></delete-prompt>
@@ -54,6 +63,7 @@ import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js';
 import { utilsMixin } from '../mixins/UtilsMixin.js';
 import { sortingMixin } from '../mixins/SortingMixin.js';
+import { navigationMixin } from '../mixins/NavigationMixin.js';
 
 export default {
   name: 'chained_campaigns',
@@ -64,7 +74,7 @@ export default {
     Paginator,
     HistoryCell,
   },
-  mixins: [roleMixin, utilsMixin, sortingMixin],
+  mixins: [roleMixin, utilsMixin, sortingMixin, navigationMixin],
   data() {
     return {
       databaseName: 'chained_campaigns',
@@ -82,19 +92,7 @@ export default {
       totalItems: 0,
       itemsPerPage: 1,
       loading: false,
-      optionsSync: {},
     };
-  },
-  watch: {
-    optionsSync: {
-      handler (newOptions, oldOptions) {
-        let query = Object.assign({}, this.$route.query);
-        this.handleSort(query, oldOptions, newOptions);
-        this.$router.replace({query: query}).catch(() => {});
-        this.fetchObjects();
-      },
-      deep: true,
-    },
   },
   methods: {
     fetchObjects: function() {
@@ -106,6 +104,7 @@ export default {
             for (const item of items) {
               item._actions = '';
             }
+            this.checkAttributes(this.columns, items);
             this.items = items;
             this.totalItems = response.data.total_rows;
             this.loading = false;

@@ -1,5 +1,9 @@
 export const sortingMixin = {
-
+  data() {
+    return {
+      optionsSync: {},
+    };
+  },
   created() {
     let query = Object.assign({}, this.$route.query);
     if ('sort' in query) {
@@ -47,6 +51,16 @@ export const sortingMixin = {
       } else {
         delete query['sort_asc']
       }
+    },
+  },
+  watch: {
+    optionsSync: {
+      handler (newOptions, oldOptions) {
+        let query = Object.assign({}, this.$route.query);
+        this.handleSort(query, oldOptions, newOptions);
+        this.$router.replace({query: query}).catch(() => {});
+      },
+      deep: true,
     },
   },
 };

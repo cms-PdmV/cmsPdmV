@@ -117,12 +117,14 @@ footer {
     0px -1px 10px 0px rgba(0, 0, 0, 0.12);
 }
 
+.bold-hover,
 .actions > a {
   text-decoration: none;
   margin-left: 2px;
   margin-right: 2px;
 }
 
+.bold-hover:hover,
 .actions > a:hover {
   text-decoration: none;
   text-shadow: .25px 0px .1px, -.25px 0px .1px;
