@@ -10,6 +10,7 @@ function(doc) {
     res.add(doc.energy, { field: 'energy', store: 'yes', type: 'float' });
     res.add(doc.root, { field: 'root', store: 'yes', type: 'int' });
     res.add(doc.cmssw_release, { field: 'cmssw_release', store: 'yes', type: 'string' });
+    res.add(doc.type, { field: 'type', store: 'yes', type: 'string' });
     if (doc.next) {
         for (var i = 0; i < doc.next.length; i++) {
             res.add(doc.next[i], { 'field': 'next', store: 'yes' });

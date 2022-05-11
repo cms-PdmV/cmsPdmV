@@ -6,17 +6,10 @@ export const navigationMixin = {
       const ignoreKeys = ['page', 'limit', 'sort', 'sort_on', 'shown'];
       let oldQuery = Object.fromEntries(Object.entries(from.query).filter(([key]) => !ignoreKeys.includes(key)));
       let newQuery = Object.fromEntries(Object.entries(to.query).filter(([key]) => !ignoreKeys.includes(key)));
-      const oldKeys = Object.keys(oldQuery);
-      const newKeys = Object.keys(newQuery);
-      if (oldKeys.length != newKeys.length) {
+      let oldQueryString = Object.keys(oldQuery).sort().map(key => `${key}=${oldQuery[key]}`).join('&');
+      let newQueryString = Object.keys(newQuery).sort().map(key => `${key}=${newQuery[key]}`).join('&');
+      if (oldQueryString != newQueryString) {
         this.fetchObjects();
-        return;
-      }
-      for (let key of oldKeys) {
-        if (oldQuery[key] !== newQuery[key]) {
-          this.fetchObjects();
-          return;
-        }
       }
     }
   },

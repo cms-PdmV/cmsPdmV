@@ -22,6 +22,7 @@
         <div class="actions">
           <a :href="databaseName + '/edit?prepid=' + item.prepid" v-if="role('production_manager')" title="Edit">Edit</a>
           <a @click="promptDelete(item)" v-if="role('production_expert')" title="Delete">Delete</a>
+          <a :href="'restapi/' + databaseName + '/get/' + item.prepid" v-if="role('administrator')" title="Raw object JSON">Raw</a>
         </div>
       </template>
       <template v-slot:[`item.prepid`]="{ item }">
@@ -33,6 +34,26 @@
       <template v-slot:[`item.notes`]="{ item }">
         <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
       </template>
+            <template v-slot:[`item.cmssw_release`]="{ item }">
+        <router-link :to="databaseName + '?cmssw_release=' + item.cmssw_release" custom title="Requests with this CMSSW release" class="bold-hover">{{item.cmssw_release}}</router-link>
+      </template>
+      <template v-slot:[`item.generators`]="{ item }">
+        <ul>
+          <li v-for="generator in item.generators" :key="generator">{{generator}}</li>
+        </ul>
+      </template>
+      <template v-slot:[`item.keep_output`]="{ item }">
+        <ol>
+          <li v-for="(value, index) in item.keep_output" :key="index">{{value}}</li>
+        </ol>
+      </template>
+      <template v-slot:[`item.sequences`]="{ item }">
+        {{item.sequences}}
+      </template>
+      <template v-slot:[`item.pileup_dataset_name`]="{ item }">
+        <a :href="dasLink(item.pileup_dataset_name)" title="Open in DAS" target="_blank" class="bold-hover">{{item.pileup_dataset_name}}</a>
+      </template>
+
     </v-data-table>
     <delete-prompt ref="delete-prompt"></delete-prompt>
     <error-dialog ref="error-dialog"></error-dialog>
@@ -51,7 +72,7 @@ import Paginator from './Paginator.vue';
 import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js';
 import { utilsMixin } from '../mixins/UtilsMixin.js';
-import { sortingMixin } from '../mixins/SortingMixin.js';
+import { dataTableMixin } from '../mixins/DataTableMixin.js';
 import { navigationMixin } from '../mixins/NavigationMixin.js';
 
 export default {
@@ -63,7 +84,7 @@ export default {
     Paginator,
     HistoryCell,
   },
-  mixins: [roleMixin, utilsMixin, sortingMixin, navigationMixin],
+  mixins: [roleMixin, utilsMixin, dataTableMixin, navigationMixin],
   data() {
     return {
       databaseName: 'requests',
@@ -77,8 +98,40 @@ export default {
         { dbName: 'memory', visible: true },
         { dbName: 'notes', visible: true },
         { dbName: 'sequences', visible: true },
+        { dbName: 'cmssw_release' },
+        { dbName: 'completed_events' },
+        { dbName: 'config_id' },
+        { dbName: 'dataset_name' },
+        { dbName: 'energy' },
+        { dbName: 'events_per_lumi' },
+        { dbName: 'extension' },
+        { dbName: 'flown_with' },
+        { dbName: 'fragment' },
+        { dbName: 'fragment_name' },
+        { dbName: 'fragment_tag' },
+        { dbName: 'generator_parameters' },
+        { dbName: 'generators' },
+        { dbName: 'input_dataset' },
+        { dbName: 'interested_pwg' },
+        { dbName: 'mcdb_id' },
+        { dbName: 'member_of_campaign' },
+        { dbName: 'member_of_chain' },
+        { dbName: 'name_of_fragment' },
+        { dbName: 'output_dataset' },
+        { dbName: 'pileup_dataset_name' },
+        { dbName: 'pilot' },
+        { dbName: 'priority' },
+        { dbName: 'process_string' },
+        { dbName: 'pwg' },
+        { dbName: 'reqmgr_name' },
+        { dbName: 'size_event' },
+        { dbName: 'tags' },
+        { dbName: 'time_event' },
+        { dbName: 'total_events' },
+        { dbName: 'type' },
+        { dbName: 'validation' },
+        { dbName: 'version' }
       ],
-      headers: [],
       items: [],
       totalItems: 0,
       itemsPerPage: 1,
@@ -109,9 +162,6 @@ export default {
           this.showError(error);
           this.loading = false;
         });
-    },
-    updateTableHeaders: function(headers) {
-      this.headers = headers;
     },
     onPaginatorUpdate: function(page, itemsPerPage) {
       this.itemsPerPage = itemsPerPage;

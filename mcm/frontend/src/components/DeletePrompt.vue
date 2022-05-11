@@ -51,7 +51,6 @@ export default {
     },
     confirm() {
       this.close();
-      console.log('Delete ' + this.item.prepid);
       axios
         .delete('restapi/' + this.database + '/delete/' + this.item.prepid)
         .then(

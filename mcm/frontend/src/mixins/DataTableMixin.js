@@ -1,6 +1,9 @@
-export const sortingMixin = {
+import axios from 'axios';
+
+export const dataTableMixin = {
   data() {
     return {
+      headers: [],
       optionsSync: {},
     };
   },
@@ -14,6 +17,18 @@ export const sortingMixin = {
     }
   },
   methods: {
+    fetchItems(database) {
+      const ignoreKeys = ['shown'];
+      const query = Object.fromEntries(Object.entries(this.$route.query).filter(([key]) => !ignoreKeys.includes(key)));
+      query.db_name = database;
+      let urlQuery = new URLSearchParams(query).toString();
+      if (urlQuery) {
+        urlQuery = '?' + urlQuery;
+        urlQuery = decodeURI(urlQuery);
+      }
+      urlQuery = 'search' + urlQuery;
+      return axios.get(urlQuery);
+    },
     handleSort(query, oldOptions, newOptions) {
       if (!oldOptions.sortBy || !oldOptions.sortDesc || !newOptions.sortBy || !newOptions.sortDesc) {
         return;
@@ -52,6 +67,9 @@ export const sortingMixin = {
         delete query['sort_asc']
       }
     },
+    updateTableHeaders: function(headers) {
+      this.headers = headers;
+    },
   },
   watch: {
     optionsSync: {
@@ -62,5 +80,16 @@ export const sortingMixin = {
       },
       deep: true,
     },
+    '$route': function(to, from) {
+      if (from.path == to.path) {
+        let newQuery = Object.fromEntries(Object.entries(to.query));
+        let oldQuery = Object.fromEntries(Object.entries(from.query));
+        if (newQuery.shown === undefined) {
+          newQuery.shown = oldQuery.shown;
+        }
+        this.$router.replace({query: newQuery}).catch(() => {});
+
+      }
+    }
   },
 };

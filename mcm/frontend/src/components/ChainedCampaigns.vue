@@ -22,6 +22,7 @@
         <div class="actions">
           <a :href="databaseName + '/edit?prepid=' + item.prepid" v-if="role('production_manager')" title="Edit">Edit</a>
           <a @click="promptDelete(item)" v-if="role('production_expert')" title="Delete">Delete</a>
+          <a :href="'restapi/' + databaseName + '/get/' + item.prepid" v-if="role('administrator')" title="Raw object JSON">Raw</a>
           <a @click="toggleEnabled(item)" v-if="role('production_expert')" title="Toggle enabled">Toggle</a>
           <router-link :to="'chained_requests?member_of_campaign=' + item.prepid" custom title="Chained requests that are members">Chained&nbsp;requests</router-link>
         </div>
@@ -62,7 +63,7 @@ import Paginator from './Paginator.vue';
 import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js';
 import { utilsMixin } from '../mixins/UtilsMixin.js';
-import { sortingMixin } from '../mixins/SortingMixin.js';
+import { dataTableMixin } from '../mixins/DataTableMixin.js';
 import { navigationMixin } from '../mixins/NavigationMixin.js';
 
 export default {
@@ -74,7 +75,7 @@ export default {
     Paginator,
     HistoryCell,
   },
-  mixins: [roleMixin, utilsMixin, sortingMixin, navigationMixin],
+  mixins: [roleMixin, utilsMixin, dataTableMixin, navigationMixin],
   data() {
     return {
       databaseName: 'chained_campaigns',
@@ -87,7 +88,6 @@ export default {
         { dbName: 'campaigns', visible: 1 },
         { dbName: 'check_cmssw_version'},
       ],
-      headers: [],
       items: [],
       totalItems: 0,
       itemsPerPage: 1,
@@ -118,9 +118,6 @@ export default {
           this.showError(error);
           this.loading = false;
         });
-    },
-    updateTableHeaders: function(headers) {
-      this.headers = headers;
     },
     onPaginatorUpdate: function(page, itemsPerPage) {
       this.itemsPerPage = itemsPerPage;

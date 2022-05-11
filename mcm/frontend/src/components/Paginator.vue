@@ -65,21 +65,41 @@
     watch:{
       pageSize: function (newValue, oldValue) {
         if (oldValue !== undefined) {
-          this.updateQuery('limit', newValue);
+          this.updateQuery();
           this.$emit('update', this.page, newValue);
         }
       },
       page: function (newValue, oldValue) {
         if (oldValue !== undefined) {
-          this.updateQuery('page', newValue);
+          this.updateQuery();
           this.$emit('update', newValue, this.pageSize);
         }
-      } 
+      },
+      '$route': function(to, from) {
+        if (from.path != to.path) {
+          this.page = 0;
+          this.limit = this.limits[0];
+        } else {
+          let newQuery = Object.fromEntries(Object.entries(to.query));
+          let oldQuery = Object.fromEntries(Object.entries(from.query));
+          if (newQuery.page === undefined) {
+            this.page = 0;
+          }
+          if (newQuery.limit === undefined) {
+            this.pageSize = parseInt(oldQuery.limit);
+          }
+        }
+        this.updateQuery();
+      }
     },
     methods: {
       updateQuery: function(name, value) {
         let query = Object.assign({}, this.$route.query);
-        query[name] = value;
+        if (query.page == this.page && query.limit == this.pageSize) {
+          return;
+        }
+        query['page'] = this.page;
+        query['limit'] = this.pageSize;
         this.$router.replace({query: query}).catch(() => {});
       }
     }

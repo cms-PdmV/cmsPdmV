@@ -22,6 +22,7 @@
         <div class="actions">
           <a :href="databaseName + '/edit?prepid=' + item.prepid" v-if="role('production_manager')" title="Edit">Edit</a>
           <a @click="promptDelete(item)" v-if="role('production_expert')" title="Delete">Delete</a>
+          <a :href="'restapi/' + databaseName + '/get/' + item.prepid" v-if="role('administrator')" title="Raw object JSON">Raw</a>
           <a @click="toggleEnabled(item)" v-if="role('production_expert')" title="Toggle enabled">Toggle</a>
           <router-link :to="'requests?member_of_chain=' + item.prepid" custom title="Requests in the chained request">Requests</router-link>
         </div>
@@ -34,7 +35,12 @@
       </template>
       <template v-slot:[`item.chain`]="{ item }">
         <template v-for="(prepid, index) in item.chain">
-          <a :key="prepid" :href="'requests?prepid=' + prepid">{{ prepid }}</a>
+          <router-link :to="'requests?prepid=' + prepid"
+                       :key="index"
+                       custom
+                       :title="'Show only ' + prepid"
+                       :style='[item.step == index ? {"font-weight": 900} : {}]'
+                       class="bold-hover">{{prepid}}</router-link>
           <span :key="prepid + 'arrow'" v-if="index < item.chain.length - 1"> -> </span>
         </template>
       </template>
@@ -56,7 +62,7 @@ import Paginator from './Paginator.vue';
 import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js';
 import { utilsMixin } from '../mixins/UtilsMixin.js';
-import { sortingMixin } from '../mixins/SortingMixin.js';
+import { dataTableMixin } from '../mixins/DataTableMixin.js';
 import { navigationMixin } from '../mixins/NavigationMixin.js';
 
 export default {
@@ -68,7 +74,7 @@ export default {
     Paginator,
     HistoryCell,
   },
-  mixins: [roleMixin, utilsMixin, sortingMixin, navigationMixin],
+  mixins: [roleMixin, utilsMixin, dataTableMixin, navigationMixin],
   data() {
     return {
       databaseName: 'chained_requests',
@@ -78,8 +84,14 @@ export default {
         { dbName: 'enabled', visible: 1 },
         { dbName: 'history', sortable: true },
         { dbName: 'chain', visible: 1 },
+        { dbName: 'dataset_name' },
+        { dbName: 'last_status' },
+        { dbName: 'member_of_campaign' },
+        { dbName: 'pwg' },
+        { dbName: 'status' },
+        { dbName: 'step' },
+        { dbName: 'validate' }
       ],
-      headers: [],
       items: [],
       totalItems: 0,
       itemsPerPage: 1,
@@ -110,9 +122,6 @@ export default {
           this.showError(error);
           this.loading = false;
         });
-    },
-    updateTableHeaders: function(headers) {
-      this.headers = headers;
     },
     onPaginatorUpdate: function(page, itemsPerPage) {
       this.itemsPerPage = itemsPerPage;

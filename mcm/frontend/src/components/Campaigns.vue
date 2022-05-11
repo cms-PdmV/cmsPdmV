@@ -22,6 +22,7 @@
         <div class="actions">
           <a :href="databaseName + '/edit?prepid=' + item.prepid" v-if="role('production_manager')" title="Edit">Edit</a>
           <a @click="promptDelete(item)" v-if="role('production_expert')" title="Delete">Delete</a>
+          <a :href="'restapi/' + databaseName + '/get/' + item.prepid" v-if="role('administrator')" title="Raw object JSON">Raw</a>
           <a @click="toggleStatus(item)" v-if="role('production_expert')" title="Toggle campaign status">Toggle</a>
           <router-link :to="'flows?uses=' + item.prepid" custom title="Flows that use campaign">Flows</router-link>
           <router-link :to="'chained_campaigns?contains=' + item.prepid" custom title="Chained campaigns that use campaign">Chained&nbsp;campaigns</router-link>
@@ -38,7 +39,10 @@
         <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
       </template>
       <template v-slot:[`item.cmssw_release`]="{ item }">
-        <router-link :to="'campaigns?cmssw_release=' + item.cmssw_release" custom title="Campaigns with this CMSSW release" class="bold-hover">{{item.cmssw_release}}</router-link>
+        <router-link :to="databaseName + '?cmssw_release=' + item.cmssw_release" custom title="Campaigns with this CMSSW release" class="bold-hover">{{item.cmssw_release}}</router-link>
+      </template>
+      <template v-slot:[`item.type`]="{ item }">
+        <router-link :to="databaseName + '?type=' + item.type" custom title="Campaigns with this type" class="bold-hover">{{item.type}}</router-link>
       </template>
       <template v-slot:[`item.next`]="{ item }">
         <ul>
@@ -53,13 +57,13 @@
         </ul>
       </template>
       <template v-slot:[`item.events_per_lumi`]="{ item }">
-        <ul>
-          <li v-for="(value, core) in item.events_per_lumi" :key="core">{{core}}:&nbsp;{{value}}</li>
-        </ul>
+          <small>Singlecore:</small>&nbsp;{{item.events_per_lumi.singlecore}}
+          <br>
+          <small>Multicore:</small>&nbsp;{{item.events_per_lumi.multicore}}
       </template>
       <template v-slot:[`item.keep_output`]="{ item }">
         <ul>
-          <li v-for="(values, name) in item.keep_output" :key="name">{{name}}:
+          <li v-for="(values, name) in item.keep_output" :key="name"><b>{{name}}</b>:
             <ol>
               <li v-for="(value, index) in values" :key="index">{{value}}</li>
             </ol>
@@ -71,6 +75,9 @@
       </template>
       <template v-slot:[`item.pileup_dataset_name`]="{ item }">
         <a :href="dasLink(item.pileup_dataset_name)" title="Open in DAS" target="_blank" class="bold-hover">{{item.pileup_dataset_name}}</a>
+      </template>
+      <template v-slot:[`item.status`]="{ item }">
+        <router-link :to="databaseName + '?status=' + item.status" custom :title="'Show only ' + item.status" class="bold-hover">{{item.status}}</router-link>
       </template>
     </v-data-table>
     <delete-prompt ref="delete-prompt"></delete-prompt>
@@ -90,7 +97,7 @@ import Paginator from './Paginator.vue';
 import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js';
 import { utilsMixin } from '../mixins/UtilsMixin.js';
-import { sortingMixin } from '../mixins/SortingMixin.js';
+import { dataTableMixin } from '../mixins/DataTableMixin.js';
 import { navigationMixin } from '../mixins/NavigationMixin.js';
 
 export default {
@@ -102,7 +109,7 @@ export default {
     Paginator,
     HistoryCell,
   },
-  mixins: [roleMixin, utilsMixin, sortingMixin, navigationMixin],
+  mixins: [roleMixin, utilsMixin, dataTableMixin, navigationMixin],
   data() {
     return {
       databaseName: 'campaigns',
@@ -121,22 +128,19 @@ export default {
         { dbName: 'notes', visible: true },
         { dbName: 'pileup_dataset_name', displayName: 'Pileup dataset' },
         { dbName: 'root', visible: true },
-        { dbName: 'sequences', visible: true },
+        { dbName: 'sequences' },
         { dbName: 'status', visible: true, sortable: true },
         { dbName: 'type', visible: true },
         { dbName: 'www', displayName: 'WWW' },
       ],
-      headers: [],
       items: [],
       totalItems: 0,
       itemsPerPage: 1,
       loading: false,
-      optionsSync: {},
     };
   },
   methods: {
     fetchObjects: function() {
-      console.log('Fetch objects');
       this.loading = true;
       this.fetchItems(this.databaseName)
         .then(
@@ -160,12 +164,8 @@ export default {
           this.loading = false;
         });
     },
-    updateTableHeaders: function(headers) {
-      this.headers = headers;
-    },
     onPaginatorUpdate: function(page, itemsPerPage) {
       this.itemsPerPage = itemsPerPage;
-      console.log('Paginator update: page ' + page + ', items per page ' + itemsPerPage);
       this.fetchObjects();
     },
     promptDelete: function(item) {

@@ -126,8 +126,8 @@ footer {
 
 .bold-hover:hover,
 .actions > a:hover {
-  text-decoration: none;
-  text-shadow: .25px 0px .1px, -.25px 0px .1px;
+  text-decoration: underline;
+  /* text-shadow: .25px 0px .1px, -.25px 0px .1px; */
 }
 
 .notes {
@@ -141,6 +141,10 @@ footer {
   margin: 4px;
   padding: 2px;
   font-family: 'Schoolbell', monospace;
+}
+
+th {
+  white-space: nowrap;
 }
 
 </style>
