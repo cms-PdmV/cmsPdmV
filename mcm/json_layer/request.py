@@ -2544,6 +2544,7 @@ class request(json_base):
 
         if hard:
             self.approve(0)
+            self.get_attribute('validation').pop('results', None)
 
         # make sure to keep track of what needs to be invalidated in case there is
         invalidation = database('invalidations')
