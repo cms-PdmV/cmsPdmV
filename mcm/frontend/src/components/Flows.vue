@@ -132,20 +132,6 @@ export default {
       this.itemsPerPage = itemsPerPage;
       this.fetchObjects();
     },
-    promptDelete: function(item) {
-      this.$refs['delete-prompt'].open(this.databaseName, item, (response) => {
-        if (response.results) {
-          this.fetchObjects();
-        } else if (response.message) {
-          this.showError(response.message);
-        }
-      }, (error) => {
-        this.showError(error);
-      });
-    },
-    showError: function(errorMessage) {
-      this.$refs['error-dialog'].open(errorMessage);
-    },
     toggleType: function(item) {
       axios
         .post('restapi/' + this.databaseName + '/type', {'prepid': item.prepid})

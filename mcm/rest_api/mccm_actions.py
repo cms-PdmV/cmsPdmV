@@ -3,7 +3,7 @@ import time
 
 import json
 from model.chained_request import ChainedRequest
-from rest_api.api_base import DeleteRESTResource, RESTResource, UpdateRESTResource
+from rest_api.api_base import DeleteRESTResource, GetEditableRESTResource, RESTResource, UpdateRESTResource
 from couchdb_layer.mcm_database import Database
 from model.mccm import MccM
 from model.user import Role, User
@@ -183,21 +183,11 @@ class GetMccM(RESTResource):
         return {'results': mccm.json()}
 
 
-class GetEditableMccM(RESTResource):
+class GetEditableMccM(GetEditableRESTResource):
     """
     Endpoing for retrieving a MccM ticket and it's editing info
     """
-
-    def get(self, prepid):
-        """
-        Retrieve the MccM ticket and it's editing info for given id
-        """
-        mccm = MccM.fetch(prepid)
-        if not mccm:
-            raise NotFoundException(prepid)
-
-        return {'results': {'object': mccm.json(),
-                            'editing_info': mccm.get_editing_info()}}
+    object_class = Request
 
 
 class GetUniqueMccMValues(RESTResource):

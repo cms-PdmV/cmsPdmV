@@ -35,6 +35,7 @@ for campaigns in database.bulk_yield(50):
 
     to_save = []
     for campaign in campaigns:
+        logger.info('Processing campaign %s', campaign['prepid'])
         initial_hash = item_hash(campaign)
         old_sequences = campaign.get('sequences')
         if isinstance(old_sequences, list):
@@ -61,6 +62,8 @@ for campaigns in database.bulk_yield(50):
 
             campaign.pop('no_output', None)
             campaign['keep_output'] = keep_output
+
+        logger.info(json.dumps(campaign, indent=2))
 
         last_hash = item_hash(campaign)
         if last_hash != initial_hash:

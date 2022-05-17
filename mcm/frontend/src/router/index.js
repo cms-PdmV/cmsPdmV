@@ -38,6 +38,27 @@ const routes = [
     name: 'chained_requests',
     component: () => import('../components/ChainedRequests.vue'),
   },
+
+  {
+    path: '/campaigns/edit',
+    name: 'campaigns_edit',
+    component: () => import('../components/CampaignsEdit.vue'),
+  },
+  {
+    path: '/flows/edit',
+    name: 'flows_edit',
+    component: () => import('../components/FlowsEdit.vue'),
+  },
+  {
+    path: '/chained_campaigns/edit',
+    name: 'chained_campaigns_edit',
+    component: () => import('../components/ChainedCampaignsEdit.vue'),
+  },
+  {
+    path: '/requests/edit',
+    name: 'requests_edit',
+    component: () => import('../components/RequestsEdit.vue'),
+  },
 ];
 
 const router = new VueRouter({

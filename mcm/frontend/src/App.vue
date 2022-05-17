@@ -8,9 +8,9 @@
       </a>
       <v-spacer></v-spacer>
       <template v-for="routeName in ['campaigns', 'flows', 'chained_campaigns', 'requests', 'chained_requests']">
-        <router-link :to="routeName" v-slot="{ route, navigate }" custom :key="routeName">
+        <router-link :to="'/' + routeName" v-slot="{ navigate }" custom :key="routeName">
           <v-btn text class="ml-1 mr-1" @click="navigate">
-            <span>{{ route.name.replace('_', ' ') }}</span>
+            <span>{{ routeName.replace('_', ' ') }}</span>
           </v-btn>
         </router-link>
       </template>
@@ -103,6 +103,8 @@ a.no-decoration {
 
 .page-title {
   margin: 4px 8px;
+  text-overflow: ellipsis;
+  overflow-x: hidden;
 }
 
 footer {
@@ -145,6 +147,69 @@ footer {
 
 th {
   white-space: nowrap;
+}
+
+table.edit-table {
+  width: 100%;
+}
+
+.edit-table td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.edit-table input,
+.edit-table select,
+.edit-table textarea {
+  width: 100%;
+  border: 1px solid black;
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.edit-table textarea {
+  min-height: 200px;
+  margin-bottom: -7px;
+}
+
+.edit-table input[type="number"] {
+  width: 45%;
+  text-align: right;
+  padding: 0 0 0 4px;
+  margin-right: 4px;
+}
+
+.edit-table input[type="checkbox"] {
+  width: unset;
+}
+
+.edit-table select {
+  width: 45%;
+  height: 25.625px;
+  appearance: menulist;
+  padding: 0 4px;
+}
+
+.edit-table input:disabled,
+.edit-table select:disabled,
+.edit-table textarea:disabled {
+  background: #dadada !important;
+  color: rgba(0, 0, 0, 0.65);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.edit-table tr td:first-child {
+  white-space: nowrap;
+  text-align: right;
+  padding-right: 16px;
+}
+.edit-table tr td:last-child {
+  width: 100%;
+}
+
+.edit-table tr:hover {
+  background: #eee;
 }
 
 </style>

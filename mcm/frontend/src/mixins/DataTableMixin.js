@@ -67,6 +67,20 @@ export const dataTableMixin = {
         delete query['sort_asc']
       }
     },
+    promptDelete: function(item) {
+      this.$refs['delete-prompt'].open(this.databaseName, item, (response) => {
+        if (response.results) {
+          this.fetchObjects();
+        } else if (response.message) {
+          this.showError(response.message);
+        }
+      }, (error) => {
+        this.showError(error);
+      });
+    },
+    showError: function(errorMessage) {
+      this.$refs['error-dialog'].open(errorMessage);
+    },
     updateTableHeaders: function(headers) {
       this.headers = headers;
     },

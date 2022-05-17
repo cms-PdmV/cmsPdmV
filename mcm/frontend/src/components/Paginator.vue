@@ -65,6 +65,7 @@
     watch:{
       pageSize: function (newValue, oldValue) {
         if (oldValue !== undefined) {
+          this.page = 0;
           this.updateQuery();
           this.$emit('update', this.page, newValue);
         }

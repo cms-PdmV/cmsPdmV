@@ -165,7 +165,9 @@ api.add_resource(GetCampaign, '/restapi/campaigns/get/<string:prepid>')
 api.add_resource(UpdateCampaign, '/restapi/campaigns/update')
 api.add_resource(DeleteCampaign, '/restapi/campaigns/delete/<string:prepid>')
 api.add_resource(CloneCampaign, '/restapi/campaigns/clone')
-api.add_resource(GetEditableCampaign, '/restapi/campaigns/get_editable/<string:prepid>')
+api.add_resource(GetEditableCampaign,
+                 '/restapi/campaigns/get_editable',
+                 '/restapi/campaigns/get_editable/<string:prepid>')
 api.add_resource(ToggleCampaignStatus, '/restapi/campaigns/status')
 api.add_resource(GetCmsDriverForCampaign, '/restapi/campaigns/get_drivers/<string:prepid>')
 api.add_resource(GetUniqueCampaignValues, '/restapi/campaigns/unique_values')
@@ -179,7 +181,9 @@ api.add_resource(GetFlow, '/restapi/flows/get/<string:prepid>')
 api.add_resource(UpdateFlow, '/restapi/flows/update')
 api.add_resource(DeleteFlow, '/restapi/flows/delete/<string:prepid>')
 api.add_resource(CloneFlow, '/restapi/flows/clone')
-api.add_resource(GetEditableFlow, '/restapi/flows/get_editable/<string:prepid>')
+api.add_resource(GetEditableFlow,
+                 '/restapi/flows/get_editable',
+                 '/restapi/flows/get_editable/<string:prepid>')
 api.add_resource(ToggleFlowType, '/restapi/flows/type')
 
 
@@ -189,6 +193,7 @@ api.add_resource(GetChainedCampaign, '/restapi/chained_campaigns/get/<string:pre
 api.add_resource(UpdateChainedCampaign, '/restapi/chained_campaigns/update')
 api.add_resource(DeleteChainedCampaign, '/restapi/chained_campaigns/delete/<string:prepid>')
 api.add_resource(GetEditableChainedCampaign,
+                 '/restapi/chained_campaigns/get_editable',
                  '/restapi/chained_campaigns/get_editable/<string:prepid>')
 api.add_resource(ToggleChainedCampaignEnabled, '/restapi/chained_campaigns/toggle_enabled')
 
@@ -204,6 +209,7 @@ api.add_resource(GetChainedRequest, '/restapi/chained_requests/get/<string:prepi
 api.add_resource(UpdateChainedRequest, '/restapi/chained_requests/update')
 api.add_resource(DeleteChainedRequest, '/restapi/chained_requests/delete/<string:prepid>')
 api.add_resource(GetEditableChainedRequest,
+                 '/restapi/chained_requests/get_editable',
                  '/restapi/chained_requests/get_editable/<string:prepid>')
 api.add_resource(ToggleChainedRequestEnabled, '/restapi/chained_requests/toggle_enabled')
 api.add_resource(ChainedRequestFlow, '/restapi/chained_requests/flow')
@@ -217,7 +223,9 @@ api.add_resource(InspectChainedRequest, '/restapi/chained_requests/inspect')
 api.add_resource(AddCurrentUser, '/restapi/users/add')
 api.add_resource(GetUserInfo, '/restapi/users/get')
 api.add_resource(UpdateUser, '/restapi/users/update')
-api.add_resource(GetEditableUser, '/restapi/users/get_editable/<string:prepid>')
+api.add_resource(GetEditableUser,
+                 '/restapi/users/get_editable',
+                 '/restapi/users/get_editable/<string:prepid>')
 api.add_resource(GetUser, '/restapi/users/get/<string:username>')
 
 
@@ -237,7 +245,9 @@ api.add_resource(RequestDelete, '/restapi/requests/delete/<string:prepid>')
 api.add_resource(GetRequest,
                  '/restapi/requests/get/<string:prepid>',
                  '/public/restapi/requests/get/<string:prepid>')
-api.add_resource(GetEditableRequest, '/restapi/requests/get_editable/<string:prepid>')
+api.add_resource(GetEditableRequest,
+                 '/restapi/requests/get_editable',
+                 '/restapi/requests/get_editable/<string:prepid>')
 api.add_resource(RequestOptionReset, '/restapi/requests/option_reset')
 api.add_resource(RequestNextStatus, '/restapi/requests/next_status')
 api.add_resource(RequestReset, '/restapi/requests/reset')
@@ -273,7 +283,9 @@ api.add_resource(GetMccM, '/restapi/mccms/get/<string:prepid>')
 api.add_resource(UpdateMccm, '/restapi/mccms/update')
 api.add_resource(CreateMccm, '/restapi/mccms/save')
 api.add_resource(DeleteMccm, '/restapi/mccms/delete/<string:prepid>')
-api.add_resource(GetEditableMccM, '/restapi/mccms/get_editable/<string:prepid>')
+api.add_resource(GetEditableMccM,
+                 '/restapi/mccms/get_editable',
+                 '/restapi/mccms/get_editable/<string:prepid>')
 api.add_resource(GetUniqueMccMValues, '/restapi/mccms/unique_values')
 api.add_resource(GenerateChains, '/restapi/mccms/generate')
 api.add_resource(CalculateTotalEvts, '/restapi/mccms/recalculate')

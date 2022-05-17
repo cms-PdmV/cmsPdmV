@@ -393,6 +393,7 @@ class UpdateRESTResource(RESTResource):
                         'prepid': prepid,
                         'message': 'Provided revision does not match revision in database'}
 
+            new_obj.set('history', old_obj.get('history'))
             # Validate
             new_obj.validate()
             # Allow updates
@@ -409,7 +410,6 @@ class UpdateRESTResource(RESTResource):
             self.logger.info('Changes of %s update: %s', prepid, changes)
             self.logger.debug('Editing info %s', editing_info)
             self.check_if_edits_are_allowed(changes, editing_info)
-            new_obj.set('history', old_obj.get('history'))
             changes_str = ', '.join(sorted(self.stringify_changes(changes)))
             new_obj.update_history('update', changes_str)
 
@@ -497,13 +497,16 @@ class GetEditableRESTResource(RESTResource):
     Endpoing for retrieving an object and it's editing info
     """
 
-    def get(self, prepid):
+    def get(self, prepid=None):
         """
         Retrieve the object and it's editing info for given id
         """
-        obj = self.object_class.fetch(prepid)
-        if not obj:
-            raise NotFoundException(prepid)
+        if prepid:
+            obj = self.object_class.fetch(prepid)
+            if not obj:
+                raise NotFoundException(prepid)
+        else:
+            obj = self.object_class()
 
         return {'results': {'object': obj.json(),
                             'editing_info': obj.get_editing_info()}}

@@ -1,16 +1,14 @@
 <template>
-  <div>
-    <v-container>
-      <h1 class="page-title">Home</h1>
-      <v-card raised class="page-card pa-2">
-        <ul>
-          <li v-for="routeName in ['campaigns', 'flows', 'chained_campaigns', 'requests', 'chained_requests']" :key="routeName">
-            <router-link class="bold-hover" :to="routeName" custom>{{ capitalizeName(routeName) }}</router-link>
-          </li>
-        </ul>
-      </v-card>
-    </v-container>
-  </div>
+  <v-container>
+    <h1 class="page-title">Home</h1>
+    <v-card raised class="page-card pa-2">
+      <ul>
+        <li v-for="routeName in ['campaigns', 'flows', 'chained_campaigns', 'requests', 'chained_requests']" :key="routeName">
+          <router-link class="bold-hover" :to="routeName" custom>{{ capitalizeName(routeName) }}</router-link>
+        </li>
+      </ul>
+    </v-card>
+  </v-container>
 </template>
 
 <script>
