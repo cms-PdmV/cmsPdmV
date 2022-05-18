@@ -2,7 +2,7 @@
   <div>
     <div class="page-header">
       <div>
-        <h1 class="page-title">Chained campaigns</h1>
+        <h1 class="page-title">Invalidations</h1>
         <ColumnSelector :columns="columns" v-on:updateHeaders="updateTableHeaders" />
       </div>
     </div>
@@ -20,36 +20,17 @@
     >
       <template v-slot:[`item._actions`]="{ item }">
         <div class="actions">
-          <a :href="databaseName + '/edit?prepid=' + item.prepid" v-if="role('production_manager')" title="Edit">Edit</a>
           <a @click="promptDelete(item)" v-if="role('production_expert')" title="Delete">Delete</a>
           <a :href="'restapi/' + databaseName + '/get/' + item.prepid" v-if="role('administrator')" title="Raw object JSON">Raw</a>
-          <a @click="toggleEnabled(item)" v-if="role('production_expert')" title="Toggle enabled">Toggle</a>
-          <router-link :to="'chained_requests?member_of_campaign=' + item.prepid" custom title="Chained requests that are members">Chained&nbsp;requests</router-link>
         </div>
       </template>
       <template v-slot:[`item.prepid`]="{ item }">
         <router-link :to="databaseName + '?prepid=' + item.prepid" custom :title="'Show only ' + item.prepid" class="bold-hover">{{item.prepid}}</router-link>
       </template>
-      <template v-slot:[`item.history`]="{ item }">
-        <HistoryCell :data="item.history"/>
-      </template>
-      <template v-slot:[`item.notes`]="{ item }">
-        <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
-      </template>
-      <template v-slot:[`item.campaigns`]="{ item }">
-        <div v-for="pair in item.campaigns" :key="pair[1]" style="white-space: nowrap;">
-          <template v-if="pair[1]">
-            <router-link :to="'flows?prepid=' + pair[1]" custom :title="'Show ' + pair[1]" class="bold-hover">{{pair[1]}}</router-link>
-            &#8658;
-          </template>
-          <router-link :to="'campaigns?prepid=' + pair[0]" custom :title="'Show ' + pair[0]" class="bold-hover">{{pair[0]}}</router-link>
-        </div>
-      </template>
     </v-data-table>
     <delete-prompt ref="delete-prompt"></delete-prompt>
     <error-dialog ref="error-dialog"></error-dialog>
     <footer>
-      <v-btn small class="ml-1 mr-1" color="success" title="Create a new chained campaign" @click="createNew()">Create new chained campaign</v-btn>
       <Paginator :totalRows="totalItems" v-on:update="onPaginatorUpdate"/>
     </footer>
   </div>
@@ -61,33 +42,29 @@ import ColumnSelector from './ColumnSelector';
 import DeletePrompt from './DeletePrompt.vue';
 import ErrorDialog from './ErrorDialog.vue';
 import Paginator from './Paginator.vue';
-import HistoryCell from './HistoryCell'
 import { roleMixin } from '../mixins/UserRoleMixin.js';
 import { utilsMixin } from '../mixins/UtilsMixin.js';
 import { dataTableMixin } from '../mixins/DataTableMixin.js';
 import { navigationMixin } from '../mixins/NavigationMixin.js';
 
 export default {
-  name: 'chained_campaigns',
+  name: 'invalidations',
   components: {
     ColumnSelector,
     DeletePrompt,
     ErrorDialog,
     Paginator,
-    HistoryCell,
   },
   mixins: [roleMixin, utilsMixin, dataTableMixin, navigationMixin],
   data() {
     return {
-      databaseName: 'chained_campaigns',
+      databaseName: 'invalidations',
       columns: [
         { dbName: 'prepid', displayName: 'PrepID', visible: 1, sortable: true },
         { dbName: '_actions', displayName: 'Actions', visible: 1 },
-        { dbName: 'enabled', visible: 1 },
-        { dbName: 'notes', visible: 1 },
-        { dbName: 'history', sortable: true },
-        { dbName: 'campaigns', visible: 1 },
-        { dbName: 'check_cmssw_version'},
+        { dbName: 'object'},
+        { dbName: 'status'},
+        { dbName: 'type'},
       ],
       items: [],
       totalItems: 0,
@@ -123,25 +100,6 @@ export default {
     onPaginatorUpdate: function(page, itemsPerPage) {
       this.itemsPerPage = itemsPerPage;
       this.fetchObjects();
-    },
-    toggleEnabled: function(item) {
-      axios
-        .post('restapi/' + this.databaseName + '/toggle_enabled', {'prepid': item.prepid})
-        .then(
-          (response) => {
-            if (response.data.results) {
-              this.fetchObjects();
-            } else if (response.data.message) {
-              this.showError(response.data.message);
-            }
-          },
-          (error) => {
-            this.showError(error);
-          },
-        )
-        .catch((error) => {
-          this.onError(error);
-        });
     },
   },
 };

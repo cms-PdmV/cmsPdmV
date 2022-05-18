@@ -99,9 +99,10 @@ class FlowRESTResource(RESTResource):
             if not allowed_campaign:
                 raise BadAttributeException(f'Allowed campaign "{allowed_campaign}" does not exist')
 
-            if allowed_campaign['energy'] != next_campaign['energy']:
-                raise BadAttributeException(f'"{allowed_campaign_id}" energy is not '
-                                            f'equal to "{next_campaign_id}" energy')
+            if next_campaign_id:
+                if float(allowed_campaign['energy']) != float(next_campaign['energy']):
+                    raise BadAttributeException(f'"{allowed_campaign_id}" energy is not '
+                                                f'equal to "{next_campaign_id}" energy')
 
 
 class CreateFlow(CreateRESTResource, FlowRESTResource):

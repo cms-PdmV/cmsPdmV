@@ -38,6 +38,21 @@ const routes = [
     name: 'chained_requests',
     component: () => import('../components/ChainedRequests.vue'),
   },
+  {
+    path: '/mccms',
+    name: 'mccms',
+    component: () => import('../components/Tickets.vue'),
+  },
+  {
+    path: '/batches',
+    name: 'batches',
+    component: () => import('../components/Batches.vue'),
+  },
+  {
+    path: '/invalidations',
+    name: 'invalidations',
+    component: () => import('../components/Invalidations.vue'),
+  },
 
   {
     path: '/campaigns/edit',

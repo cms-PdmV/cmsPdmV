@@ -1,8 +1,19 @@
 <template>
   <v-container>
-    <h1 class="page-title"><span class="font-weight-light">Editing flow</span> {{prepid}}</h1>
+    <h1 class="page-title">
+      <template v-if="prepid">
+        <span class="font-weight-light">Editing flow</span> {{prepid}}
+      </template>
+      <template v-else>
+        <span class="font-weight-light">Creating</span> new <span class="font-weight-light">flow</span>
+      </template>
+    </h1>
     <v-card raised class="page-card pa-2">
-      <table class="edit-table" v-if="object.prepid">
+      <table class="edit-table" v-if="Object.keys(object).length">
+        <tr>
+          <td>Prepid</td>
+          <td><input type="text" v-model="object.prepid" :disabled="!editable.prepid"/></td>
+        </tr>
         <tr>
           <td>Allowed campaigns</td>
           <td>
@@ -21,7 +32,7 @@
         </tr>
         <tr>
           <td>Request parameters</td>
-          <td><textarea v-model="object.request_parameters" :disabled="!editable.request_parameters"></textarea></td>
+          <td><textarea v-model="object.request_parameters" class="request-parameters" :disabled="!editable.request_parameters"></textarea></td>
         </tr>
       </table>
       <pre v-if="showRaw" style="font-size: 0.6em">{{JSON.stringify(object, null, 2)}}</pre>
@@ -34,7 +45,7 @@
       <v-btn small class="ml-1 mr-1" color="success" title="Save and return" @click="save(true)">Save</v-btn>
       <v-btn small class="ml-1 mr-1" color="success" title="Save and stay in this page" @click="save(false)">Save & stay</v-btn>
       <v-btn small class="ml-1 mr-1" color="primary" title="Cancel editing" @click="cancelEdit()">Cancel</v-btn>
-      <v-btn small class="ml-1 mr-1" color="error" title="Delete this object" @click="promptDelete(object)">Delete</v-btn>
+      <v-btn small class="ml-1 mr-1" v-if="object._rev" color="error" title="Delete this object" @click="promptDelete(object)">Delete</v-btn>
     </footer>
   </v-container>
 </template>
@@ -71,14 +82,21 @@ export default {
       return axios.get(`restapi/campaigns/unique_values?attribute=prepid&value=${query}`)
         .then(response => callback(response.data.results));
     },
+    prepareForEdit: function(object) {
+      object.request_parameters = JSON.stringify(object.request_parameters, null, 2);
+    },
+    prepareForSave: function(object) {
+      object.request_parameters = JSON.parse(object.request_parameters);
+    }
   },
 };
 </script>
 
 <style scoped>
 
-footer button {
-  margin-top: 7px;
+.request-parameters {
+  font-family: monospace;
+  font-size: 0.8em;
 }
 
 </style>

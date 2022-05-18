@@ -51,12 +51,31 @@
         <router-link :to="databaseName + '?approval=' + item.approval" custom :title="'Show ' + item.approval + ' flows'" class="bold-hover">{{item.approval}}</router-link>
       </template>
       <template v-slot:[`item.request_parameters`]="{ item }">
-        {{item.request_parameters}}
+        <ul class="request-parameters">
+          <li v-for="(param, key) in item.request_parameters" :key="key">
+            <div v-if="key == 'sequences'">
+              sequences:
+              <ol>
+                <li v-for="(sequence, index) in param" :key="index">
+                  <ul>
+                    <li v-for="(sequenceValue, sequenceKey) in sequence" :key="sequenceKey">
+                      {{sequenceKey}}:&nbsp;{{sequenceValue}}
+                    </li>
+                  </ul>
+                </li>
+              </ol>
+            </div>
+            <div v-else>
+              {{key}}:&nbsp;{{param}}
+            </div>
+          </li>
+        </ul>
       </template>
     </v-data-table>
     <delete-prompt ref="delete-prompt"></delete-prompt>
     <error-dialog ref="error-dialog"></error-dialog>
     <footer>
+      <v-btn small class="ml-1 mr-1" color="success" title="Create a new flow" @click="createNew()">Create new flow</v-btn>
       <Paginator :totalRows="totalItems" v-on:update="onPaginatorUpdate"/>
     </footer>
   </div>
@@ -154,3 +173,12 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+
+.request-parameters {
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+</style>

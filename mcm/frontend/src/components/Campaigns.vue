@@ -71,7 +71,17 @@
         </ul>
       </template>
       <template v-slot:[`item.sequences`]="{ item }">
-        {{item.sequences}}
+        <ul>
+          <li v-for="(sequences, sequenceName) in item.sequences" :key="sequenceName">
+            {{sequenceName}}:
+            <ul>
+              <li v-for="(sequence, index) in sequences" :key="index">
+                {{sequence.datatier.join(',')}}:
+                <div class="sequence-field">{{makeDriver(sequence)}}</div>
+              </li>
+            </ul>
+          </li>
+        </ul>
       </template>
       <template v-slot:[`item.pileup_dataset_name`]="{ item }">
         <a :href="dasLink(item.pileup_dataset_name)" title="Open in DAS" target="_blank" class="bold-hover">{{item.pileup_dataset_name}}</a>
@@ -83,6 +93,7 @@
     <delete-prompt ref="delete-prompt"></delete-prompt>
     <error-dialog ref="error-dialog"></error-dialog>
     <footer>
+      <v-btn small class="ml-1 mr-1" color="success" title="Create a new campaign" @click="createNew()">Create new campaign</v-btn>
       <Paginator :totalRows="totalItems" v-on:update="onPaginatorUpdate"/>
     </footer>
   </div>

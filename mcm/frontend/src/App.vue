@@ -7,10 +7,10 @@
         </v-toolbar-title>
       </a>
       <v-spacer></v-spacer>
-      <template v-for="routeName in ['campaigns', 'flows', 'chained_campaigns', 'requests', 'chained_requests']">
-        <router-link :to="'/' + routeName" v-slot="{ navigate }" custom :key="routeName">
-          <v-btn text class="ml-1 mr-1" @click="navigate">
-            <span>{{ routeName.replace('_', ' ') }}</span>
+      <template v-for="route in routes">
+        <router-link :to="'/' + getRoutePath(route)" v-slot="{ navigate }" custom :key="getRouteName(route)">
+          <v-btn text @click="navigate">
+            <span>{{ getRouteName(route) }}</span>
           </v-btn>
         </router-link>
       </template>
@@ -58,6 +58,28 @@ export default {
     },
     user() {
       return this.$store.getters.getUserInfo;
+    },
+    routes() {
+      let routes = ['campaigns', 'flows', 'chained_campaigns', 'requests', 'chained_requests', ['mccms', 'MccM Tickets']];
+      if (this.role('production_manager')) {
+        routes.push('batches');
+        routes.push('invalidations');
+      }
+      return routes;
+    }
+  },
+  methods: {
+    getRoutePath(route) {
+      if (Array.isArray(route)) {
+        return route[0];
+      }
+      return route;
+    },
+    getRouteName(route) {
+      if (Array.isArray(route)) {
+        return route[1];
+      }
+      return route.replace('_', ' ');
     },
   },
 };
@@ -210,6 +232,20 @@ table.edit-table {
 
 .edit-table tr:hover {
   background: #eee;
+}
+
+.sequence-field {
+  font-family: monospace;
+  font-size: 0.9em;
+  padding: 4px;
+  background: #fafafa;
+  border: rgba(0, 0, 0, 0.87) 1px solid;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+footer > button {
+  margin-top: 7px;
 }
 
 </style>

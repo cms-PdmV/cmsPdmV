@@ -2,7 +2,7 @@
   <div>
     <div class="page-header">
       <div>
-        <h1 class="page-title">Requests</h1>
+        <h1 class="page-title">Batches</h1>
         <ColumnSelector :columns="columns" v-on:updateHeaders="updateTableHeaders" />
       </div>
     </div>
@@ -20,7 +20,6 @@
     >
       <template v-slot:[`item._actions`]="{ item }">
         <div class="actions">
-          <a :href="databaseName + '/edit?prepid=' + item.prepid" v-if="role('production_manager')" title="Edit">Edit</a>
           <a @click="promptDelete(item)" v-if="role('production_expert')" title="Delete">Delete</a>
           <a :href="'restapi/' + databaseName + '/get/' + item.prepid" v-if="role('administrator')" title="Raw object JSON">Raw</a>
         </div>
@@ -34,36 +33,10 @@
       <template v-slot:[`item.notes`]="{ item }">
         <pre v-if="item.notes.length" v-html="sanitize(item.notes)" class="notes" v-linkified></pre>
       </template>
-            <template v-slot:[`item.cmssw_release`]="{ item }">
-        <router-link :to="databaseName + '?cmssw_release=' + item.cmssw_release" custom title="Requests with this CMSSW release" class="bold-hover">{{item.cmssw_release}}</router-link>
-      </template>
-      <template v-slot:[`item.generators`]="{ item }">
-        <ul>
-          <li v-for="generator in item.generators" :key="generator">{{generator}}</li>
-        </ul>
-      </template>
-      <template v-slot:[`item.keep_output`]="{ item }">
-        <ol>
-          <li v-for="(value, index) in item.keep_output" :key="index">{{value}}</li>
-        </ol>
-      </template>
-      <template v-slot:[`item.sequences`]="{ item }">
-        <ul>
-          <li v-for="(sequence, index) in item.sequences" :key="index">
-            {{sequence.datatier.join(',')}}:
-            <div class="sequence-field">{{makeDriver(sequence)}}</div>
-          </li>
-        </ul>
-      </template>
-      <template v-slot:[`item.pileup_dataset_name`]="{ item }">
-        <a :href="dasLink(item.pileup_dataset_name)" title="Open in DAS" target="_blank" class="bold-hover">{{item.pileup_dataset_name}}</a>
-      </template>
-
     </v-data-table>
     <delete-prompt ref="delete-prompt"></delete-prompt>
     <error-dialog ref="error-dialog"></error-dialog>
     <footer>
-      <v-btn small class="ml-1 mr-1" color="success" title="Create a new request" @click="createNew()">Create new request</v-btn>
       <Paginator :totalRows="totalItems" v-on:update="onPaginatorUpdate"/>
     </footer>
   </div>
@@ -82,7 +55,7 @@ import { dataTableMixin } from '../mixins/DataTableMixin.js';
 import { navigationMixin } from '../mixins/NavigationMixin.js';
 
 export default {
-  name: 'requests',
+  name: 'batches',
   components: {
     ColumnSelector,
     DeletePrompt,
@@ -93,50 +66,14 @@ export default {
   mixins: [roleMixin, utilsMixin, dataTableMixin, navigationMixin],
   data() {
     return {
-      databaseName: 'requests',
+      databaseName: 'batches',
       columns: [
-        { dbName: 'prepid', displayName: 'PrepID', visible: true, sortable: true },
-        { dbName: '_actions', displayName: 'Actions', visible: true },
-        { dbName: 'approval', visible: true },
-        { dbName: 'status', visible: true },
+        { dbName: 'prepid', displayName: 'PrepID', visible: 1, sortable: true },
+        { dbName: '_actions', displayName: 'Actions', visible: 1 },
         { dbName: 'history', sortable: true },
-        { dbName: 'keep_output', visible: true },
-        { dbName: 'memory', visible: true },
-        { dbName: 'notes', visible: true },
-        { dbName: 'sequences', visible: true },
-        { dbName: 'cmssw_release' },
-        { dbName: 'completed_events' },
-        { dbName: 'config_id' },
-        { dbName: 'dataset_name' },
-        { dbName: 'energy' },
-        { dbName: 'events_per_lumi' },
-        { dbName: 'extension' },
-        { dbName: 'flown_with' },
-        { dbName: 'fragment' },
-        { dbName: 'fragment_name' },
-        { dbName: 'fragment_tag' },
-        { dbName: 'generator_parameters' },
-        { dbName: 'generators' },
-        { dbName: 'input_dataset' },
-        { dbName: 'interested_pwg' },
-        { dbName: 'mcdb_id' },
-        { dbName: 'member_of_campaign' },
-        { dbName: 'member_of_chain' },
-        { dbName: 'name_of_fragment' },
-        { dbName: 'output_dataset' },
-        { dbName: 'pileup_dataset_name' },
-        { dbName: 'pilot' },
-        { dbName: 'priority' },
-        { dbName: 'process_string' },
-        { dbName: 'pwg' },
-        { dbName: 'reqmgr_name' },
-        { dbName: 'size_event' },
-        { dbName: 'tags' },
-        { dbName: 'time_event' },
-        { dbName: 'total_events' },
-        { dbName: 'type' },
-        { dbName: 'validation' },
-        { dbName: 'version' }
+        { dbName: 'notes', visible: 1 },
+        { dbName: 'requests' },
+        { dbName: 'status' }
       ],
       items: [],
       totalItems: 0,

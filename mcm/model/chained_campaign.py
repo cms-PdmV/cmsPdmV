@@ -87,10 +87,10 @@ class ChainedCampaign(ModelBase):
 
     def get_editing_info(self):
         info = super().get_editing_info()
+        info['campaigns'] = not bool(self.get('campaigns'))
         info['check_cmssw_version'] = True
         info['enabled'] = True
         info['notes'] = True
-        info['threshold'] = True
         return info
 
     def toggle_enabled(self):

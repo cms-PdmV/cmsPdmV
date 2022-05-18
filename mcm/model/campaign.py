@@ -127,6 +127,7 @@ class Campaign(ModelBase):
         info['memory'] = True
         info['notes'] = True
         info['pileup_dataset_name'] = True
+        info['prepid'] = not bool(self.get('prepid'))
         info['root'] = True
         info['sequences'] = True
         info['type'] = True

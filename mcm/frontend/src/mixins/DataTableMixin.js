@@ -29,6 +29,9 @@ export const dataTableMixin = {
       urlQuery = 'search' + urlQuery;
       return axios.get(urlQuery);
     },
+    createNew() {
+      window.location = this.databaseName + '/edit';
+    },
     handleSort(query, oldOptions, newOptions) {
       if (!oldOptions.sortBy || !oldOptions.sortDesc || !newOptions.sortBy || !newOptions.sortDesc) {
         return;

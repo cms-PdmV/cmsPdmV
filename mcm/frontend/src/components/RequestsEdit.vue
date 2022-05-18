@@ -1,8 +1,15 @@
 <template>
   <v-container>
-    <h1 class="page-title"><span class="font-weight-light">Editing request</span> {{prepid}}</h1>
+    <h1 class="page-title">
+      <template v-if="prepid">
+        <span class="font-weight-light">Editing request</span> {{prepid}}
+      </template>
+      <template v-else>
+        <span class="font-weight-light">Creating</span> new <span class="font-weight-light">request</span>
+      </template>
+    </h1>
     <v-card raised class="page-card pa-2">
-      <table class="edit-table" v-if="object.prepid">
+      <table class="edit-table" v-if="Object.keys(object).length">
         <tr>
           <td>Notes</td>
           <td><textarea v-model="object.notes" :disabled="!editable.notes"></textarea></td>
@@ -18,7 +25,7 @@
       <v-btn small class="ml-1 mr-1" color="success" title="Save and return" @click="save(true)">Save</v-btn>
       <v-btn small class="ml-1 mr-1" color="success" title="Save and stay in this page" @click="save(false)">Save & stay</v-btn>
       <v-btn small class="ml-1 mr-1" color="primary" title="Cancel editing" @click="cancelEdit()">Cancel</v-btn>
-      <v-btn small class="ml-1 mr-1" color="error" title="Delete this object" @click="promptDelete(object)">Delete</v-btn>
+      <v-btn small class="ml-1 mr-1" v-if="object._rev" color="error" title="Delete this object" @click="promptDelete(object)">Delete</v-btn>
     </footer>
   </v-container>
 </template>
@@ -55,11 +62,3 @@ export default {
   },
 };
 </script>
-
-<style scoped>
-
-footer button {
-  margin-top: 7px;
-}
-
-</style>

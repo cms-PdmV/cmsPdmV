@@ -46,6 +46,7 @@ class Flow(ModelBase):
         info['allowed_campaigns'] = True
         info['next_campaign'] = True
         info['notes'] = True
+        info['prepid'] = not bool(self.get('prepid'))
         info['request_parameters'] = True
         return info
 
