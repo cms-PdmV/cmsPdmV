@@ -1335,11 +1335,7 @@ class request(json_base):
         prepid = self.get_attribute('prepid')
         member_of_campaign = self.get_attribute('member_of_campaign')
         scram_arch = self.get_scram_arch().lower()
-        if scram_arch.startswith('slc7_'):
-            scram_arch_os = 'CentOS7'
-        else:
-            scram_arch_os = 'SLCern6'
-
+        default_scram_arch = scram_arch.startswith('slc7_')
         bash_file = ['#!/bin/bash', '']
 
         if not for_validation or automatic_validation:
@@ -1449,8 +1445,7 @@ class request(json_base):
                           '']
 
         # Whether to dump cmsDriver.py to a file so it could be run using singularity
-        dump_test_to_file = (scram_arch_os == 'SLCern6')
-        if dump_test_to_file:
+        if not default_scram_arch:
             bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
                           'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
                           '#!/bin/bash',
@@ -1662,7 +1657,7 @@ class request(json_base):
                           'fi',
                          ]
 
-        if dump_test_to_file:
+        if not default_scram_arch:
             bash_file += ['',
                           '# End of %s file' % (test_file_name),
                           'EndOfTestFile',
@@ -1671,22 +1666,32 @@ class request(json_base):
                           'chmod +x %s' % (test_file_name),
                           '']
 
-        if scram_arch_os == 'SLCern6':
+            os_name = scram_arch.split('_')[0]
+            container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
+
+            bash_file += ['if [ -e "%s/%s:amd64" ]; then' % (container_path, os_name),
+                          '  CONTAINER_NAME="%s:amd64"' % (os_name),
+                          'elif [ -e "%s/%s:x86_64" ]; then' % (container_path, os_name),
+                          '  CONTAINER_NAME="%s:x86_64"' % (os_name),
+                          'else',
+                          '  echo "Could not find amd64 or x86_64 for %s"' % (os_name),
+                          '  exit 1',
+                          'fi']
             if for_validation:
                 # Validation will run on CC7 machines (HTCondor, lxplus)
                 # If it's CC7, just run the script normally
-                # If it's SLC6, run it in slc6 singularity container
-                bash_file += ['# Run in SLC6 container',
+                # If it's not CC7, run it in singularity container
+                bash_file += ['# Run in singularity container',
                               '# Mount afs, eos, cvmfs',
                               '# Mount /etc/grid-security for xrootd',
                               'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/slc6:amd64 $(echo $(pwd)/%s)' % (test_file_name)]
+                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)]
             else:
                 # Config generation for production run on CC7 machine - vocms0481
                 # If it's CC7, just run the script normally
-                # If it's SLC6, run it in slc6 singularity container
+                # If it's not CC7, run it in singularity container
                 bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/slc6:amd64 $(echo $(pwd)/%s)' % (test_file_name)]
+                              'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)]
 
         # Empty line at the end of the file
         bash_file += ['']

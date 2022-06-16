@@ -310,7 +310,8 @@ class SubmissionsBase(Handler):
         command += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
 
         executable_file_name = '%supload_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
-        if 'slc6_' in scram_arch:
+        default_scram_arch = scram_arch.startswith('slc7_')
+        if not default_scram_arch:
             command += 'cat > %s << \'EndOfInjectFile\'\n' % (executable_file_name)
             command += '#!/bin/bash\n'
             command += 'cd %s \n' % (directory)
@@ -326,11 +327,21 @@ class SubmissionsBase(Handler):
                                                                                                      self.database_name,
                                                                                                      self.prepid,
                                                                                                      test_params)
-        if 'slc6_' in scram_arch:
+        if not default_scram_arch:
             command += '\n\nEndOfInjectFile\n'
             command += 'chmod +x %s\n' % (executable_file_name)
+            os_name = scram_arch.split('_')[0]
+            container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
+            command += 'if [ -e "%s/%s:amd64" ]; then\n' % (container_path, os_name)
+            command += '  CONTAINER_NAME="%s:amd64"\n' % (os_name)
+            command += 'elif [ -e "%s/%s:x86_64" ]; then\n' % (container_path, os_name)
+            command += '  CONTAINER_NAME="%s:x86_64"\n' % (os_name)
+            command += 'else\n'
+            command += '  echo "Could not find amd64 or x86_64 for %s"\n' % (os_name)
+            command += '  exit 1\n'
+            command += 'fi\n'
             command += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
-            command += 'singularity run -B /afs -B /cvmfs --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/slc6:amd64 %s\n' % (executable_file_name)
+            command += 'singularity run -B /afs -B /cvmfs --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME %s\n' % (executable_file_name)
             command += 'rm -f %s\n' % (executable_file_name)
 
         command += 'rm -f %s' % (proxy_file_name)
