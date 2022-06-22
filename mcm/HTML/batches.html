@@ -73,20 +73,6 @@
                   <a ng-click='openNotifyModal(data.prepid)' rel="tooltip" title="Notify batch" ng-hide="!data.message_id || data.status != 'announced'" ng-href="#">
                     <i class="icon-volume-up"></i>
                   </a>
-                  <script type="text/ng-template" id="announceModal.html"> <!--hidden modal template-->
-                    <div class="modal-header">
-                      <h4>{{type}} batch: {{prepid}}</h4>
-                    </div>  <!--end of modal header-->
-                    <div class="modal-body">
-                      Additional notes:
-                      <textarea ng-model="mail.mailContent"></textarea>
-                    </div> <!--end of modal body-->
-                    <div class="modal-footer">
-                      <button class="btn btn-success" ng-click="send()">{{type}}</button>
-                      <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
-                    </div> <!--end of modal footer-->
-                  </script>
-                  <!--     END OF MODAL                 -->
                   <a ng-click="isSureModal('reset', data.prepid);" rel="tooltip" title="Reset all requests in the batch" ng-hide="role(3);" ng-href="#"><i class="icon-repeat"></i></a>
                   <a ng-click="loadStats(data.requests);" rel="tooltip" title="View request status" ng-href="#"><i class="icon-eye-open"></i></a>
                   <a ng-click="broadcast_inspect(data.prepid, data.requests);" rel="tooltip" title="Load detailed view of all requests" ng-href="#">
@@ -137,6 +123,19 @@
         </tr>
       </tbody>
     </table>
+    <script type="text/ng-template" id="announceModal.html"> <!--hidden modal template-->
+      <div class="modal-header">
+        <h4>{{type}} batch: {{prepid}}</h4>
+      </div>  <!--end of modal header-->
+      <div class="modal-body">
+        Additional notes:
+        <textarea ng-model="mail.mailContent"></textarea>
+      </div> <!--end of modal body-->
+      <div class="modal-footer">
+        <button class="btn btn-success" ng-click="send()">{{type}}</button>
+        <button class="btn btn-warning cancel" ng-click="close()">Cancel</button>
+      </div> <!--end of modal footer-->
+    </script>
     <div class="row-fluid custom-footer">
       <div class="span4">
         <span>
