@@ -2,10 +2,10 @@ import paramiko
 import time
 import logging
 import random
-
+import os
+import tools.settings as settings
 from tools.logger import InjectionLogAdapter
 from threading import BoundedSemaphore
-import tools.settings as settings
 
 
 class ssh_executor:
@@ -17,7 +17,7 @@ class ssh_executor:
             server = settings.get_value("node_for_test")
         self.ssh_server = server
         self.ssh_server_port = 22
-        self.ssh_credentials = '/home/pdmvserv/private/credentials'
+        self.ssh_credentials = os.environ.get('CRED_FILE', '')
         self.hname = None
         # TO-DO
         # rename logger -> inject_logger
