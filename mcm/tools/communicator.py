@@ -1,13 +1,14 @@
 import smtplib
 import logging
 
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEText import MIMEText
-from email.Utils import COMMASPACE, formatdate
-from email.utils import make_msgid
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import make_msgid, formatdate
 from tools.locator import locator
 import tools.settings as settings
 from tools.locker import locker
+
+COMMASPACE = ","
 
 
 class communicator:
@@ -25,7 +26,7 @@ class communicator:
                 if self.cache[key]['N'] <= Nmin:
                     # flush only above a certain amount of messages
                     continue
-                destination = addressee.split(COMMASPACE)
+                destination = [d.strip() for d in addressee.split(COMMASPACE)]
                 text = self.cache[key]['Text']
                 msg = MIMEMultipart()
                 msg['From'] = sender
@@ -48,7 +49,7 @@ class communicator:
                     self.cache.pop(key)
                     res.append(subject)
                 except Exception as e:
-                    print "Error: unable to send email", e.__class__
+                    print("Error: unable to send email", e.__class__)
             return res
 
     def sendMail(self,
@@ -60,7 +61,7 @@ class communicator:
                  accumulate=False):
 
         if not isinstance(destination, list):
-            print "Cannot send email. destination should be a list of strings"
+            print("Cannot send email. destination should be a list of strings")
             return
 
         destination.sort()

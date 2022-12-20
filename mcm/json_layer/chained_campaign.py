@@ -1,5 +1,5 @@
-from chained_request import chained_request as ChainedRequest
-from json_base import json_base
+from json_layer.chained_request import chained_request as ChainedRequest
+from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database as Database
 from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
@@ -22,7 +22,6 @@ class chained_campaign(json_base):
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
-
         # update self according to json_input
         self.update(json_input)
         self.validate()

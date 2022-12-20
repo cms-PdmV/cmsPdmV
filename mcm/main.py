@@ -44,81 +44,101 @@ logging.getLogger('paramiko').setLevel(logging.WARNING)
 def campaigns_html():
     return send_from_directory('HTML', 'campaigns.html')
 
+
 @app.route('/requests')
 def requests_html():
    return send_from_directory('HTML', 'requests.html')
+
 
 @app.route('/edit')
 def edit_html():
     return send_from_directory('HTML', 'edit.html')
 
+
 @app.route('/flows')
 def flows_html():
     return send_from_directory('HTML', 'flows.html')
+
 
 @app.route('/chained_campaigns')
 def chained_campaigns_html():
     return send_from_directory('HTML', 'chained_campaigns.html')
 
+
 @app.route('/chained_requests')
 def chained_requests_html():
     return send_from_directory('HTML', 'chained_requests.html')
+
 
 @app.route('/priority_change')
 def priority_change_html():
     return send_from_directory('HTML', 'priority_change.html')
 
+
 @app.route('/')
 def index_html():
     return send_from_directory('HTML', 'index.html')
+
 
 @app.route('/create')
 def create_html():
     return send_from_directory('HTML', 'create.html')
 
+
 @app.route('/users')
 def users_html():
     return send_from_directory('HTML', 'users.html')
+
 
 @app.route('/batches')
 def batches_html():
     return send_from_directory('HTML', 'batches.html')
 
+
 @app.route('/getDefaultSequences')
 def getDefaultSequences():
     return json.dumps(sequence()._json_base__schema)
+
 
 @app.route('/mccms')
 def mccms_html():
     return send_from_directory('HTML', 'mccms.html')
 
+
 @app.route('/settings')
 def settings_html():
     return send_from_directory('HTML', 'settings.html')
+
 
 @app.route('/invalidations')
 def invalidations_html():
     return send_from_directory('HTML', 'invalidations.html')
 
+
 @app.route('/edit_many')
 def edit_many_html():
     return send_from_directory('HTML', 'edit_many.html')
+
 
 @app.route('/dashboard')
 def dashboard_html():
     return send_from_directory('HTML', 'dashboard.html')
 
+
 @app.route('/lists')
 def stalled_html():
     return send_from_directory('HTML', 'lists.html')
+
 
 @app.route('/scripts/<path:path>')
 def send_static(path):
     return send_from_directory('scripts', path)
 
+
 @app.route('/HTML/<path:path>')
 def send_HTML(path):
     return send_from_directory('HTML', path)
+
 
 api.add_resource(Search, '/search')
 

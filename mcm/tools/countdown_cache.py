@@ -1,5 +1,6 @@
 import sys
 
+
 class CountdownCache:
     def __init__(self, count=25):
         self.count = count

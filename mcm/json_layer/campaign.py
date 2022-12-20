@@ -1,6 +1,6 @@
 import re
-from json_base import json_base
-from sequence import sequence
+from json_layer.json_base import json_base
+from json_layer.sequence import sequence
 
 
 class campaign(json_base):

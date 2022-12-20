@@ -2,14 +2,13 @@
 import flask
 import traceback
 import time
-import urllib2
 from json import dumps, loads
 from collections import defaultdict
 import re
 
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
-from RequestPrepId import RequestPrepId
+from rest_api.RestAPIMethod import RESTResource
+from rest_api.RequestPrepId import RequestPrepId
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
@@ -19,11 +18,10 @@ from tools.locator import locator
 from tools.communicator import communicator
 from tools.locker import locker
 import tools.settings as settings
-from tools.handlers import RequestInjector, submit_pool
+from tools.handlers import RequestInjector
 from tools.user_management import access_rights
 from tools.priority import priority
 from tools.utils import clean_split, expand_range
-from flask_restful import reqparse
 
 
 class RequestRESTResource(RESTResource):

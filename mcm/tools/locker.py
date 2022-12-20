@@ -69,6 +69,7 @@ class Locker(object):
             self.logger.info("Releasing simple lock %s for lock_id %s" % (lock, lock_id))
         return lock.release()
 
+
 locker = Locker()
 
 
@@ -113,5 +114,6 @@ class SemaphoreEvents(object):
                 # because the default oonstructor is with is_set=False
                 # in case the batch was created, sever cycled, and one tries to announce it on the "second" session
                 return True
+
 
 semaphore_events = SemaphoreEvents()

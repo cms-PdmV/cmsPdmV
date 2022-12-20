@@ -2,14 +2,16 @@
 
 import logging
 import traceback
-
+import tools.settings as settings
+import time
 from tools.user_management import authenticator, user_pack
 from tools.communicator import communicator
-import tools.settings as settings
 from tools.locker import locker
 from couchdb_layer.mcm_database import database
 from copy import deepcopy
 from tools.user_management import access_rights
+from json import dumps
+
 
 class json_base:
     __json = {}
@@ -116,7 +118,7 @@ class json_base:
                 return database(self.__class__.__name__ + "es")
             else:
                 return database(self.__class__.__name__ + "s")
-        except (database.DatabaseNotFoundException, database.DatabaseAccessError) as ex:
+        except Exception as ex:
             self.logger.error("Problem with database creation:\n{0}".format(ex))
             return None
 
@@ -167,6 +169,8 @@ class json_base:
     def update(self, json_input):
         self._json_base__json = {}
         if not json_input:
+            # INFO: It seems the old version uses the following attribute references from the child classes
+            # even if they do not exist in the parent class.
             self._json_base__json = deepcopy(self._json_base__schema)
         else:
             for key in self._json_base__schema:
@@ -330,21 +334,16 @@ class json_base:
         return cls.__schema
 
     def print_self(self):
-        try:
-            import json
-        except ImportError:
-            self.logger.error('Error: Could not import "json" module')
-            print self.__json
-        print json.dumps(self.__json, indent=4)
+        print(dumps(self.__json, indent=4))
 
     def keys(self):
         return self.__schema.keys()
 
     def print_schema(self):
-        print '{'
+        print('{')
         for key in self.__json:
-            print key, ': ', self.__json[key], '\t(', type(self.__json[key]), ')'
-        print '}'
+            print(key, ': ', self.__json[key], '\t(', type(self.__json[key]), ')')
+        print('}')
 
     def get_approval_steps(self):
         return self.__approvalsteps
@@ -363,7 +362,7 @@ class json_base:
                reply_msg_ID=None,
                accumulate=False):
 
-        dest = map(lambda i: i, who)
+        dest = list.copy(who)
         if actors:
             auth = authenticator()
             # add the actors to the object
@@ -429,10 +428,10 @@ class json_base:
             # check if "step" is a string -> some DR requests has single step string with , in it...
             # some DR requests has it.... most probably the generated ones
 
-            if isinstance(__seq[0]["step"], basestring):
-                __step = __seq[0]["step"].split(",")[0].split(":")[0]
-            else:
-                __step = __seq[0]["step"][0].split(":")[0]
+            # DEPRECATED: basestring was a class that supported Unicode and non-unicode characters
+            # for strings in Python 2.x. It became deprecated since Python 3.0
+            # https://stackoverflow.com/questions/1979004/what-is-the-difference-between-isinstanceaaa-basestring-and-isinstanceaaa
+            __step = __seq[0]["step"][0].split(":")[0]
 
             if __step in possible_dt_inputs:
                 __possible_inputs = possible_dt_inputs[__step]
@@ -475,12 +474,8 @@ class submission_details(json_base):
         self.update(json_input)
         self.validate()
 
-    def __get_datetime(self):
-        try:
-            import time
-        except ImportError as ex:
-            self.logger.error('Could not import "time" module. Returned: %s' % (ex))
-
+    @classmethod
+    def __get_datetime(cls):
         localtime = time.localtime(time.time())
 
         datetime = ''

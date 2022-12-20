@@ -5,8 +5,9 @@ import sys
 import socket
 import base64
 import json
-import urllib2
-import urllib
+from urllib.request import build_opener, HTTPHandler, Request
+from urllib.parse import urlencode
+from urllib.error import HTTPError
 from tools.locator import locator
 from tools.locker import locker
 from cachelib import SimpleCache
@@ -35,7 +36,7 @@ class database:
         self.db_url = self.resolve_hostname_to_ip(url)
         self.lucene_url = self.resolve_hostname_to_ip(lucene_url)
         self.auth_header = self.get_auth_header()
-        self.opener = urllib2.build_opener(urllib2.HTTPHandler)
+        self.opener = build_opener(HTTPHandler)
         self.max_attempts = 3
 
     def get_auth_header(self):
@@ -48,7 +49,8 @@ class database:
             credentials = json.load(json_file)
 
         b64 = '%s:%s' % (credentials['username'], credentials['password'])
-        b64 = base64.b64encode(b64)
+        b64_encoded = b64.encode(encoding='utf-8')
+        b64 = base64.b64encode(b64_encoded).decode(encoding='utf-8')
         return 'Basic %s' % (b64)
 
     def resolve_hostname_to_ip(self, hostname):
@@ -92,7 +94,7 @@ class database:
 
         full_url = url + path.lstrip('/')
         self.logger.debug('Built full url: %s', full_url)
-        request = urllib2.Request(full_url, data=data)
+        request = Request(full_url, data=data)
         request.get_method = lambda: method
         for key, value in headers.items():
             request.add_header(key, value)
@@ -129,7 +131,7 @@ class database:
             try:
                 data = self.opener.open(db_request)
                 return json.loads(data.read())
-            except urllib2.HTTPError as http_error:
+            except HTTPError as http_error:
                 code = http_error.code
                 if code == 404 and include_deleted:
                     data = http_error.read()
@@ -309,7 +311,7 @@ class database:
             options['key'] = key # (key.replace('"', '\\"'))
 
         if options:
-            url += '?' + urllib.urlencode(options)
+            url += '?' + urlencode(options)
 
         self.logger.debug('Query view %s', url)
         request = self.couch_request(url)
@@ -454,7 +456,7 @@ class database:
 
         if options:
             self.logger.debug('Query options %s', options)
-            options = '&%s&' % urllib.urlencode(options)
+            options = '&%s&' % urlencode(options)
         else:
             options = ''
 
@@ -474,7 +476,7 @@ class database:
 
                 return [r['doc'] for r in data.get('rows', [])]
 
-            except urllib2.HTTPError as http_error:
+            except HTTPError as http_error:
                 code = http_error.code
                 self.logger.error('HTTP error %s %s: %s', url, options, http_error)
                 if 400 <= code < 500:

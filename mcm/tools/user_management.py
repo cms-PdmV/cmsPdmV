@@ -89,6 +89,7 @@ class user_pack:
         cls.__user_cache.clear()
         return size
 
+
 roles = ('user', 'generator_contact', 'generator_convener', 'production_manager', 'administrator')
 access_rights = Enum(*roles)
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import tools.settings as settings
-from json_base import json_base
+from json_layer.json_base import json_base
 from copy import deepcopy
 
 
@@ -11,7 +11,6 @@ class sequence(json_base):
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
-
         self._json_base__schema = settings.get_value('cmsdriver_options')
 
         # how to get the options ?
@@ -44,8 +43,8 @@ class sequence(json_base):
                     self._json_base__json[key] = deepcopy(self._json_base__schema[key])
 
     def srepr(self, arg):
-        if isinstance(arg, basestring):  # Python 3: isinstance(arg, str)
-            return arg.decode('utf-8')
+        if isinstance(arg, str):
+            return arg
         elif isinstance(arg, int):  # in case we have int we should make it string for cmsDriver construction
             return str(arg)
         try:
@@ -57,19 +56,16 @@ class sequence(json_base):
         if attribute == 'index':
             return ''
         value = self.get_attribute(attribute)
-        if isinstance(value, basestring) and not value.strip():
-            return ''
         if attribute == 'nThreads':
-            if isinstance(value, basestring) and not value.isdigit():
+            if isinstance(value, str) and not value.isdigit():
                 return ''
             if int(value) <= 1:
                 return ''
         if attribute == 'nStreams':
-            if isinstance(value, basestring) and not value.isdigit():
+            if isinstance(value, str) and not value.isdigit():
                 return ''
             if int(value) <= 0:
                 return ''
-
         if value == True:
             return "--" + str(attribute)
         elif value == False:

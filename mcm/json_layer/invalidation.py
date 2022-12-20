@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-from json_base import json_base
+from json_layer.json_base import json_base
 from tools.user_management import user_pack
 
 
 class invalidation(json_base):
-
     _json_base__status = ['new', "hold", 'announced', 'acknowledged']
-
     _json_base__schema = {
         '_id': '',
         'prepid': '',

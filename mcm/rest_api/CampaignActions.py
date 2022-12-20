@@ -4,13 +4,12 @@ import traceback
 import json
 
 from couchdb_layer.mcm_database import database as Database
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from json_layer.campaign import campaign as Campaign
 from json_layer.request import request as Request
 from json_layer.sequence import sequence as Sequence
 from json_layer.chained_campaign import chained_campaign as ChainedCampaign
 from tools.user_management import access_rights
-import tools.settings as settings
 
 
 class CreateCampaign(RESTResource):

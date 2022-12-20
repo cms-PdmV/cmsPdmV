@@ -1,20 +1,15 @@
 """
 Module that contains ConnectionWrapper class
 """
-try:
-    import http.client as client
-except ImportError:
-    import httplib as client
-
+import http.client as client
 import logging
 import os
 import json
 import time
 import ssl
-from contextlib import contextmanager
 
 
-class ConnectionWrapper():
+class ConnectionWrapper:
     """
     HTTP and HTTPS client wrapper class to re-use existing connection
     Supports user certificate authentication

@@ -1,20 +1,18 @@
 #!/usr/bin/env python
 
 import itertools
-
+import tools.settings as settings
 from json import loads
 from flask import request
-
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from tools.communicator import communicator
 from tools.locator import locator
 from json_layer.invalidation import invalidation
-import tools.settings as settings
 from tools.user_management import access_rights
 
 
-class Announcer():
+class Announcer:
 
     def __init__(self):
         self.db_name = "invalidations"

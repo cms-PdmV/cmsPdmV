@@ -1,11 +1,11 @@
 import time
 import json
 
-from json_base import json_base
+from json_layer.json_base import json_base
 from json_layer.request import request
 from json_layer.campaign import campaign
 from json_layer.mccm import mccm
-from flow import flow
+from json_layer.flow import flow
 from couchdb_layer.mcm_database import database
 from tools.priority import priority
 from tools.locker import locker

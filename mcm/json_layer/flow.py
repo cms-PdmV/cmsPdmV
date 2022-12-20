@@ -1,4 +1,4 @@
-from json_base import json_base
+from json_layer.json_base import json_base
 
 
 class flow(json_base):
@@ -20,7 +20,6 @@ class flow(json_base):
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
-
         self._json_base__schema['approval'] = self.get_approval_steps()[0]
 
         # update self according to json_input

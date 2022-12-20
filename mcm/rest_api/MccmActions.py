@@ -7,12 +7,10 @@ from couchdb_layer.mcm_database import database as Database
 from json_layer.mccm import mccm as MccM
 from json_layer.user import user as User
 from json_layer.chained_campaign import chained_campaign as ChainedCampaign
-from json_layer.chained_request import chained_request as ChainedRequest
 from json_layer.request import request as Request
 from tools.locker import locker
 from tools.locator import locator
 from tools.communicator import communicator
-import tools.settings as settings
 from tools.user_management import access_rights
 from tools.user_management import user_pack as UserPack
 from tools.priority import priority

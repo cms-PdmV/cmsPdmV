@@ -1,17 +1,16 @@
 #!/usr/bin/env python
 
 import flask
-
 from json import dumps, loads
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from json_layer.chained_request import chained_request
 from json_layer.request import request
 from json_layer.mccm import mccm
 from tools.user_management import access_rights
 from flask_restful import reqparse
 from tools.locker import locker
-from ChainedRequestPrepId import ChainedRequestPrepId
+from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
 
 class CreateChainedRequest(RESTResource):

@@ -4,8 +4,8 @@ import logging
 import random
 
 from random import randint
-from threading import Thread, Lock
-from Queue import Queue
+from threading import Thread
+from queue import Queue
 
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
@@ -38,7 +38,7 @@ class Worker(Thread):
             try:
                 self.logger.info("Worker %s acquired task: %s" % (self.worker_name, func))
                 func(*args, **kargs)
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Exception in '%s' thread: %s Traceback:\n%s" % (
                     self.worker_name, str(e), traceback.format_exc()))
 

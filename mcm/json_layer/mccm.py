@@ -1,10 +1,9 @@
-from json_base import json_base
+from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database as Database
 from tools.utils import expand_range
 
 
 class mccm(json_base):
-
     _json_base__schema = {
         '_id': '',
         'prepid': '',
@@ -27,7 +26,6 @@ class mccm(json_base):
 
     def __init__(self, json_input=None):
         json_input = json_input if json_input else {}
-
         repetitions = int(json_input.get('repetitions', 1))
         if repetitions > 10:
             self.logger.error('Too many repetitions: %s', repetitions)

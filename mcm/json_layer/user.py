@@ -1,8 +1,8 @@
-from json_base import json_base
+from json_layer.json_base import json_base
 import tools.settings as settings
 
-class user(json_base):
 
+class user(json_base):
     _json_base__schema = {
         '_id': '',
         'username': '',

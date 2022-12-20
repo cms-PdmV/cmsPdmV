@@ -4,8 +4,8 @@ from tools.user_management import access_rights
 from flask import request
 from json import loads
 
-class GetList(RESTResource):
 
+class GetList(RESTResource):
     access_limit = access_rights.user
 
     def __init__(self):

@@ -1,13 +1,12 @@
 import os
 import subprocess
 import datetime
-
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
 
-class GetBjobs(RESTResource):
 
+class GetBjobs(RESTResource):
     access_limit = access_rights.user
 
     def __init__(self):

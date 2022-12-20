@@ -104,7 +104,6 @@ class ssh_executor:
                     self.logger.error('Attribute error two times. Returning nothing.')
                     return None, None, None
 
-
     def execute(self, cmd):
         stdin, stdout, stderr = self.__remote_exec(cmd)
         return stdin, stdout, stderr

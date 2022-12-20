@@ -1,15 +1,9 @@
 import flask
-import time
-
 import json
-from random import shuffle
-
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database as Database
-from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign as ChainedCampaign
 from tools.user_management import access_rights
-import tools.settings as settings
 
 
 class CreateChainedCampaign(RESTResource):
