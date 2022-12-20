@@ -11,11 +11,27 @@ export USERCRT=$CERT_FILE
 export USERKEY=$KEY_FILE
 export CRED_FILE=$CRED_FILE
 
-source kinit.sh &
+# Host deployment
+export MCM_HOST='0.0.0.0'
+export MCM_PORT='8000'
 
-echo "Running grunt"
-node_modules/grunt/bin/grunt
-echo "Started on: " `date`
+function setup() {
+  source kinit.sh &
 
-# start Flask
-python main.py
+  echo "Running grunt"
+  node_modules/grunt/bin/grunt
+  echo "Started on: " `date`
+}
+
+# Start McM server
+CMD=$1
+if [ "$CMD" = "dev" ]; then
+  setup
+  python main.py --port $MCM_PORT --host $MCM_HOST
+elif [ "$CMD" = "prod" ]; then
+  setup
+  gunicorn wsgi:app
+else
+  echo "Please select a mode: dev or prod"
+  exit 1
+fi
