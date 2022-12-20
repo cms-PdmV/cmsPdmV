@@ -1,11 +1,36 @@
 {
+  "name": "mcm",
+  "version": "1.0.2",
+  "description": "CMS PPD - PdmV: Monte Carlo Management Tool",
+  "main": "\"\"",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cms-PdmV/cmsPdmV.git"
+  },
+  "keywords": [
+    "MonteCarlo",
+    "McM",
+    "PdmV",
+    "CMS"
+  ],
+  "author": "CMS-PPD-PdmV Group",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/cms-PdmV/cmsPdmV/issues"
+  },
+  "homepage": "https://github.com/cms-PdmV/cmsPdmV#readme",
   "devDependencies": {
-    "babel-core": "^6.0.0",
-    "babel-loader": "^6.0.0",
-    "grunt": "^1.0.1",
-    "grunt-contrib-concat": "^1.0.1",
-    "html-webpack-plugin": "^1.6.2",
-    "webpack": "^2.6.1",
-    "webpack-dev-server": "^2.4.5"
+    "@babel/core": "^7.20.5",
+    "@babel/preset-env": "^7.20.2",
+    "babel-loader": "^9.1.0",
+    "grunt-contrib-concat": "^2.1.0",
+    "html-webpack-plugin": "^5.5.0",
+    "webpack": "^5.75.0"
+  },
+  "dependencies": {
+    "grunt": "^1.5.3"
   }
 }
