@@ -528,6 +528,16 @@ def setup_access_logging(app, logger, debug):
     app.after_request(after)
 
 
+def set_app(debug: bool = True):
+    # Setup loggers
+    logging.root.setLevel(logging.DEBUG if debug else logging.INFO)
+    error_logger = setup_error_logger(debug)
+    setup_injection_logger(debug)
+    access_logger = setup_access_logger(debug)
+    setup_access_logging(app, access_logger, debug)
+    return app, error_logger, access_logger
+
+
 def main():
     parser = argparse.ArgumentParser(description='The McM - Monte Carlo Management tool')
     parser.add_argument('--port', help='Port, default is 8000', type=int, default=8000)
@@ -537,13 +547,9 @@ def main():
     port = args.get('port')
     host = args.get('host')
     debug = args.get('debug')
-    # Setup loggers
-    logging.root.setLevel(logging.DEBUG if debug else logging.INFO)
-    error_logger = setup_error_logger(debug)
-    setup_injection_logger(debug)
-    access_logger = setup_access_logger(debug)
-    setup_access_logging(app, access_logger, debug)
+
     # Write McM PID to a file
+    app, error_logger, access_logger = set_app(debug=debug)
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         # Do only once, before the reloader
         pid = os.getpid()
