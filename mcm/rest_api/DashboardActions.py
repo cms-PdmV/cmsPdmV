@@ -60,6 +60,8 @@ class GetLogFeed(RESTResource):
 
         read_process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
         data = read_process.communicate()[0]
+        if isinstance(data, bytes):
+            revision = data.decode(encoding='utf-8')
         return {"results": data}
 
 
@@ -78,6 +80,8 @@ class GetRevision(RESTResource):
         import subprocess
         output = subprocess.Popen(["git", "describe", "--tags", "--abbrev=0"], stdout=subprocess.PIPE)
         revision = output.communicate()[0]
+        if isinstance(revision, bytes):
+            revision = revision.decode(encoding='utf-8')
         return revision
 
 
@@ -129,19 +133,19 @@ class GetLocksInfo(RESTResource):
     def get(self):
         from tools.locker import locker, semaphore_events
         pretty_r_locks = {}
-        for key, lock in locker.lock_dictionary.iteritems():
+        for key, lock in locker.lock_dictionary.items():
             pretty_r_locks[key] = '%s %s' % (key, str(lock))
 
         pretty_locks = {}
-        for key, lock in locker.thread_lock_dictionary.iteritems():
+        for key, lock in locker.thread_lock_dictionary.items():
             pretty_locks[key] = '%s %s' % (key, str(lock))
 
         return {"r_locks": pretty_r_locks,
                 "locks (thread)": pretty_locks,
                 "semaphores": semaphore_events.count_dictionary}
 
-class GetQueueInfo(RESTResource):
 
+class GetQueueInfo(RESTResource):
     access_limit = access_rights.user
 
     def __init__(self):

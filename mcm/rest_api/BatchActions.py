@@ -74,7 +74,7 @@ class BatchAnnouncer(RESTResource):
             rdb = database('requests')
             priority_coeff = settings.get_value('nanoaod_priority_increase_coefficient')
             if priority_coeff > 0:
-                for wf, requests in map_wf_to_prepid.iteritems():
+                for wf, requests in map_wf_to_prepid.items():
                     if len(requests) == 1 and 'nanoaod' in requests[0].lower():
                         for r_prepid in requests:
                             req = request(rdb.get(r_prepid))

@@ -1875,7 +1875,7 @@ class request(json_base):
             open_evts_in_das = 0
             if event_number_history:
                 event_number_history = event_number_history[-1]
-                for dataset, content in event_number_history.get('Datasets', {}).iteritems():
+                for dataset, content in event_number_history.get('Datasets', {}).items():
                     dataset_statuses[dataset] = {'pdmv_evts_in_DAS': content.get('Events', 0),
                                                  'pdmv_status_in_DAS': content.get('Type', 'NONE'),
                                                  'pdmv_open_evts_in_DAS': 0}

@@ -75,7 +75,7 @@ class mccm(json_base):
 
     def update_mccm_generated_chains(self, chains_requests_dict):
         generated_chains = self.get_attribute('generated_chains')
-        for chain, requests in chains_requests_dict.iteritems():
+        for chain, requests in chains_requests_dict.items():
             generated_chains.setdefault(chain, []).extend(requests)
 
         mccms_db = Database('mccms')
