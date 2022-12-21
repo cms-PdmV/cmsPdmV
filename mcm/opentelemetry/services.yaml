@@ -1,0 +1,30 @@
+# OpenTelemetry Collector & Jaeger services
+
+version: "3.8"
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector:0.67.0@sha256:88a5ce48b1688e2c5d37ee7f871a6488f2b5441de1c008868cdcb85cbfd17df1
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    depends_on:
+      - jaeger
+    restart: "on-failure"
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP http receiver
+      - "24000:24000" # OpenTelemetry Collector Receiver port
+    networks:
+      - opentelemetry
+  jaeger:
+    image: jaegertracing/all-in-one:1.40@sha256:5d0ced43d7961f00657b84c08999897c610747ad64dcec74fff7605fd69b19b6
+    ports:
+      - "16686:16686"   # UI
+    networks:
+      - opentelemetry
+
+
+networks:
+  opentelemetry:
+    name: "opentelemetry"
+

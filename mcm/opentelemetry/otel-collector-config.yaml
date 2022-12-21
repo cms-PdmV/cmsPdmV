@@ -1,0 +1,34 @@
+# OpenTelemetry Collector configuration
+# https://opentelemetry.io/docs/collector/
+# https://opentelemetry.io/docs/collector/configuration/
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:24000
+
+exporters:
+  logging:
+    loglevel: debug
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 2000
+  batch:
+
+# Service configuration
+# This works like a control panel to activate the receivers and exporters
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [jaeger, logging]
+    metrics:
+      receivers: [otlp]
+      exporters: [logging]
