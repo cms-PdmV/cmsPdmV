@@ -1,2 +1,5 @@
 # Ignore VSCode remote development folder
 .vscode/
+
+# Development: Execute all server in just one file
+execute.sh
