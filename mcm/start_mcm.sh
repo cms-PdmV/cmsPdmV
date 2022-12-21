@@ -27,7 +27,7 @@ function setup() {
 CMD=$1
 if [ "$CMD" = "dev" ]; then
   setup
-  python main.py --port $MCM_PORT --host $MCM_HOST
+  python main.py --port $MCM_PORT --host $MCM_HOST --debug
 elif [ "$CMD" = "prod" ]; then
   setup
   gunicorn wsgi:app
