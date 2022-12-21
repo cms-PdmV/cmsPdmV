@@ -1,6 +1,6 @@
 {
   "name": "mcm",
-  "version": "1.0.2",
+  "version": "1.18.0",
   "description": "CMS PPD - PdmV: Monte Carlo Management Tool",
   "main": "\"\"",
   "scripts": {
