@@ -6,6 +6,14 @@ CERT_FILE=...
 KEY_FILE=...
 CRED_FILE=...
 
+# OpenTelemetry Agent configuration
+SERVICE_NAME='McM: Monte Carlo Management'
+OTLP_ENDPOINT='http://localhost:24000'
+
+# Set enviroment variables to OpenTelemetry
+export OTEL_RESOURCE_ATTRIBUTES=service.name=$SERVICE_NAME
+export OTEL_EXPORTER_OTLP_ENDPOINT=$OTLP_ENDPOINT
+
 export COUCH_CRED=$COUCH_DB_CRED
 export USERCRT=$CERT_FILE
 export USERKEY=$KEY_FILE
@@ -25,12 +33,13 @@ function setup() {
 
 # Start McM server
 CMD=$1
+
 if [ "$CMD" = "dev" ]; then
   setup
-  python main.py --port $MCM_PORT --host $MCM_HOST --debug
+  opentelemetry-instrument python main.py --port $MCM_PORT --host $MCM_HOST --debug
 elif [ "$CMD" = "prod" ]; then
   setup
-  gunicorn wsgi:app
+  opentelemetry-instrument gunicorn wsgi:app
 else
   echo "Please select a mode: dev or prod"
   exit 1
