@@ -2070,8 +2070,148 @@ class request(json_base):
                 self.get_attribute('status'), self.get_attribute('approval'))})
             return not_good
 
-    def collect_outputs(self, mcm_rr, tiers_expected, proc_strings, prime_ds, camp, skip_check=False):
 
+    def check_reqmgr_mismatch(self, prime_ds, full_ds):
+        """
+        Check if there is a mismatch of one character between the dataset name registered on McM
+        and the output dataset retrieved from ReqMgr. The output dataset must follow the dataset name convention
+        registered in McM.
+        Hot fix for a consistency error discovered today with ReqMgr.
+        Due to the output dataset is now produced, replace the dataset name on McM to be able to continue
+        with other steps.
+
+        For example:
+
+        Dataset name registered on McM:
+            ZToMuMu_M-50To120_TuneCP5_13p6TeV-powheg-pythia8
+        Full output dataset name retrieved from ReqMgr:
+            /ZToMuMu_M-50To120_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EEMiniAODv3-Poisson70KeepRAW_124X_mcRun3_2022_realistic_postEE_v1-v2/MINIAODSIM
+        Output dataset name:
+            ZToMuMu_M-50To120_TuneCP5_13p6TeV_powheg-pythia8
+        => Mismatch of one character
+
+        Args:
+            prime_ds: str
+                Primary dataset name currently registered on McM
+            full_ds: str
+                Output dataset name retrieved from ReqMgr
+        Returns:
+            True
+                If there is only one character mismatch of '-' on current dataset name on McM and '_' on dataset name from
+                ReqMgr. Perform the quick fix if only this happens
+            False
+                Otherwise
+        """
+        # Retrieve the primary dataset from full dataset taken from ReqMgr, position 0 is empty
+        prime_ds_from_full_ds = full_ds.split("/")[1]
+
+        # Check, character by character if there is ONLY a mismatch of - to _
+        # Both strings must have the same lenght
+        prime_ds_string = prime_ds.strip()
+        prime_ds_from_full_ds = prime_ds_from_full_ds.strip()
+
+        self.logger.info("[check_reqmgr_mismatch] Dataset name on McM: %s", prime_ds_string)
+        self.logger.info("[check_reqmgr_mismatch] Dataset name on ReqMgr: %s", prime_ds_from_full_ds)
+        self.logger.info("[check_reqmgr_mismatch] Full output dataset retrieved from ReqMgr: %s", full_ds)
+
+        # Check if they are the same
+        if prime_ds_string == prime_ds_from_full_ds:
+            # This is fine, there is no error to fix
+            self.logger.info("[check_reqmgr_mismatch] Both dataset names are the same. Do not perform fix")
+            return False
+
+        if len(prime_ds_string) != len(prime_ds_from_full_ds):
+            self.logger.info("[check_reqmgr_mismatch] Lenght of two dataset names is not equal. Do not perform fix")
+            return False
+
+        # Item: Tuple[int, str, str] -> Tuple[position, char_on_prime_ds, char_on_prime_ds_from_full_ds]
+        # Expected difference: There is only one mismatch between a "-"
+        #                      character on char_on_prime_ds and "_" from char_on_prime_ds_from_full_ds
+        differences = []
+
+        # Other differences: The error is wider than we think
+        other_differences = []
+
+        # Check character by character
+        for idx in range(len(prime_ds_string)):
+            prime_ds_char = prime_ds_string[idx]
+            prime_ds_from_full_char = prime_ds_from_full_ds[idx]
+            if prime_ds_char != prime_ds_from_full_char:
+                result_tuple = (idx, prime_ds_char, prime_ds_from_full_char)
+                if prime_ds_char == "-" and prime_ds_from_full_char == "_":
+                    differences.append(result_tuple)
+                else:
+                    other_differences.append(result_tuple)
+
+        # Return decision
+        if len(other_differences) != 0:
+            # Error wider than we think, do not update anything
+            self.logger.info("[check_reqmgr_mismatch] There are differences we do not expect. Do not perform fix")
+            self.logger.info("[check_reqmgr_mismatch] Differences: ", other_differences)
+            return False
+
+        if len(differences) > 1:
+            # We are expecting only one difference for the moment, report this situation, do not update for the moment
+            self.logger.info("[check_reqmgr_mismatch] There is more than one expected difference. Do not perform fix")
+            self.logger.info("[check_reqmgr_mismatch] Differences: ", differences)
+            return False
+
+        # We have one error: Report it on the logs and execute the quick fix
+        self.logger.info("[check_reqmgr_mismatch] There is only one expected difference. Perform fix")
+        self.logger.info("[check_reqmgr_mismatch] Difference at: ", differences)
+        return True
+
+    def fix_reqmgr_mismatch(self, prime_ds, full_ds):
+        """
+        Replace the current dataset name using the primary dataset name from the output dataset
+        registered on ReqMgr.
+
+        Args:
+            prime_ds: str
+                Primary dataset currently registered on McM
+            full_ds: str
+                Output dataset name retrieved from ReqMgr
+        Returns:
+            str
+                Updated dataset name
+        """
+        prime_ds_from_full_ds = full_ds.split("/")[1]
+        prime_ds_from_full_ds = prime_ds_from_full_ds.strip()
+
+        self.logger.info("[fix_reqmgr_mismatch] Fixing character mismatch on dataset name")
+        self.logger.info("[fix_reqmgr_mismatch] Current dataset name: %s", prime_ds)
+        self.logger.info("[fix_reqmgr_mismatch] Changing dataset name to: %s", prime_ds_from_full_ds)
+
+        self._json_base__schema['dataset_name'] = prime_ds_from_full_ds
+        self.validate()
+        self.save()
+
+        return prime_ds_from_full_ds
+
+
+    def reqmgr_mismatch(self, prime_ds, full_ds):
+        """
+        Fix expected error with ReqMgr dataset name. For more details, check the docs
+        from check_reqmgr_mismatch()
+
+        Args:
+            prime_ds: str
+                Primary dataset currently registered on McM
+            full_ds: str
+                Output dataset name retrieved from ReqMgr
+        Returns:
+            str
+                Updated dataset name if it has been updated
+            False
+                If no update has been performed
+        """
+        fix_error = self.check_reqmgr_mismatch(prime_ds=prime_ds, full_ds=full_ds)
+        if fix_error is True:
+            return self.fix_reqmgr_mismatch(prime_ds=prime_ds, full_ds=full_ds)
+        return False
+
+
+    def collect_outputs(self, mcm_rr, tiers_expected, proc_strings, prime_ds, camp, skip_check=False):
         re_to_match = re.compile("/%s(.*)/%s(.*)\\-v(.*)/" % (prime_ds, camp))
         collected = []
         versioned = {}
@@ -2087,6 +2227,14 @@ class request(json_base):
             if 'pdmv_dataset_list' not in wma['content']:
                 continue
             those = wma['content']['pdmv_dataset_list']
+
+            # Fix dataset name from ReqMgr
+            fix_dataset_name = self.reqmgr_mismatch(
+                prime_ds=prime_ds,
+                full_ds=those[0]
+            )
+            if fix_dataset_name:
+                re_to_match = re.compile("/%s(.*)/%s(.*)\\-v(.*)/" % (fix_dataset_name, camp))
 
             for ds in those:
                 # we do all the DS-PS/TIER checks for the requests and last Step
