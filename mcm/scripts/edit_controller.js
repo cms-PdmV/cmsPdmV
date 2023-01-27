@@ -536,7 +536,7 @@ testApp.directive("customMccmChains", function($http, $rootScope){
           return [];
         }
         const campaign = $rootScope.campaignsForChains.length ? '&prepid___=' + $rootScope.campaignsForChains.join(',') : '';
-        const url = "search/?db_name=chained_campaigns&include_fields=prepid&valid=true&prepid=" + viewValue + "*" + campaign;
+        const url = "search/?db_name=chained_campaigns&include_fields=prepid&valid=true&limit=100&prepid=" + viewValue + "*" + campaign;
         if (scope.suggestionCache[url]) {
           const suggestions = scope.suggestionCache[url];
           scope.newestSuggestions = suggestions.filter(x => scope.chainedCampaigns.indexOf(x) < 0);
