@@ -341,7 +341,7 @@ class SubmissionsBase(Handler):
             command += '  exit 1\n'
             command += 'fi\n'
             command += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
-            command += 'singularity run -B /afs -B /cvmfs --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME %s\n' % (executable_file_name)
+            command += 'singularity run -B /afs -B /cvmfs -B /etc/pki/ca-trust --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME %s\n' % (executable_file_name)
             command += 'rm -f %s\n' % (executable_file_name)
 
         command += 'rm -f %s' % (proxy_file_name)
