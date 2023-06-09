@@ -1685,13 +1685,13 @@ class request(json_base):
                               '# Mount afs, eos, cvmfs',
                               '# Mount /etc/grid-security for xrootd',
                               'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)]
+                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)]
             else:
                 # Config generation for production run on CC7 machine - vocms0481
                 # If it's CC7, just run the script normally
                 # If it's not CC7, run it in singularity container
                 bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /cvmfs -B /etc/grid-security --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)]
+                              'singularity run -B /afs -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)]
 
         # Empty line at the end of the file
         bash_file += ['']
