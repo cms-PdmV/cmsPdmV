@@ -6,11 +6,7 @@ class locator:
         pass
 
     def isDev(self):
-        return not (self.isInt() or self.isProd())
-
-    def isInt(self):
-        host = os.environ['HOSTNAME']
-        return host in ['vocms082.cern.ch']  # Int machine
+        return not self.isProd()
 
     def isProd(self):
         host = os.environ['HOSTNAME']
@@ -37,11 +33,9 @@ class locator:
 
     def baseurl(self):
         if self.isDev():
-            return 'https://cms-pdmv-dev.cern.ch/mcm/'
-        elif self.isInt():
-            return 'https://cms-pdmv-int.cern.ch/mcm/'
+            return 'https://cms-pdmv-dev.web.cern.ch/mcm/'
         else:
-            return 'https://cms-pdmv.cern.ch/mcm/'
+            return 'https://cms-pdmv-prod.web.cern.ch/mcm/'
 
     def cmsweburl(self):
         if self.isDev():
