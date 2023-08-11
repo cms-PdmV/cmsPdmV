@@ -41,7 +41,7 @@ class communicator:
                 # self.logger.info('Sending a message from cache \n%s'% (text))
                 try:
                     msg.attach(MIMEText(text))
-                    smtpObj = smtplib.SMTP(host="cernmx.cern.ch", port=25)
+                    smtpObj = smtplib.SMTP()
                     smtpObj.connect()
                     smtpObj.sendmail(sender, destination, msg.as_string())
                     smtpObj.quit()
