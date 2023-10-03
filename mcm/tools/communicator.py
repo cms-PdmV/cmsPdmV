@@ -114,7 +114,7 @@ class communicator:
 
         try:
             msg.attach(MIMEText(text))
-            smtpObj = smtplib.SMTP(host="cernmx.cern.ch", port=25)
+            smtpObj = smtplib.SMTP()
             smtpObj.connect()
             communicator.logger.info('Sending %s to %s...' % (msg['Subject'], msg['To']))
             smtpObj.sendmail(sender, destination, msg.as_string())
