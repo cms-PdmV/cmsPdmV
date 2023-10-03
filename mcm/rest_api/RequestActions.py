@@ -1875,6 +1875,11 @@ class RequestsFromDataset(Search):
         }
         index_args = {self.casting[self.db_name].get(k, k): v for k, v in index_args.items()}
         # Construct the complex query
-        res = requests_db.search(index_args, page=-1)
-        res['results'] = res.pop('rows', [])
-        return self.output_text(res, 200, {'Content-Type': 'application/json'})
+        index_res = requests_db.search(index_args, page=-1)
+        total_requests = len(index_res)
+        self.logger.debug('Number of retrieved requests: %s', total_requests)
+        response = {
+            'results': index_res,
+            'total_requests': total_requests
+        }
+        return self.output_text(response, 200, {'Content-Type': 'application/json'})
