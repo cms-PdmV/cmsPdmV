@@ -23,6 +23,7 @@ from tools.handlers import RequestInjector, submit_pool
 from tools.user_management import access_rights
 from tools.priority import priority
 from tools.utils import clean_split, expand_range
+from rest_api.ControlActions import Search
 from flask_restful import reqparse
 
 
@@ -1844,3 +1845,41 @@ class GENLogOutput(RESTResource):
         result = mcm_request.get_gen_script_output()
         code = 404 if 'Error getting checking script output' in result else 200
         return self.output_text(result, code, headers={'Content-Type': 'text/plain'})
+    
+
+class RequestsFromDataset(Search):
+    """
+    Retrieves the information of all requests
+    which include the desired `dataset_name`
+    using the Apache Lucene index.
+    """
+
+    access_limit = access_rights.user
+    modules = {'requests': 'request'}
+    casting = None
+
+    def __init__(self):
+        super(RequestsFromDataset, self).__init__()
+        self.count_call()
+        self.db_name = 'requests'
+
+    def get(self, dataset_name):
+        """
+        Retrieve the data of all the requests related to
+        the given data `dataset_name`.
+        """
+        self.logger.debug('Retriving all requests related to dataset: %s', dataset_name)
+        requests_db = database(self.db_name)
+        index_args = {
+            'dataset_name': dataset_name
+        }
+        index_args = {self.casting[self.db_name].get(k, k): v for k, v in index_args.items()}
+        # Construct the complex query
+        index_res = requests_db.search(index_args, page=-1)
+        total_requests = len(index_res)
+        self.logger.debug('Number of retrieved requests: %s', total_requests)
+        response = {
+            'results': index_res,
+            'total_requests': total_requests
+        }
+        return self.output_text(response, 200, {'Content-Type': 'application/json'})
