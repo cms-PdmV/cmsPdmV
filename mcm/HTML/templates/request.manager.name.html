@@ -16,7 +16,7 @@
             </b>
           </li>
           <li>
-            <a ng-href="http://cms-pdmv.cern.ch/stats/?workflow_name={{reqmgr.name}}" rel="tooltip" title="Open {{reqmgr.name}} in Stats" target="_blank">Check in Stats</a>
+            <a ng-href="https://cms-pdmv-prod.web.cern.ch/stats/?workflow_name={{reqmgr.name}}" rel="tooltip" title="Open {{reqmgr.name}} in Stats" target="_blank">Check in Stats</a>
           </li>
         </ul>
       </span>
@@ -31,7 +31,7 @@
           status: {{stats_cache[reqmgr.name].pdmv_status_from_reqmngr}}<span ng-if="stats_cache[reqmgr.name].pdmv_status_from_reqmngr === undefined"><i>unknown</i></span>,
         </li>
         <li>
-          Last update in <a ng-href="http://cms-pdmv.cern.ch/stats/?workflow_name={{reqmgr.name}}" rel="tooltip" title="Open {{reqmgr.name}} in Stats" target="_blank">Stats</a>: {{stats_cache[reqmgr.name].pdmv_monitor_time}}<span ng-if="stats_cache[reqmgr.name].pdmv_monitor_time === undefined"><i>unknown</i></span>,
+          Last update in <a ng-href="https://cms-pdmv-prod.web.cern.ch/stats/?workflow_name={{reqmgr.name}}" rel="tooltip" title="Open {{reqmgr.name}} in Stats" target="_blank">Stats</a>: {{stats_cache[reqmgr.name].pdmv_monitor_time}}<span ng-if="stats_cache[reqmgr.name].pdmv_monitor_time === undefined"><i>unknown</i></span>,
         </li>
         <li>Output datasets:
           <ul style="margin-bottom: 0px;" ng-show="true;">

@@ -86,8 +86,8 @@
               </div>
               <div ng-switch-when="PrepId">
                 <a ng-href='{{getLocation()}}&prepid={{data[value.db_name]}}' rel="tooltip" title="View only {{data[value.db_name]}}" target="_self">{{data[value.db_name]}}</a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/batches/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4) || isDevMachine();"><i class="icon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/batches/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>
+                <a ng-href="https://cms-pdmv-prod.web.cern.ch/mcm/admin/_utils/#database/batches/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4) || isDevMachine();"><i class="icon-star"></i></a>
+                <a ng-href="https://cms-pdmv-dev.web.cern.ch/mcm/admin/_utils/#database/batches/{{data[value.db_name]}}" rel="tooltip" title="Admin view of {{data[value.db_name]}}" target="_self" ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>
               </div>
               <div ng-switch-when="Notes">
                 <div style="width:500px"><pre class="notes">{{data[value.db_name]}}</pre></div>

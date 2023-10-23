@@ -76,11 +76,11 @@
                    rel="tooltip"
                    title="View batches containing {{data.prepid}}"
                    target="_self"><i class="icon-tags"></i></a>
-                <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/requests/{{data[column.db_name]}}"
+                <a ng-href="https://cms-pdmv-prod.web.cern.ch/mcm/admin/_utils/#database/requests/{{data[column.db_name]}}"
                    rel="tooltip"
                    title="Admin view of {{data[column.db_name]}}"
                    ng-hide="role(4) || isDevMachine();"><i class="icon-star"></i></a>
-                <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/requests/{{data[column.db_name]}}"
+                <a ng-href="https://cms-pdmv-dev.web.cern.ch/mcm/admin/_utils/#database/requests/{{data[column.db_name]}}"
                    rel="tooltip"
                    title="Admin view of {{data[column.db_name]}}"
                    ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>

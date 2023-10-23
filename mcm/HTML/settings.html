@@ -64,8 +64,8 @@
           <div ng-switch on="data.text">
             <div ng-switch-when="Prepid">
               <a ng-href="settings?prepid={{settings_info['prepid']}}" rel="tooltip" title="View only {{settings_info['prepid']}}" target="_self"> {{settings_info['prepid']}}</a>
-              <a ng-href="https://cms-pdmv.cern.ch/mcm/admin/_utils/#database/settings/{{settings_info[data.db_name]}}" rel="tooltip" title="Admin view of {{settings_info[data.db_name]}}" target="_self" ng-hide="role(4) || isDevMachine();"><i class="icon-star"></i></a>
-              <a ng-href="https://cms-pdmv-dev.cern.ch/mcm/admin/_utils/#database/settings/{{settings_info[data.db_name]}}" rel="tooltip" title="Admin view of {{settings_info[data.db_name]}}" target="_self" ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>
+              <a ng-href="https://cms-pdmv-prod.web.cern.ch/mcm/admin/_utils/#database/settings/{{settings_info[data.db_name]}}" rel="tooltip" title="Admin view of {{settings_info[data.db_name]}}" target="_self" ng-hide="role(4) || isDevMachine();"><i class="icon-star"></i></a>
+              <a ng-href="https://cms-pdmv-dev.web.cern.ch/mcm/admin/_utils/#database/settings/{{settings_info[data.db_name]}}" rel="tooltip" title="Admin view of {{settings_info[data.db_name]}}" target="_self" ng-hide="role(4) || !isDevMachine();"><i class="icon-star"></i></a>
             </div>
             <div ng-switch-when="Actions">
               <a rel="tooltip" title="Edit settings" ng-href="edit?db_name=settings&prepid={{settings_info['prepid']}}" ng-hide="role(4);" target="_self">

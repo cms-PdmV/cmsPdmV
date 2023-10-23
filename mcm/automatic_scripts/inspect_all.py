@@ -41,7 +41,7 @@ def do_with_timeout(func, *args, **kwargs):
 
 
 def inspect_campaign(campaign_prepid):
-    return os.system('curl -k -L -s --cookie %s https://cms-pdmv.cern.ch/mcm/restapi/campaigns/inspect/%s' % (os.getenv('PROD_COOKIE'), campaign_prepid))
+    return os.system('curl -k -L -s --cookie %s https://cms-pdmv-prod.web.cern.ch/mcm/restapi/campaigns/inspect/%s' % (os.getenv('PROD_COOKIE'), campaign_prepid))
 
 
 def get_all_campaigns():
