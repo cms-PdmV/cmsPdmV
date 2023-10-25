@@ -1444,16 +1444,6 @@ class request(json_base):
                           'echo "CPU_NAME=$cpu_name ($hypervisor_name)"',
                           '']
 
-        # Whether to dump cmsDriver.py to a file so it could be run using singularity
-        if not default_scram_arch:
-            bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
-                          'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
-                          '#!/bin/bash',
-                          '']
-
-        # Set up CMSSW environment
-        bash_file += self.make_release().split('\n')
-
         # Get the fragment if need to
         fragment_name = self.get_fragment()
         if fragment_name:
@@ -1479,6 +1469,19 @@ class request(json_base):
                               '    exit -1',
                               '  fi',
                               'fi']
+
+        # Whether to dump cmsDriver.py to a file so it could be run using singularity
+        if not default_scram_arch:
+            bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
+                          'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
+                          '#!/bin/bash',
+                          '']
+
+        # Set up CMSSW environment
+        bash_file += self.make_release().split('\n')
+        
+        # Include the fragment script downloaded outside the CMSSW folder
+        bash_file += 'mv ../../Configuration .'
 
         bash_file += ['scram b',
                       'cd ../..',
