@@ -1472,7 +1472,8 @@ class request(json_base):
 
         # Whether to dump cmsDriver.py to a file so it could be run using singularity
         if not default_scram_arch:
-            bash_file += ['# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
+            bash_file += ['',
+                          '# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
                           'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
                           '#!/bin/bash',
                           '']
@@ -1481,7 +1482,7 @@ class request(json_base):
         bash_file += self.make_release().split('\n')
         
         # Include the fragment script downloaded outside the CMSSW folder
-        bash_file += 'mv ../../Configuration .'
+        bash_file += ['mv ../../Configuration .']
 
         bash_file += ['scram b',
                       'cd ../..',
