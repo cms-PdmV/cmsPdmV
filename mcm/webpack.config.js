@@ -55,7 +55,7 @@ module.exports = [{
                buildHTMLPlugin("news"),
               HotReloader,
               new webpack.DefinePlugin({
-      'API_URL': "'https://cms-pdmv-dev.cern.ch/mcm/'"})],
+      'API_URL': "'https://cms-pdmv-dev.web.cern.ch/mcm/'"})],
 
   resolve: {
     alias: {

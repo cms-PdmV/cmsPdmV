@@ -8,7 +8,7 @@ from inspect_all import do_with_timeout
 
 
 def inspect_chained_request(prepid):
-    return os.system('curl -k -L -s --cookie %s https://cms-pdmv.cern.ch/mcm/restapi/chained_requests/inspect/%s' % (os.getenv('PROD_COOKIE'), prepid))
+    return os.system('curl -k -L -s --cookie %s https://cms-pdmv-prod.web.cern.ch/mcm/restapi/chained_requests/inspect/%s' % (os.getenv('PROD_COOKIE'), prepid))
 
 
 def get_all_chained_campaigns():
