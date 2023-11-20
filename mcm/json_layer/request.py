@@ -2838,7 +2838,7 @@ class request(json_base):
                 self.logger.info('Filter efficiency lower than %s (%s), choosing cores based on evens/lumi',
                                  filter_efficiency_threshold,
                                  filter_efficiency)
-                validation_info = sorted([v for v in validation_info if v['events_per_lumi'] >= 45], key=lambda v: v['cpu_efficiency'])
+                validation_info = sorted([v for v in validation_info if v['events_per_lumi'] >= 10], key=lambda v: v['cpu_efficiency'])
                 self.logger.info('Validation info after filter (by cpu eff) %s', dumps(validation_info, indent=2, sort_keys=True))
                 if validation_info:
                     validation_info = validation_info[-1]

@@ -749,7 +749,7 @@ class ValidationControl():
                 self.submit_item(validation_name, 4)
                 self.submit_item(validation_name, 8)
             else:
-                min_events_per_lumi = 45
+                min_events_per_lumi = 10
                 max_events_per_lumi = self.get_events_per_lumi(storage_item)
                 self.logger.info('Validation max events per lumi: %s, need at least %s', max_events_per_lumi, min_events_per_lumi)
                 if max_events_per_lumi < min_events_per_lumi:
