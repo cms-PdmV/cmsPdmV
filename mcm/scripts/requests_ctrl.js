@@ -37,9 +37,33 @@ angular.module('testApp').controller('resultsCtrl',
 
       $scope.actionPrompt = function(action, prepid) {
         $scope.openIsSureModal($scope.dbName, prepid, action, function (database, prepid, action) {
-          $scope.objectAction(action, prepid);
+          $scope.objectAction(action, prepid);  
         });
       }
+
+      $scope.deleteMultipleRequestPrompt = function (prepid) {
+        let prepids = prepid == 'selected' ? $scope.selected_prepids || [] : prepid = [prepid];
+
+        // If there are no requests selected
+        if (prepids.length === 0) {
+          $scope.openErrorModal(
+            undefined, 
+            "Please select at least one request to apply this operation"
+          );
+          return;
+        }
+        
+        // Custom message
+        let modalMessage = ''
+        for (let p of prepids) {
+          modalMessage += p + ', '
+        }
+        modalMessage = modalMessage.trim().slice(0,-1);
+
+        $scope.openIsSureModal($scope.dbName, modalMessage, 'delete', function (database, prepid, action) {
+          $scope.deleteMultipleRequests(prepids);
+        });
+      };
 
       $scope.objectAction = function (action, prepid) {
         let prepids = prepid == 'selected' ? $scope.selected_prepids : prepid = [prepid];
@@ -60,6 +84,65 @@ angular.module('testApp').controller('resultsCtrl',
         }).error(function (data, status) {
           delete $scope.actionMessage[prepid];
           $scope.openErrorModal(undefined, data['message'])
+        });
+      };
+
+      /**
+       * Deletes a group of selected requests
+       * @param prepids (string[]): Request's prepids to delete
+       */
+      $scope.deleteMultipleRequests = function (prepids) {
+        for (let prepid of prepids) {
+          // Reset messages
+          $scope.actionMessage[prepid] = 'loading';
+        }
+        const deleteRequestEndpoint = 'restapi/requests/delete/';
+        const deletedRequests = [];
+
+        // Call the API
+        for (let prepid of prepids) {
+          const deletePromise = $http.delete(deleteRequestEndpoint + prepid);
+          deletedRequests.push(deletePromise);
+        }
+
+        // Wait for all the promises to finish.
+        Promise.allSettled(deletedRequests).then((results) => {
+          const failureResponse = {};
+          for (let r of results) {
+            const promiseFulfilled = r.status === 'fulfilled';
+            const response = promiseFulfilled ? r.value : r.reason;
+
+            let prepidResponse = ''
+            const isFulfilled = promiseFulfilled && response.status == 200;
+
+            if (isFulfilled) {
+              let successful = response.data.results || false;
+              prepidResponse = response.data.prepid;
+              if (successful) {
+                $scope.actionMessage[prepidResponse] = 'OK';  
+              }
+              else {
+                delete $scope.actionMessage[prepidResponse];
+                failureResponse[prepidResponse] = response.data.message || 'Unable to delete the request'
+              }
+            }
+            else {
+              prepidResponse = response.config.url.trim().split('/').slice(-1)[0] || ''
+              delete $scope.actionMessage[prepidResponse];
+              failureResponse[prepidResponse] = response.data.message || 'Unable to delete the request'
+            }
+          }
+          // Parse the error message and display it to the user.
+          if (Object.keys(failureResponse).length !== 0) {
+            let errorMessage = 'Error deleting the following requests:\n'
+            errorMessage += JSON.stringify(failureResponse, null, 4);
+            console.error(errorMessage);
+            $scope.openErrorModal(undefined, errorMessage)
+          }
+
+          // Refresh the view
+          $scope.selected_prepids = [];
+          $scope.getData();
         });
       };
 
