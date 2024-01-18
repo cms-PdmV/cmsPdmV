@@ -215,11 +215,15 @@ class request(json_base):
                 # Allow generator conveners to edit dataset name for
                 # "validation-validation", "define-" and "approve-" requests
                 editable['dataset_name'] = True
+                editable['extension'] = True
+                editable['process_string'] = True
 
             if self.current_user_level == 1 and self.get_attribute('approval') in ('validation', 'define', 'approve'):
                 # Allow generator contacts to edit dataset name for
                 # "validation-validation", "define-" and "approve-" requests
                 editable['dataset_name'] = True
+                editable['extension'] = True
+                editable['process_string'] = True
 
             if self.current_user_level > 3:  # only for admins
                 for key in self._json_base__schema:
