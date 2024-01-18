@@ -1335,8 +1335,10 @@ class request(json_base):
         prepid = self.get_attribute('prepid')
         member_of_campaign = self.get_attribute('member_of_campaign')
         scram_arch = self.get_scram_arch().lower()
-        default_scram_arch = scram_arch.startswith('slc7_')
         bash_file = ['#!/bin/bash', '']
+
+        # Always use a singularity container.
+        default_scram_arch = False
 
         if not for_validation or automatic_validation:
             bash_file += ['#############################################################',
@@ -1673,6 +1675,10 @@ class request(json_base):
             os_name = scram_arch.split('_')[0]
             container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
 
+            # Use a valid tag for CentOS 7 available in /cvmfs
+            if os_name == 'slc7':
+                os_name = 'el7'
+
             bash_file += ['if [ -e "%s/%s:amd64" ]; then' % (container_path, os_name),
                           '  CONTAINER_NAME="%s:amd64"' % (os_name),
                           'elif [ -e "%s/%s:x86_64" ]; then' % (container_path, os_name),
@@ -1682,9 +1688,7 @@ class request(json_base):
                           '  exit 1',
                           'fi']
             if for_validation:
-                # Validation will run on CC7 machines (HTCondor, lxplus)
-                # If it's CC7, just run the script normally
-                # If it's not CC7, run it in singularity container
+                # Validation will run on CMS CAF nodes (HTCondor, lxplus)
                 bash_file += ['# Run in singularity container',
                               '# Mount afs, eos, cvmfs',
                               '# Mount /etc/grid-security for xrootd',
@@ -1692,8 +1696,6 @@ class request(json_base):
                               'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)]
             else:
                 # Config generation for production run on CC7 machine - vocms0481
-                # If it's CC7, just run the script normally
-                # If it's not CC7, run it in singularity container
                 bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
                               'singularity run -B /afs -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)]
 

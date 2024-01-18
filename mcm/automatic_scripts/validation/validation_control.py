@@ -990,7 +990,7 @@ class ValidationControl():
                        'RequestCpus           = %s' % (request_cores),
                        '+AccountingGroup      = "group_u_CMS.CAF.PHYS"',
                        '+JobPrio              = %s' % (condor_prio),
-                       'requirements          = (OpSysAndVer =?= "CentOS7")',
+                       'requirements          = (OpSysAndVer =?= "AlmaLinux9")',
                        # Leave in queue when status is DONE for 30 minutes - 1800 seconds
                        'leave_in_queue        = JobStatus == 4 && (CompletionDate =?= UNDEFINED || ((CurrentTime - CompletionDate) < 1800))',
                        'queue']
