@@ -427,7 +427,7 @@ class request(json_base):
             raise self.WrongApprovalSequence(
                 self.get_attribute('status'),
                 'validation',
-                'Single core request should use <= 4GB memory')
+                'Single core request should use <= 4GB memory. Try increasing the number of cores')
 
         # Do not allow to validate if there are collisions
         self.check_for_collisions()
