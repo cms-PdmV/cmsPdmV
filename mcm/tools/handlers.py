@@ -310,7 +310,10 @@ class SubmissionsBase(Handler):
         command += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
 
         executable_file_name = '%supload_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
-        default_scram_arch = scram_arch.startswith('slc7_')
+
+        # Always use singularity containers.
+        default_scram_arch = False
+
         if not default_scram_arch:
             command += 'cat > %s << \'EndOfInjectFile\'\n' % (executable_file_name)
             command += '#!/bin/bash\n'
@@ -331,6 +334,11 @@ class SubmissionsBase(Handler):
             command += '\n\nEndOfInjectFile\n'
             command += 'chmod +x %s\n' % (executable_file_name)
             os_name = scram_arch.split('_')[0]
+
+            # Use a valid tag for CentOS 7 available in /cvmfs
+            if os_name == 'slc7':
+                os_name = 'el7'
+
             container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
             command += 'if [ -e "%s/%s:amd64" ]; then\n' % (container_path, os_name)
             command += '  CONTAINER_NAME="%s:amd64"\n' % (os_name)
