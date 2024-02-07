@@ -311,14 +311,10 @@ class SubmissionsBase(Handler):
 
         executable_file_name = '%supload_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
 
-        # Always use singularity containers.
-        default_scram_arch = False
-
-        if not default_scram_arch:
-            command += 'cat > %s << \'EndOfInjectFile\'\n' % (executable_file_name)
-            command += '#!/bin/bash\n'
-            command += 'cd %s \n' % (directory)
-
+        command += 'cat > %s << \'EndOfInjectFile\'\n' % (executable_file_name)
+        command += '#!/bin/bash\n'
+        command += 'cd %s \n' % (directory)
+        
         command += mcm_r.make_release()
         test_params = ''
         if locator_type.isDev():
@@ -330,27 +326,27 @@ class SubmissionsBase(Handler):
                                                                                                      self.database_name,
                                                                                                      self.prepid,
                                                                                                      test_params)
-        if not default_scram_arch:
-            command += '\n\nEndOfInjectFile\n'
-            command += 'chmod +x %s\n' % (executable_file_name)
-            os_name = scram_arch.split('_')[0]
+        
+        command += '\n\nEndOfInjectFile\n'
+        command += 'chmod +x %s\n' % (executable_file_name)
+        os_name = scram_arch.split('_')[0]
 
-            # Use a valid tag for CentOS 7 available in /cvmfs
-            if os_name == 'slc7':
-                os_name = 'el7'
+        # Use a valid tag for CentOS 7 available in /cvmfs
+        if os_name == 'slc7':
+            os_name = 'el7'
 
-            container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
-            command += 'if [ -e "%s/%s:amd64" ]; then\n' % (container_path, os_name)
-            command += '  CONTAINER_NAME="%s:amd64"\n' % (os_name)
-            command += 'elif [ -e "%s/%s:x86_64" ]; then\n' % (container_path, os_name)
-            command += '  CONTAINER_NAME="%s:x86_64"\n' % (os_name)
-            command += 'else\n'
-            command += '  echo "Could not find amd64 or x86_64 for %s"\n' % (os_name)
-            command += '  exit 1\n'
-            command += 'fi\n'
-            command += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
-            command += 'singularity run -B /afs -B /cvmfs -B /etc/pki/ca-trust --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME %s\n' % (executable_file_name)
-            command += 'rm -f %s\n' % (executable_file_name)
+        container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
+        command += 'if [ -e "%s/%s:amd64" ]; then\n' % (container_path, os_name)
+        command += '  CONTAINER_NAME="%s:amd64"\n' % (os_name)
+        command += 'elif [ -e "%s/%s:x86_64" ]; then\n' % (container_path, os_name)
+        command += '  CONTAINER_NAME="%s:x86_64"\n' % (os_name)
+        command += 'else\n'
+        command += '  echo "Could not find amd64 or x86_64 for %s"\n' % (os_name)
+        command += '  exit 1\n'
+        command += 'fi\n'
+        command += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
+        command += 'singularity run -B /afs -B /cvmfs -B /etc/pki/ca-trust --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME %s\n' % (executable_file_name)
+        command += 'rm -f %s\n' % (executable_file_name)
 
         command += 'rm -f %s' % (proxy_file_name)
         self.logger.info('Inject command:\n\n%s\n\n' % (command))
