@@ -1346,9 +1346,6 @@ class request(json_base):
         scram_arch = self.get_scram_arch().lower()
         bash_file = ['#!/bin/bash', '']
 
-        # Always use a singularity container.
-        default_scram_arch = False
-
         if not for_validation or automatic_validation:
             bash_file += ['#############################################################',
                           '#   This script is used by McM when it performs automatic   #',
@@ -1481,13 +1478,13 @@ class request(json_base):
                               '  fi',
                               'fi']
 
-        # Whether to dump cmsDriver.py to a file so it could be run using singularity
-        if not default_scram_arch:
-            bash_file += ['',
-                          '# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
-                          'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
-                          '#!/bin/bash',
-                          '']
+        bash_file += [
+            '',
+            '# Dump actual test code to a %s file that can be run in Singularity' % (test_file_name),
+            'cat <<\'EndOfTestFile\' > %s' % (test_file_name),
+            '#!/bin/bash',
+            ''
+        ]
 
         # Set up CMSSW environment
         bash_file += self.make_release().split('\n')
@@ -1672,41 +1669,47 @@ class request(json_base):
                           'fi',
                          ]
 
-        if not default_scram_arch:
-            bash_file += ['',
-                          '# End of %s file' % (test_file_name),
-                          'EndOfTestFile',
-                          '',
-                          '# Make file executable',
-                          'chmod +x %s' % (test_file_name),
-                          '']
+        bash_file += [
+            '',
+            '# End of %s file' % (test_file_name),
+            'EndOfTestFile',
+            '',
+            '# Make file executable',
+            'chmod +x %s' % (test_file_name),
+            ''
+        ]
 
-            os_name = scram_arch.split('_')[0]
-            container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
+        os_name = scram_arch.split('_')[0]
+        container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
 
-            # Use a valid tag for CentOS 7 available in /cvmfs
-            if os_name == 'slc7':
-                os_name = 'el7'
+        # Use a valid tag for CentOS 7 available in /cvmfs
+        if os_name == 'slc7':
+            os_name = 'el7'
 
-            bash_file += ['if [ -e "%s/%s:amd64" ]; then' % (container_path, os_name),
-                          '  CONTAINER_NAME="%s:amd64"' % (os_name),
-                          'elif [ -e "%s/%s:x86_64" ]; then' % (container_path, os_name),
-                          '  CONTAINER_NAME="%s:x86_64"' % (os_name),
-                          'else',
-                          '  echo "Could not find amd64 or x86_64 for %s"' % (os_name),
-                          '  exit 1',
-                          'fi']
-            if for_validation:
-                # Validation will run on CMS CAF nodes (HTCondor, lxplus)
-                bash_file += ['# Run in singularity container',
-                              '# Mount afs, eos, cvmfs',
-                              '# Mount /etc/grid-security for xrootd',
-                              'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)]
-            else:
-                # Config generation for production run on CC7 machine - vocms0481
-                bash_file += ['export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                              'singularity run -B /afs -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)]
+        bash_file += [
+            'if [ -e "%s/%s:amd64" ]; then' % (container_path, os_name),
+            '  CONTAINER_NAME="%s:amd64"' % (os_name),
+            'elif [ -e "%s/%s:x86_64" ]; then' % (container_path, os_name),
+            '  CONTAINER_NAME="%s:x86_64"' % (os_name),
+            'else',
+            '  echo "Could not find amd64 or x86_64 for %s"' % (os_name),
+            '  exit 1',
+            'fi'
+        ]
+        if for_validation:
+            # Validation will run on CMS CAF nodes (HTCondor, lxplus)
+            bash_file += [
+                '# Run in singularity container',
+                '# Mount afs, eos, cvmfs',
+                '# Mount /etc/grid-security for xrootd',
+                'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
+                'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
+            ]
+        else:
+            bash_file += [
+                'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
+                'singularity run -B /afs -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
+            ]
 
         # Empty line at the end of the file
         bash_file += ['']
