@@ -59,5 +59,5 @@ class locator:
         """
         cred_header = os.getenv("COUCH_CRED", "")
         if not cred_header:
-            raise RuntimeError("Please provide the CouchDB authentication header")
+            raise RuntimeError("Set COUCH_CRED to the CouchDB authentication header")
         return cred_header
