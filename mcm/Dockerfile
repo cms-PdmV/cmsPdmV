@@ -38,5 +38,7 @@ COPY --chown=pdmv:pdmv --from=frontend /usr/app/scripts ./scripts
 
 USER 1001
 
+EXPOSE 8000/tcp
+
 ENV PATH="/usr/app/venv/bin:$PATH"
 CMD [ "python", "main.py" ]
