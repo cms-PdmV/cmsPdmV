@@ -1,0 +1,55 @@
+# This deploys the database and the search engine
+version: "3.8"
+services:
+  couchdb:
+    container_name: "couchdb"
+    image: docker.io/couchdb:3.3.3@sha256:b8c85ebce55d1c0c676ce7a9beaff87f514c0df25afd5fa844e744985c0c2fd1
+    environment:
+      - NODENAME=${COUCHDB_NODENAME}
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+    ports:
+      - "${COUCHDB_PORT}:5984"
+    volumes:
+      - ${COUCHDB_DATA}:/opt/couchdb/data
+    networks:
+      - mcm
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5984"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+  
+  config-couchdb:
+    container_name: "couchdb-wizard"
+    image: docker.io/library/alpine:latest
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+    depends_on:
+      - couchdb
+    command: |
+      sh -c 'apk add curl &&
+             curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@couchdb:5984/_users &&
+             curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@couchdb:5984/_replicator &&
+             curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@couchdb:5984/_global_changes'
+    networks:
+      - mcm
+    
+  couchdb-lucene:
+    container_name: "lucene"
+    image: docker.io/pdmvserv/couchdb-lucene:2.2.0@sha256:efdde9c34c2d3ce3896f25289e02001b258452e1a8931bba31a01c78c074d1be
+    volumes:
+      - ${LUCENE_DATA_PATH}:/opt/couchdb-lucene/indexes
+      - ${LUCENE_CONF_PATH}:/opt/couchdb-lucene/conf
+    ports:
+      - ${LUCENE_PORT}:5985
+    depends_on:
+      - couchdb
+    networks:
+      - mcm
+
+networks:
+  mcm:
+    name: mcm
