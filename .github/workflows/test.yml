@@ -8,12 +8,20 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: "mcm/"
+        working-directory: "repo/mcm/"
 
     # Job steps
     steps:
       - name: Retrieve source code
         uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - name: Find source code
+        run: |
+          echo "Source code at: $GITHUB_WORKSPACE"
+          ls -alrh $GITHUB_WORKSPACE
+          tree $GITHUB_WORKSPACE
 
       - name: Deploy components
         env:

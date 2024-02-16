@@ -19,10 +19,11 @@ export LUCENE_CONF_PATH="$DATA_PATH/lucene/config"
 
 # Path to CouchDB Lucene config file
 TO_INI_PATH='deploy/couchdb-lucene.ini'
-cp $GITHUB_WORKSPACE/$TO_INI_PATH $LUCENE_CONF_PATH/
+REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
+cp $REPO_PATH/$TO_INI_PATH $LUCENE_CONF_PATH/
 
 # Deployment
-docker compose -f $GITHUB_WORKSPACE/deploy/mcm-databases.yml up -d
+docker compose -f $REPO_PATH/deploy/mcm-databases.yml up -d
 echo "Waiting for $SECONDS_TO_WAIT seconds...."
 sleep $SECONDS_TO_WAIT
 docker ps -a
