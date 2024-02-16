@@ -1,0 +1,27 @@
+name: API testing for McM
+on:
+  workflow_dispatch:
+
+jobs:
+  database:
+    name: Deploy CouchDB and CouchDB Lucene
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "mcm/"
+
+    # Job steps
+    steps:
+      - name: Retrieve source code
+        uses: actions/checkout@v4
+
+      - name: Deploy components
+        env:
+          COUCHDB_PORT: '5984'
+          COUCHDB_USER: 'test'
+          COUCHDB_PASSWORD: 'test'
+          COUCHDB_NODENAME: '127.0.0.1'
+          LUCENE_PORT: '5985'
+          SECONDS_TO_WAIT: '10'
+        run: |
+          bash deploy/action.sh
