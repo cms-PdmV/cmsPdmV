@@ -46,3 +46,18 @@ class locator:
             return 'https://cmsweb-testbed.cern.ch/'
         else:
             return 'https://cmsweb.cern.ch/'
+
+    def database_credentials(self):
+        """
+        Retrieve the credential's header to the CouchDB database.
+        It is taken from the runtime environment.
+
+        Returns:
+            str: CouchDB basic credentials coded as base64.
+        Raises:
+            RuntimeError: If they are not provided.
+        """
+        cred_header = os.getenv("COUCH_CRED", "")
+        if not cred_header:
+            raise RuntimeError("Set COUCH_CRED to the CouchDB authentication header")
+        return cred_header

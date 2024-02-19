@@ -34,22 +34,9 @@ class database:
         self.cache_enabled = cache_enabled or db_name in {'campaigns', 'chained_campaigns'}
         self.db_url = self.resolve_hostname_to_ip(url)
         self.lucene_url = self.resolve_hostname_to_ip(lucene_url)
-        self.auth_header = self.get_auth_header()
+        self.auth_header = locator().database_credentials()
         self.opener = urllib2.build_opener(urllib2.HTTPHandler)
         self.max_attempts = 3
-
-    def get_auth_header(self):
-        """
-        Return authentication to couchdb header
-        """
-        filename = '/home/pdmvserv/private/couchdb_credentials_json.txt'
-        filename = os.getenv('COUCH_CRED', filename)
-        with open(filename) as json_file:
-            credentials = json.load(json_file)
-
-        b64 = '%s:%s' % (credentials['username'], credentials['password'])
-        b64 = base64.b64encode(b64)
-        return 'Basic %s' % (b64)
 
     def resolve_hostname_to_ip(self, hostname):
         """
