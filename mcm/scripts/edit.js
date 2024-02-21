@@ -118,7 +118,6 @@ angular.module('testApp').controller('ModalDemoCtrl',
 
     // Generator parameters stuff
     $scope.showData = {
-        "Cross section": "cross_section",
         "Filter efficiency": "filter_efficiency",
         "Filter efficiency error": "filter_efficiency_error",
         "Match efficiency": "match_efficiency",
@@ -475,7 +474,6 @@ testApp.directive("generatorParams", function($http){
     '          <label class="control-label">{{key}}</label>'+
     '          <div class="controls">'+
     '            <input type="text" ng-model="gen_params.data[value]">'+
-    '            <a ng-if="key==\'Cross section\'" class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
     '          </div>'+
     '        </div>'+
     '      </form>'+
@@ -490,7 +488,6 @@ testApp.directive("generatorParams", function($http){
     '      <dl class="dl-horizontal" style="margin-bottom: 0px; margin-top: 0px;" ng-if="$index==genParam_data.length-1">'+
     '        <dt ng-repeat-start="(key, value) in showData">{{key.toLowerCase()}}</dt>'+
     '        <dd ng-repeat-end class="clearfix">{{elem[value]}}'+
-    '          <a ng-if="key==\'Cross section\'" class="label label-info" rel="tooltip" title="pico barn" ng-href="#">pb</a>'+
     '        </dd>'+
     '        <dt>author username</dt>'+
     '        <dd class="clearfix">{{elem["submission_details"]["author_username"]}}</dd>'+
