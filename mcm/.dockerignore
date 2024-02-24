@@ -1,0 +1,14 @@
+# Ignore the following files for image building
+logs/
+venv/
+automatic_scripts/
+deploy/
+.vscode/
+*.env
+
+# Ignore Python cache
+__pycache__/
+
+# Ignore Docker Compose files
+*.yaml
+*.pid
