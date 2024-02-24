@@ -165,6 +165,7 @@ class SubmissionsBase(Handler):
         #     self.inject_logger.error('Could not acquire lock for injection with prepid %s' % (self.prepid))
         #     return False
 
+        l_type = locator()
         self.inject_logger.info('Injection with prepid %s' % (self.prepid))
         try:
             mcm_r = self.requests[-1]
@@ -173,7 +174,7 @@ class SubmissionsBase(Handler):
                 semaphore_events.increment(self.batch_name)
 
             self.inject_logger.info('Got batch name %s for prepid %s' % (self.batch_name, self.prepid))
-            with ssh_executor(server='vocms0481.cern.ch') as ssh:
+            with ssh_executor(server=l_type.mcm_executor_node()) as ssh:
                 cmd = self.make_injection_command(mcm_r)
                 self.inject_logger.info('Command used for injecting requests %s: %s' % (self.prepid, cmd))
                 # modify here to have the command to be executed
@@ -521,13 +522,14 @@ class RequestApprover(Handler):
             text)
 
     def internal_run(self):
+        l_type = locator()
         command = self.make_command()
         try:
             self.logger.info("Command being used for approve requests: " + command)
             trails = 1
             while trails < 3:
                 self.logger.info("Wmapprove trail number: %s" % trails)
-                with ssh_executor(server='vocms0481.cern.ch') as executor:
+                with ssh_executor(server=l_type.mcm_executor_node()) as executor:
                     _, stdout, stderr = executor.execute(command)
                     if not stdout and not stderr:
                         self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)

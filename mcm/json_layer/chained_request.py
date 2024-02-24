@@ -811,7 +811,7 @@ class chained_request(json_base):
                     next_request.get_attribute("sequences"))
             else:
                 self.logger.debug("\tget from stats")
-                statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
+                statsDB = database('stats', url=l_type.stats_database_url())
                 if statsDB.document_exists(last_wma['name']):
                     latestStatus = statsDB.get(last_wma['name'])
                     input_dataset = self.get_ds_input(

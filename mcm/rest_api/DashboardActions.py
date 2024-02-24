@@ -5,6 +5,7 @@ import datetime
 from RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
+from tools.locator import locator
 
 class GetBjobs(RESTResource):
 
@@ -47,7 +48,7 @@ class GetLogFeed(RESTResource):
         """
         Gets a number of lines from given log.
         """
-        name = os.path.join('logs', os.path.basename(filename))
+        name = os.path.join(locator().logs_folder(), os.path.basename(filename))
         return self.read_logs(name, lines)
 
     def read_logs(self, name, nlines):
@@ -102,7 +103,7 @@ class GetLogs(RESTResource):
     access_limit = access_rights.user
 
     def __init__(self):
-        self.path = "logs"
+        self.path = locator.logs_folder()
         self.before_request()
         self.count_call()
 
