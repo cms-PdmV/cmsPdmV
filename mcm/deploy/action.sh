@@ -23,7 +23,7 @@ REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
 cp $REPO_PATH/$TO_INI_PATH $LUCENE_CONF_PATH/
 
 # Deployment
-docker compose -f $REPO_PATH/deploy/mcm-databases.yml up -d
+docker compose -f $REPO_PATH/deploy/mcm-components.yml up -d
 echo "Waiting for $SECONDS_TO_WAIT seconds...."
 sleep $SECONDS_TO_WAIT
 docker ps -a
