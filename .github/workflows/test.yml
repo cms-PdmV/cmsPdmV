@@ -3,8 +3,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  database:
-    name: Deploy CouchDB and CouchDB Lucene
+  components:
+    name: Deploy McM components
     runs-on: ubuntu-latest
     defaults:
       run:
