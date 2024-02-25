@@ -1,0 +1,77 @@
+{
+    "_id": "Run3Winter23Reco",
+    "status": "started",
+    "www": "",
+    "prepid": "Run3Winter23Reco",
+    "no_output": false,
+    "events_per_lumi": {
+      "multicore": 1000,
+      "singlecore": 100
+    },
+    "type": "MCReproc",
+    "energy": 13.6,
+    "sequences": [
+      {
+        "default": {
+          "eventcontent": [
+            "RECOSIM",
+            "AODSIM"
+          ],
+          "runsScenarioForMC": "",
+          "donotDropOnInput": "",
+          "extra": "",
+          "slhc": "",
+          "runsAndWeightsForMC": "",
+          "outputCommand": "",
+          "dropDescendant": false,
+          "pileup": "",
+          "hltProcess": "",
+          "index": -1,
+          "customise": "RecoParticleFlow/PFClusterProducer/particleFlow_HB2023.customiseHB2023",
+          "custom_conditions": "",
+          "datatier": [
+            "GEN-SIM-RECO",
+            "AODSIM"
+          ],
+          "processName": "",
+          "inputCommands": "",
+          "particle_table": "",
+          "conditions": "126X_mcRun3_2023_forPU65_v1",
+          "harvesting": "",
+          "triggerResultsProcess": "",
+          "inputEventContent": "",
+          "beamspot": "",
+          "restoreRNDSeeds": "",
+          "filtername": "",
+          "repacked": "",
+          "customise_commands": "",
+          "step": [
+            "RAW2DIGI",
+            "L1Reco",
+            "RECO",
+            "RECOSIM"
+          ],
+          "gflash": "",
+          "procModifiers": "",
+          "magField": "",
+          "himix": false,
+          "nThreads": "4",
+          "scenario": "",
+          "geometry": "DB:Extended",
+          "nStreams": 0,
+          "datamix": "",
+          "inline_custom": false,
+          "era": "Run3_2023"
+        }
+      }
+    ],
+    "cmssw_release": "CMSSW_12_6_5",
+    "next": [],
+    "input_dataset": "",
+    "generators": [],
+    "memory": 8000,
+    "pileup_dataset_name": "",
+    "root": 1,
+    "notes": "",
+    "history": []
+}

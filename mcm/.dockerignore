@@ -1,6 +1,7 @@
 # Ignore the following files for image building
 logs/
-venv/
+venv*/
+tests/
 automatic_scripts/
 deploy/
 .vscode/
