@@ -49,7 +49,7 @@ jobs:
           export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
           export TEST_FOLDER_PATH=$REPO_PATH/tests
           python3 -m pip install --upgrade pip
-          python3 -m pip install -r $TEST_FOLDER/requirements.txt
+          python3 -m pip install -r $TEST_FOLDER_PATH/requirements.txt
 
       - name: Run test suite
         run: |
