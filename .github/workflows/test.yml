@@ -30,11 +30,12 @@ jobs:
           COUCHDB_PASSWORD: 'test'
           COUCHDB_NODENAME: '127.0.0.1'
           LUCENE_PORT: '5985'
-          SECONDS_TO_WAIT: '10'
+          SECONDS_TO_WAIT: '30'
           MCM_WARMUP_SECONDS: '10'
           MCM_COUCHDB_URL: 'http://couchdb:5984/'
-          COUCH_CRED: 'dGVzdDp0ZXN0'
+          COUCH_CRED: 'Basic dGVzdDp0ZXN0'
           MCM_LUCENE_URL: 'http://couchdb-lucene:5985/'
+          MCM_EXAMPLE_DATA_URL: ${{ secrets.MCM_EXAMPLE_DATA_URL }}
 
         run: |
           bash deploy/action.sh

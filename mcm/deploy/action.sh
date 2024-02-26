@@ -7,10 +7,22 @@
 echo "Docker version $(docker version)"
 echo "Docker Compose version $(docker compose version)"
 
+# Download and decompress the required data
+if [ -z "$MCM_EXAMPLE_DATA_URL" ]; then
+    echo 'Set $MCM_EXAMPLE_DATA_URL with the URL for downloading the McM data'
+    exit 1
+fi
+
+echo 'Downloading McM data....'
+MCM_DATA_FILE="$HOME/data.tar.gz"
+curl -s -o $MCM_DATA_FILE $MCM_EXAMPLE_DATA_URL
+echo 'Decompressing ....'
+tar -xf $MCM_DATA_FILE -C $HOME/
+
 echo 'Creating data folders'
 DATA_PATH="$HOME/container"
-mkdir -p "$DATA_PATH/couchdb" && \
 mkdir -p "$DATA_PATH/lucene/data" && mkdir -p "$DATA_PATH/lucene/config"
+mv $HOME/couchdb $DATA_PATH
 chown -R "$(whoami):docker" $DATA_PATH && chmod -R 770 $DATA_PATH
 
 export COUCHDB_DATA="$DATA_PATH/couchdb"
@@ -33,3 +45,5 @@ echo "CouchDB:"
 curl -s "http://localhost:$COUCHDB_PORT/" | python3 -m json.tool
 echo "CouchDB Lucene"
 curl -s "http://localhost:$LUCENE_PORT/" | python3 -m json.tool
+echo "McM application"
+curl -s "http://localhost:8000/restapi/users/get_role" | python3 -m json.tool
