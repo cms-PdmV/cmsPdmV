@@ -4,7 +4,7 @@ on:
 
 jobs:
   components:
-    name: Deploy McM components
+    name: Deploy McM components and execute the test suite
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -38,3 +38,21 @@ jobs:
 
         run: |
           bash deploy/action.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11.x'
+
+      - name: Install test dependencies
+        run: |
+          export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
+          export TEST_FOLDER_PATH=$REPO_PATH/tests
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r $TEST_FOLDER/requirements.txt
+
+      - name: Run test suite
+        run: |
+          export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
+          export PYTHONPATH=$REPO_PATH
+          pytest -s -vv
