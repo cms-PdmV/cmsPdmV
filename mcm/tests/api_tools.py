@@ -74,7 +74,7 @@ class APIRequest:
 
         if not self.mcm_couchdb_url:
             error_msg += [
-                "Please the CouchDB connection url via constructor args or `MCM_COUCHDB_URL` variable"
+                "Set the CouchDB connection url via constructor args or the `MCM_COUCHDB_URL` variable"
             ]
         if not self.mcm_couchdb_credential:
             error_msg += [
@@ -174,10 +174,9 @@ class APIRequest:
             data (dict | None): Data to include in the request body.
             headers (dict): Request headers
         """
-        full_headers = {**headers}
+        full_headers = headers.copy()
         if as_role:
-            user_headers = {"Adfs-Login": as_role.value}
-            full_headers.update(user_headers)
+            full_headers["Adfs-Login"] = as_role.value
 
         return self.__http_request(
             base=self.mcm_application_url,
@@ -245,7 +244,7 @@ class APIRequest:
             new_user["username"] = role
             new_user["role"] = role
             new_user["fullname"] = f"Test user for role: {role}"
-            new_users += [new_user]
+            new_users.append(new_user)
 
         # Send the request.
         self.couchdb_request(
