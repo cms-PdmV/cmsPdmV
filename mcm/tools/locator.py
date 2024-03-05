@@ -210,8 +210,8 @@ class locator:
             str: Log folder absolute path.
         """
         custom_path = os.getenv("MCM_LOG_FOLDER")
-        default_path = os.path.join(os.getcwd(), "logs")
         if custom_path:
             self.logger.info("Using a custom log folder: %s", custom_path)
             return custom_path
+        default_path = os.path.join(os.getcwd(), "logs")
         return default_path
