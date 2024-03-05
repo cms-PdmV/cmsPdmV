@@ -331,11 +331,7 @@ class McM:
             )
             url = "restapi/%s/%s/%s" % (object_type, method, object_id)
             res, _ = self._get(url)
-            result = res.get("results")
-            if not result:
-                return None
-
-            return result
+            return res.get("results") or None
         elif query:
             if page != -1:
                 self.logger.debug(
