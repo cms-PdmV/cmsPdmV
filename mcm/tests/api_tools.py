@@ -44,8 +44,7 @@ class APIRequest:
 
         Attributes:
             mcm_couchdb_url (str): McM database URL.
-                If it is not provided, it will be tried to retrieve it from
-                `MCM_COUCHDB_URL`.
+                Retrieved from the environment variable `MCM_COUCHDB_URL` by default.
             mcm_couchdb_credential (str): Credentials to write data in
                 CouchDB. If it is not provided, it will be tried to retrieve it from
                 `COUCH_CRED`
