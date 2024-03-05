@@ -385,7 +385,7 @@ class McM:
         object_data - new JSON of an object to be updated
         method - action to be performed, default is 'save'
         """
-        url = "restapi/%s/%s" % (object_type, method)
+        url = f"restapi/{object_type}/{method}"
         res = self._put(url, object_data)
         return res
 
