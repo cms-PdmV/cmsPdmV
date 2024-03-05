@@ -6,7 +6,9 @@ the campaign entity.
 import uuid
 from pathlib import Path
 from copy import deepcopy
+from importlib.resources import files
 import pytest
+import campaign
 from tests.base_test_tools import Entity, EntityTest, api
 from tests.api_tools import McM, Roles
 
@@ -18,7 +20,7 @@ class CampaignAPI(Entity):
     """
 
     def __init__(self, mcm: McM) -> None:
-        mock_path = Path("./tests/campaign/static/campaign.json").absolute()
+        mock_path: Path = files(campaign).joinpath("static/campaign.json")
         super().__init__(mock_path, mcm)
         self.object_type: str = "campaigns"
 
