@@ -56,7 +56,7 @@ class APIRequest:
                 - Host: MCM_HOST
                 - Port: MCM_PORT
             mockup (bool): If True, the creation/validation of mock users
-                will not be perform
+                will not be performed
         Raises:
             RuntimeError: In case some of the required attributes finish to be empty.
         """
