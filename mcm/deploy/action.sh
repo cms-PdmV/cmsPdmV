@@ -14,7 +14,7 @@ if [ -z "$MCM_EXAMPLE_DATA_URL" ]; then
 fi
 
 echo 'Downloading McM data....'
-curl -s $MCM_EXAMPLE_DATA_URL | tar -xC $HOME
+curl -s $MCM_EXAMPLE_DATA_URL | tar -xzC $HOME
 
 echo 'Creating data folders'
 DATA_PATH="$HOME/container"
