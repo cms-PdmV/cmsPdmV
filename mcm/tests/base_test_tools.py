@@ -6,14 +6,13 @@ its configuration.
 
 from __future__ import annotations
 import abc
-import pytest
 import json
 from pathlib import Path
-from tests.api_tools import APIRequest, McM
+from tests.api_tools import Environment, McM
 from requests import Response
 
 # Default configuration for the test environment
-api = APIRequest(
+config = Environment(
     mcm_couchdb_url="http://localhost:5984/",
     mcm_couchdb_credential="Basic dGVzdDp0ZXN0",
     mcm_couchdb_lucene_url="http://localhost:5985/",

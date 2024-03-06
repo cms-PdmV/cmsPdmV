@@ -8,8 +8,8 @@ from pathlib import Path
 from copy import deepcopy
 from importlib.resources import files
 import pytest
-import campaign
-from tests.base_test_tools import Entity, EntityTest, api
+import tests.campaign as campaign
+from tests.base_test_tools import Entity, EntityTest, config
 from tests.api_tools import McM, Roles
 
 
@@ -84,7 +84,7 @@ class TestCampaign(EntityTest):
 
     @property
     def entity_api(self) -> CampaignAPI:
-        mcm: McM = api.mcm_client(Roles.ADMINISTRATOR)
+        mcm: McM = McM(config=config, role=Roles.ADMINISTRATOR)
         return CampaignAPI(mcm)
 
     def test_create(self):
@@ -188,7 +188,7 @@ class TestCampaignAsProdMgr(TestCampaign):
 
     @property
     def entity_api(self) -> CampaignAPI:
-        mcm: McM = api.mcm_client(Roles.PRODUCTION_MANAGER)
+        mcm: McM = McM(config=config, role=Roles.PRODUCTION_MANAGER)
         return CampaignAPI(mcm)
 
     def test_delete(self):
@@ -206,12 +206,12 @@ class TestCampaignAsUser(TestCampaignAsProdMgr):
 
     @property
     def entity_api(self) -> CampaignAPI:
-        mcm: McM = api.mcm_client(Roles.USER)
+        mcm: McM = McM(config=config, role=Roles.USER)
         return CampaignAPI(mcm)
 
     @property
     def higher_role_entity_api(self) -> CampaignAPI:
-        mcm: McM = api.mcm_client(Roles.ADMINISTRATOR)
+        mcm: McM = McM(config=config, role=Roles.ADMINISTRATOR)
         return CampaignAPI(mcm)
 
     def test_create(self):

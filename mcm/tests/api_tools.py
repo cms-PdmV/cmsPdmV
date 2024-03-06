@@ -24,11 +24,9 @@ class Roles(Enum):
     ADMINISTRATOR = "administrator"
 
 
-class APIRequest:
+class Environment:
     """
-    Provides some utilities to perform HTTP request for consuming
-    endpoints in the McM application impersonating a user or interacting
-    with the database.
+    Wraps some configuration variables about the test environment.
     """
 
     def __init__(
@@ -37,7 +35,6 @@ class APIRequest:
         mcm_couchdb_credential: str = "",
         mcm_couchdb_lucene_url: str = "",
         mcm_application_url: str = "",
-        mockup: bool = False,
     ) -> None:
         """
         Instantiate the API request client.
@@ -55,8 +52,6 @@ class APIRequest:
                 If it is not provided, it will be tried to retrieve it from
                 - Host: MCM_HOST
                 - Port: MCM_PORT
-            mockup (bool): If True, the creation/validation of mock users
-                will not be performed
         Raises:
             ValueError: In case some of the required attributes finish to be empty.
         """
@@ -104,108 +99,54 @@ class APIRequest:
             compress_msg = "\n".join(error_msg)
             raise ValueError(compress_msg)
 
-        # Check the required mock users are available
-        # Otherwise, create them
-        if not mockup:
-            if not self.check_test_users():
-                self.__include_test_users()
 
-    def __http_request(
-        self,
-        base: str,
-        endpoint: str,
-        method: str,
-        data: dict = {},
-        headers: dict = {},
-    ) -> Response:
-        """
-        Executes a HTTP request.
+class McM:
+    """
+    A simple version for McM REST client adapted to
+    be used for building the test cases.
 
-        Args:
-            base (str): Base URL, e.g: http://localhost:5984/
-            endpoint (str): Endpoint to consume, e.g: entity/document?p=1
-            method (str): HTTP method, e.g: POST
-            data (dict | None): Data to include in the request body.
-            headers (dict): Request headers
-        """
-        session = Session()
-        full_url: str = base + endpoint
-        req = Request(method=method, url=full_url, headers=headers, json=data)
-        prepared_req = session.prepare_request(req)
-        return session.send(prepared_req)
+    Arguments:
+        config (Environment): Test environment configuration.
+        role (Roles): User role to impersonate when performing the
+            requests.
+    """
 
-    def couchdb_request(
-        self, endpoint: str, method: str, data: dict = {}, headers: dict = {}
-    ) -> Response:
-        """
-        Sends a HTTP request to CouchDB.
-
-        Args:
-            endpoint (str): Endpoint to consume, e.g: entity/document?p=1
-            method (str): HTTP method, e.g: POST
-            data (dict | None): Data to include in the request body.
-            headers (dict): Request headers
-        """
-        couchdb_headers = {"Authorization": self.mcm_couchdb_credential}
-        full_headers = {**headers, **couchdb_headers}
-        return self.__http_request(
-            base=self.mcm_couchdb_url,
-            endpoint=endpoint,
-            method=method,
-            data=data,
-            headers=full_headers,
+    def __init__(self, config: Environment, role: Roles):
+        self.config = config
+        self.role: Roles = role
+        self.logger = self.__logger()
+        self.mcm_requests = self.__session({"Adfs-Login": role.value})
+        self.lucene_requests = self.__session()
+        self.couchdb_requests = self.__session(
+            {"Authorization": self.config.mcm_couchdb_credential}
         )
+        if not self.check_test_users():
+            self.__include_test_users()
 
-    def mcm_request(
-        self,
-        endpoint: str,
-        method: str,
-        as_role: Roles | None = None,
-        data: dict = {},
-        headers: dict = {},
-    ) -> Response:
+    def __logger(self) -> logging.Logger:
         """
-        Sends a HTTP request to McM web application.
+        Returns a logger for the class
+        """
+        logger = logging.getLogger("mcm-rest-client")
+        formatter = logging.Formatter("[%(asctime)s][%(levelname)s] %(message)s")
+        handler = logging.StreamHandler(sys.stdout)
+
+        handler.setFormatter(formatter)
+        handler.setLevel(logging.INFO)
+        logger.addHandler(handler)
+        return logger
+
+    def __session(self, headers: dict = {}) -> Session:
+        """
+        Create a pre-configured `request.Session` object.
 
         Args:
-            endpoint (str): Endpoint to consume, e.g: entity/document?p=1
-            method (str): HTTP method, e.g: POST
-            as_role (Roles | None): Role to impersonate for the request.
-            data (dict | None): Data to include in the request body.
-            headers (dict): Request headers
+            headers (dict): Headers to include in the pre-configured session.
         """
-        full_headers = headers.copy()
-        if as_role:
-            full_headers["Adfs-Login"] = as_role.value
-
-        return self.__http_request(
-            base=self.mcm_application_url,
-            endpoint=endpoint,
-            method=method,
-            data=data,
-            headers=full_headers,
-        )
-
-    def lucene_request(
-        self, endpoint: str, method: str, data: dict = {}, headers: dict = {}
-    ) -> Response:
-        """
-        Sends a HTTP request to CouchDB Lucene.
-
-        Args:
-            endpoint (str): Endpoint to consume, e.g: entity/document?p=1
-            method (str): HTTP method, e.g: POST
-            data (dict | None): Data to include in the request body.
-            headers (dict): Request headers
-        """
-        return self.__http_request(
-            base=self.mcm_couchdb_lucene_url,
-            endpoint=endpoint,
-            method=method,
-            data=data,
-            headers=headers,
-        )
-
+        s = Session()
+        s.headers.update(headers)
+        return s
+    
     def check_test_users(self) -> bool:
         """
         Checks that there is one user per role
@@ -215,15 +156,14 @@ class APIRequest:
             True if there is one user per role,
                 False otherwise.
         """
+        full_url: str = self.config.mcm_couchdb_url + "users/_find"
         all_roles = [r.value for r in Roles]
         query = {"selector": {"_id": {"$in": all_roles}}}
-        response = self.couchdb_request(
-            endpoint="users/_find", method="POST", data=query
-        )
+        response = self.couchdb_requests.post(url=full_url, json=query)
         content = response.json()
         docs = content.get("docs", [])
         return len(docs) == len(all_roles)
-
+    
     def __include_test_users(self):
         """
         Includes one test user per available role.
@@ -247,64 +187,22 @@ class APIRequest:
             new_users.append(new_user)
 
         # Send the request.
-        self.couchdb_request(
-            endpoint="users/_bulk_docs", method="POST", data={"docs": new_users}
-        )
-
-    def mcm_client(self, role: Roles) -> McM:
-        """
-        Return an instance of the McM client to perform requests
-        to the web application.
-
-        Args:
-            role (Roles): Role to impersonate in the requests.
-        """
-        return McM(api=self, role=role)
-
-
-class McM:
-    """
-    A simple version for McM REST client adapted to
-    be used for building the test cases.
-
-    Arguments:
-        api (APIRequest): Client to perform HTTP requests.
-        role (Roles): User role to impersonate when performing the
-            requests.
-    """
-
-    def __init__(self, api: APIRequest, role: Roles):
-        self.api: APIRequest = api
-        self.role: Roles = role
-        self.logger = self.__logger()
-
-    def __logger(self) -> logging.Logger:
-        """
-        Returns a logger for the class
-        """
-        logger = logging.getLogger("mcm-rest-client")
-        formatter = logging.Formatter("[%(asctime)s][%(levelname)s] %(message)s")
-        handler = logging.StreamHandler(sys.stdout)
-
-        handler.setFormatter(formatter)
-        handler.setLevel(logging.INFO)
-        logger.addHandler(handler)
-        return logger
+        full_url: str = self.config.mcm_couchdb_url + "users/_bulk_docs"
+        self.couchdb_requests.post(url=full_url, json={"docs": new_users})
 
     def _get(self, url) -> tuple[dict, Response]:
-        response = self.api.mcm_request(endpoint=url, method="GET", as_role=self.role)
+        full_url: str = self.config.mcm_application_url + url
+        response = self.mcm_requests.get(url=full_url)
         return response.json(), response
 
     def _put(self, url, data) -> tuple[dict, Response]:
-        response = self.api.mcm_request(
-            endpoint=url, method="PUT", data=data, as_role=self.role
-        )
+        full_url: str = self.config.mcm_application_url + url
+        response = self.mcm_requests.put(url=full_url, json=data)
         return response.json(), response
 
     def _delete(self, url) -> tuple[dict, Response]:
-        response = self.api.mcm_request(
-            endpoint=url, method="DELETE", as_role=self.role
-        )
+        full_url: str = self.config.mcm_application_url + url
+        response = self.mcm_requests.delete(full_url)
         return response.json(), response
 
     # McM methods

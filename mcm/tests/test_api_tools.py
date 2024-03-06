@@ -3,57 +3,57 @@ Test the functionality provided via `api.py` module.
 """
 
 import pytest
-from tests.base_test_tools import api
-from tests.api_tools import APIRequest, Roles
+from tests.base_test_tools import config
+from tests.api_tools import Environment, McM, Roles
 
 
-class TestAPIRequestInit:
+class TestEnvironment:
     """
     Test the different ways to instantiate
-    the `APIRequest` class.
+    the `Environment` class.
     """
+
+    @property
+    def mcm(self) -> McM:
+        if hasattr(self, "_mcm"):
+            return self._mcm
+        else:
+            self._mcm = McM(config=config, role=Roles.USER)
+            return self._mcm
 
     def test_init_empty(self):
         """
         Initialize the class with no attributes.
         """
-        with pytest.raises(RuntimeError):
-            APIRequest()
+        with pytest.raises(ValueError):
+            Environment()
 
     def test_some_provided_args(self):
         """
         Initialize the class with some attributes
         provided via the constructor but not all.
         """
-        with pytest.raises(RuntimeError):
-            APIRequest(mcm_application_url="http://localhost:5984/")
+        with pytest.raises(ValueError):
+            Environment(mcm_application_url="http://localhost:5984/")
 
     def test_full_args(self):
         """
         Initialize the class only via constructor args.
         """
-        api = APIRequest(
+        config = Environment(
             mcm_couchdb_url="http://localhost:5984/",
             mcm_couchdb_credential="Basic dGVzdDp0ZXN0",
             mcm_couchdb_lucene_url="http://localhost:5985/",
             mcm_application_url="http://localhost:8000/",
-            mockup=True,
         )
-        assert api.mcm_couchdb_credential == "Basic dGVzdDp0ZXN0"
-
-
-class TestAPIRequestHTTP:
-    """
-    Test the functionality to perform HTTP request
-    to the McM underlying components.
-    """
+        assert config.mcm_couchdb_credential == "Basic dGVzdDp0ZXN0"
 
     def test_couchdb(self):
         """
         Check it is possible to contact with the CouchDB
         service.
         """
-        response = api.couchdb_request(endpoint="", method="GET")
+        response = self.mcm.couchdb_requests.get(url=config.mcm_couchdb_url)
         content = response.json()
         assert response.status_code == 200
         assert (
@@ -66,7 +66,7 @@ class TestAPIRequestHTTP:
         Check it is possible to contact with the
         CouchDB Lucene service
         """
-        response = api.lucene_request(endpoint="", method="GET")
+        response = self.mcm.lucene_requests.get(url=config.mcm_couchdb_lucene_url)
         content = response.json()
         assert response.status_code == 200
         assert "couchdb-lucene" in content
@@ -76,24 +76,4 @@ class TestAPIRequestHTTP:
         Check the method that verifies the required
         mock users are already set.
         """
-        assert api.check_test_users() == True
-
-    def test_mcm_user_request(self):
-        """
-        Check that the user is properly interpreted by McM.
-        """
-        user_endpoint = "restapi/users/get_role"
-        for role in Roles:
-            response = api.mcm_request(
-                endpoint=user_endpoint, method="GET", as_role=role
-            )
-            content = response.json()
-            assert content.get("role", "") == role.value
-
-    def test_mcm_client(self):
-        user_endpoint = "restapi/users/get_role"
-        for role in Roles:
-            mcm_client = api.mcm_client(role)
-            content, response = mcm_client._get(url=user_endpoint)
-            assert content.get("role", "") == role.value
-            assert response.status_code == 200
+        assert self.mcm.check_test_users() == True
