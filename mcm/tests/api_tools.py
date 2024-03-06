@@ -58,7 +58,7 @@ class APIRequest:
             mockup (bool): If True, the creation/validation of mock users
                 will not be performed
         Raises:
-            RuntimeError: In case some of the required attributes finish to be empty.
+            ValueError: In case some of the required attributes finish to be empty.
         """
         self.mcm_couchdb_url = mcm_couchdb_url or os.getenv("MCM_COUCHDB_URL", "")
         self.mcm_couchdb_credential = mcm_couchdb_credential or os.getenv(
@@ -102,7 +102,7 @@ class APIRequest:
         # Check and raise
         if error_msg:
             compress_msg = "\n".join(error_msg)
-            raise RuntimeError(compress_msg)
+            raise ValueError(compress_msg)
 
         # Check the required mock users are available
         # Otherwise, create them
