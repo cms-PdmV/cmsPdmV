@@ -146,7 +146,7 @@ class McM:
         s = Session()
         s.headers.update(headers)
         return s
-    
+
     def check_test_users(self) -> bool:
         """
         Checks that there is one user per role
@@ -163,7 +163,7 @@ class McM:
         content = response.json()
         docs = content.get("docs", [])
         return len(docs) == len(all_roles)
-    
+
     def __include_test_users(self):
         """
         Includes one test user per available role.
@@ -286,103 +286,6 @@ class McM:
         res = self._put(url, object_data)
         return res
 
-    def approve(self, object_type, object_id, level=None):
-        if level is None:
-            url = "restapi/%s/approve/%s" % (object_type, object_id)
-        else:
-            url = "restapi/%s/approve/%s/%d" % (object_type, object_id, level)
-
-        return self._get(url)
-
-    def clone_request(self, object_data):
-        return self.put("requests", object_data, method="clone")
-
-    def get_range_of_requests(self, query) -> tuple[dict | None, Response]:
-        res, response = self._put(
-            "restapi/requests/listwithfile", data={"contents": query}
-        )
-        return res.get("results", None), response
-
     def delete(self, object_type, object_id):
         url = "restapi/%s/delete/%s" % (object_type, object_id)
         return self._delete(url)
-
-    def forceflow(self, prepid) -> tuple[dict | None, Response]:
-        """
-        Forceflow a chained request with given prepid
-        """
-        res, response = self._get("restapi/chained_requests/flow/%s/force" % (prepid))
-        return res.get("results", None), response
-
-    def reset(self, prepid) -> tuple[dict | None, Response]:
-        """
-        Reset a request
-        """
-        res, response = self._get("restapi/requests/reset/%s" % (prepid))
-        return res.get("results", None), response
-
-    def soft_reset(self, prepid) -> tuple[dict | None, Response]:
-        """
-        Soft reset a request
-        """
-        res, response = self._get("restapi/requests/soft_reset/%s" % (prepid))
-        return res.get("results", None), response
-
-    def option_reset(self, prepid) -> tuple[dict | None, Response]:
-        """
-        Option reset a request
-        """
-        res, response = self._get("restapi/requests/option_reset/%s" % (prepid))
-        return res.get("results", None), response
-
-    def ticket_generate(self, ticket_prepid) -> tuple[dict | None, Response]:
-        """
-        Generate chains for a ticket
-        """
-        res, response = self._get("restapi/mccms/generate/%s" % (ticket_prepid))
-        return res.get("results", None), response
-
-    def ticket_generate_reserve(self, ticket_prepid) -> tuple[dict | None, Response]:
-        """
-        Generate and reserve chains for a ticket
-        """
-        res, response = self._get("restapi/mccms/generate/%s/reserve" % (ticket_prepid))
-        return res.get("results", None), response
-
-    def rewind(self, chained_request_prepid) -> tuple[dict | None, Response]:
-        """
-        Rewind a chained request
-        """
-        res, response = self._get(
-            "restapi/chained_requests/rewind/%s" % (chained_request_prepid)
-        )
-        return res.get("results", None), response
-
-    def flow(self, chained_request_prepid) -> tuple[dict | None, Response]:
-        """
-        Flow a chained request
-        """
-        res, response = self._get(
-            "restapi/chained_requests/flow/%s" % (chained_request_prepid)
-        )
-        return res.get("results", None), response
-
-    def root_requests_from_ticket(self, ticket_prepid) -> tuple[dict | None, Response]:
-        """
-        Return list of all root (first ones in the chain) requests of a ticket
-        """
-        mccm = self.get("mccms", ticket_prepid)
-        query = ""
-        for root_request in mccm.get("requests", []):
-            if isinstance(root_request, str):
-                query += "%s\n" % (root_request)
-            elif isinstance(root_request, list):
-                # List always contains two elements - start and end of a range
-                query += "%s -> %s\n" % (root_request[0], root_request[1])
-            else:
-                self.logger.error(
-                    "%s is of unsupported type %s", root_request, type(root_request)
-                )
-
-        requests = self.get_range_of_requests(query)
-        return requests
