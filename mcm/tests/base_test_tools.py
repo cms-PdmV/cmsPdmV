@@ -5,11 +5,14 @@ its configuration.
 """
 
 from __future__ import annotations
+
 import abc
 import json
 from pathlib import Path
-from tests.api_tools import Environment, McM
+
 from requests import Response
+
+from tests.api_tools import Environment, McM
 
 # Default configuration for the test environment
 config = Environment(
@@ -24,7 +27,7 @@ class Entity(abc.ABC):
     """
     Minimum common operations to test the API related to
     one McM entity/concept, e.g: campaigns, requests,
-    chain_requests, etc.'
+    chain_requests, etc.
     """
 
     def __init__(self, mockup_path: Path, mcm: McM) -> None:

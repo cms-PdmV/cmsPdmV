@@ -4,12 +4,14 @@ to consume a desired endpoint.
 """
 
 from __future__ import annotations
-import sys
-import os
+
 import logging
+import os
+import sys
 from copy import deepcopy
 from enum import Enum
-from requests import Request, Response, Session
+
+from requests import Response, Session
 
 
 class Roles(Enum):
@@ -73,11 +75,11 @@ class Environment:
             ]
         if not self.mcm_couchdb_credential:
             error_msg += [
-                "Please set the CouchDB basic credentials via constructor args or `COUCH_CRED` variable"
+                "Set the CouchDB basic credentials via constructor args or `COUCH_CRED` variable"
             ]
         if not self.mcm_couchdb_lucene_url:
             error_msg += [
-                "Please set the CouchDB Lucene connection url via constructor args or `MCM_LUCENE_URL` variable"
+                "Set the CouchDB Lucene connection url via constructor args or `MCM_LUCENE_URL` variable"
             ]
         if not self.mcm_application_url:
             # Check if it is possible to form it from environment
@@ -89,7 +91,7 @@ class Environment:
             else:
                 error_msg += [
                     (
-                        "Please set the McM application url via constructor args "
+                        "Set the McM application url via constructor args "
                         "or set the enviroment variables `MCM_HOST` and `MCM_PORT`"
                     )
                 ]
@@ -114,16 +116,16 @@ class McM:
     def __init__(self, config: Environment, role: Roles):
         self.config = config
         self.role: Roles = role
-        self.logger = self.__logger()
-        self.mcm_requests = self.__session({"Adfs-Login": role.value})
-        self.lucene_requests = self.__session()
-        self.couchdb_requests = self.__session(
+        self.logger = self._logger()
+        self.mcm_requests = self._session({"Adfs-Login": role.value})
+        self.lucene_requests = self._session()
+        self.couchdb_requests = self._session(
             {"Authorization": self.config.mcm_couchdb_credential}
         )
         if not self.check_test_users():
-            self.__include_test_users()
+            self._include_test_users()
 
-    def __logger(self) -> logging.Logger:
+    def _logger(self) -> logging.Logger:
         """
         Returns a logger for the class
         """
@@ -136,7 +138,7 @@ class McM:
         logger.addHandler(handler)
         return logger
 
-    def __session(self, headers: dict = {}) -> Session:
+    def _session(self, headers: dict = {}) -> Session:
         """
         Create a pre-configured `request.Session` object.
 
@@ -164,7 +166,7 @@ class McM:
         docs = content.get("docs", [])
         return len(docs) == len(all_roles)
 
-    def __include_test_users(self):
+    def _include_test_users(self):
         """
         Includes one test user per available role.
         """
@@ -190,20 +192,17 @@ class McM:
         full_url: str = self.config.mcm_couchdb_url + "users/_bulk_docs"
         self.couchdb_requests.post(url=full_url, json={"docs": new_users})
 
-    def _get(self, url) -> tuple[dict, Response]:
+    def _get(self, url) -> Response:
         full_url: str = self.config.mcm_application_url + url
-        response = self.mcm_requests.get(url=full_url)
-        return response.json(), response
+        return self.mcm_requests.get(url=full_url)
 
-    def _put(self, url, data) -> tuple[dict, Response]:
+    def _put(self, url, data) -> Response:
         full_url: str = self.config.mcm_application_url + url
-        response = self.mcm_requests.put(url=full_url, json=data)
-        return response.json(), response
+        return self.mcm_requests.put(url=full_url, json=data)
 
-    def _delete(self, url) -> tuple[dict, Response]:
+    def _delete(self, url) -> Response:
         full_url: str = self.config.mcm_application_url + url
-        response = self.mcm_requests.delete(full_url)
-        return response.json(), response
+        return self.mcm_requests.delete(full_url)
 
     # McM methods
     def get(
@@ -227,7 +226,8 @@ class McM:
                 object_type,
             )
             url = "restapi/%s/%s/%s" % (object_type, method, object_id)
-            res, _ = self._get(url)
+            http_res = self._get(url)
+            res = http_res.json()
             return res.get("results") or None
         elif query:
             if page != -1:
@@ -239,7 +239,8 @@ class McM:
                     page,
                     query,
                 )
-                res, _ = self._get(url)
+                http_res = self._get(url)
+                res = http_res.json()
                 results = res.get("results", [])
                 self.logger.debug(
                     "Found %s %s in page %s for query %s",
@@ -283,9 +284,13 @@ class McM:
         method - action to be performed, default is 'save'
         """
         url = f"restapi/{object_type}/{method}"
-        res = self._put(url, object_data)
-        return res
+        http_res = self._put(url, object_data)
+        res = http_res.json()
+        return res, http_res
 
-    def delete(self, object_type, object_id):
+    def delete(self, object_type, object_id) -> tuple[dict, Response]:
         url = "restapi/%s/delete/%s" % (object_type, object_id)
-        return self._delete(url)
+        http_res = self._delete(url)
+        res = http_res.json()
+        return res, http_res
+

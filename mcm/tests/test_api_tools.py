@@ -3,8 +3,9 @@ Test the functionality provided via `api.py` module.
 """
 
 import pytest
-from tests.base_test_tools import config
+
 from tests.api_tools import Environment, McM, Roles
+from tests.base_test_tools import config
 
 
 class TestEnvironment:

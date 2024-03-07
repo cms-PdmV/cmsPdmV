@@ -4,13 +4,16 @@ the campaign entity.
 """
 
 import uuid
-from pathlib import Path
 from copy import deepcopy
 from importlib.resources import files
+from pathlib import Path
+
+from requests import Response
 import pytest
+
 import tests.campaign as campaign
-from tests.base_test_tools import Entity, EntityTest, config
 from tests.api_tools import McM, Roles
+from tests.base_test_tools import Entity, EntityTest, config
 
 
 class CampaignAPI(Entity):
@@ -49,32 +52,60 @@ class CampaignAPI(Entity):
         self.create(mockup)
         return self.retrieve(mockup)
 
-    def cms_drivers(self, mockup: dict):
+    def cms_drivers(self, mockup: dict) -> tuple[dict, Response]:
         """
         Retrieves the cms-sw commands for a given campaign.
         Related to test the endpoint:
             - restapi/campaigns/get_cmsDrivers/<string:campaign_id>
+
+        Returns:
+            tuple[dict, request.Response]: The cms-sw driver commands
+                for each step to simulate and the HTTP response.
         """
         endpoint = f"restapi/campaigns/get_cmsDrivers/{mockup.get('prepid')}"
-        return self.mcm._get(endpoint)
+        http_res = self.mcm._get(endpoint)
+        return http_res.json(), http_res
 
-    def inspect(self, mockup: dict):
+    def inspect(self, mockup: dict) -> tuple[dict, Response]:
         """
         Inspect all the requests in a given campaign.
         Related to test the endpoint:
             - restapi/campaigns/inspect/<string:campaign_id>
+
+        Returns:
+            tuple[str, request.Response]: The result of inspecting
+                all the `request` linked to the `campaign`.
+                This `inspect` process refers to synchronize the progress
+                related to the `request` from ReqMgr2 (CMS' main request manager tool)
+                to the McM application.
+                
+                Also, this returns the HTTP response object.
         """
         endpoint = f"restapi/campaigns/inspect/{mockup.get('prepid')}"
-        return self.mcm._get(endpoint)
+        http_res = self.mcm._get(endpoint)
+        return http_res.text, http_res
 
-    def status(self, mockup: dict):
+    def toggle_status(self, mockup: dict) -> tuple[dict, Response]:
         """
         Toggles the status for a campaign.
         Related to test the endpoint:
             - restapi/campaigns/status/<string:campaign_id>
+
+        Returns:
+            tuple[dict, request.Response]: Result of the operation and description of error messages
+                in case they happen. Format:
+                - For sucessful execution: `{'results': True}`
+                - In case of errors: `{'results': False, 'message': '<Description: str>`
+                    - There are three common cases for the description:
+                        - The campaign doesn't exists.
+                        - Runtime exception when saving to the database.
+                        - Any other exception.
+                
+                Also, this returns the HTTP response object.
         """
         endpoint = f"restapi/campaigns/status/{mockup.get('prepid')}"
-        return self.mcm._get(endpoint)
+        http_res = self.mcm._get(endpoint)
+        return http_res.json(), http_res
 
 
 class TestCampaign(EntityTest):
@@ -138,9 +169,19 @@ class TestCampaign(EntityTest):
         assert response.status_code == 200
         assert content["results"] == False
 
-    @pytest.mark.skip("Takes too much time to compute")
     def test_delete(self):
-        pass
+        # The campaign exists
+        example = self.entity_api.example()
+        content, response = self.entity_api.delete(example)
+        assert content["results"] == True
+        assert response.status_code == 200
+
+        # The campaign doesn't exists
+        mockup = self.entity_api.mockup()
+        content, response = self.entity_api.delete(mockup)
+        assert content["results"] == False
+        assert response.status_code == 200
+        assert f"Cannot delete, {mockup['prepid']}" in content["message"]
 
     def test_cmssw_drivers(self):
         example = self.entity_api.example()
@@ -159,14 +200,21 @@ class TestCampaign(EntityTest):
         assert response.status_code == 200
         assert content["results"] == False
 
-    @pytest.mark.skip("Takes too much time to computes and renders a html page")
     def test_inspect(self):
-        pass
+        # The campaign exists
+        example = self.entity_api.example()
+        content, response = self.entity_api.inspect(example)
+        campaign_header: str = f"Starting campaign inspect of {example['prepid']}"
+        campaign_footer: str = "Inspecting 0 requests on page 0"
 
-    def test_status(self):
+        assert campaign_header in content
+        assert campaign_footer in content
+        assert response.status_code == 200
+
+    def test_toggle_status(self):
         # Stop a valid campaign
         example = self.entity_api.example()
-        content, response = self.entity_api.status(example)
+        content, response = self.entity_api.toggle_status(example)
         after_toggle = self.entity_api.retrieve(example)
         assert response.status_code == 200
         assert content["results"] == True
@@ -175,7 +223,7 @@ class TestCampaign(EntityTest):
         # Start an invalid campaign
         del after_toggle["cmssw_release"]
         self.entity_api.update(after_toggle)
-        content, response = self.entity_api.status(example)
+        content, response = self.entity_api.toggle_status(example)
         assert response.status_code == 200
         assert content["results"] == False
 
@@ -261,8 +309,8 @@ class TestCampaignAsUser(TestCampaignAsProdMgr):
         _, response = self.entity_api.inspect(example)
         assert response.status_code == 403
 
-    def test_status(self):
+    def test_toggle_status(self):
         # Not enough permissions.
         example = self.higher_role_entity_api.example()
-        _, response = self.entity_api.status(example)
+        _, response = self.entity_api.toggle_status(example)
         assert response.status_code == 403
