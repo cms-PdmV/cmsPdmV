@@ -1819,7 +1819,8 @@ class request(json_base):
         self.reload()
 
     def get_stats(self, forced=False):
-        stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
+        l_type = locator()
+        stats_db = database('requests', url=l_type.stats_database_url())
         prepid = self.get_attribute('prepid')
         stats_workflows = stats_db.raw_query_view('_designDoc',
                                                   'requests',
@@ -2006,11 +2007,12 @@ class request(json_base):
         return changes_happen
 
     def get_input_dataset_status(self):
+        l_type = locator()
         input_dataset = self.get_attribute('input_dataset')
         if not input_dataset:
             return
 
-        stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
+        stats_db = database('requests', l_type.stats_database_url())
         stats_workflows = stats_db.raw_query_view('_designDoc',
                                                   'outputDatasets',
                                                   page=0,
@@ -2695,7 +2697,7 @@ class request(json_base):
                             self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
                             return False
 
-                        machine_name = "vocms0481.cern.ch"
+                        machine_name = l_type.mcm_executor_node()
                         with ssh_executor(server=machine_name) as executor:
                             _, stdout, stderr = executor.execute(command)
 

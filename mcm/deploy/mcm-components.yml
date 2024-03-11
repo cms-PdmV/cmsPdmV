@@ -1,4 +1,5 @@
-# This deploys the database and the search engine
+# This deploys all the required components to start McM
+# The database, the search engine and the application
 version: "3.8"
 services:
   couchdb:
@@ -46,6 +47,29 @@ services:
     ports:
       - ${LUCENE_PORT}:5985
     depends_on:
+      - couchdb
+    networks:
+      - mcm
+
+  mcm-application:
+    container_name: mcm
+    build: ../
+    image: pdmv/mcm:test
+    environment:
+      - MCM_DEBUG=True
+      - MCM_WARMUP_SECONDS=${MCM_WARMUP_SECONDS}
+      - MCM_COUCHDB_URL=${MCM_COUCHDB_URL}
+      - COUCH_CRED=${COUCH_CRED}
+      - MCM_LUCENE_URL=${MCM_LUCENE_URL}
+    command: |
+      /bin/bash -c '
+        echo "Warming up for $MCM_WARMUP_SECONDS seconds";
+        sleep $MCM_WARMUP_SECONDS; 
+        echo "Starting McM...";
+        python main.py'
+    ports:
+      - 8000:8000
+    depends_on: 
       - couchdb
     networks:
       - mcm

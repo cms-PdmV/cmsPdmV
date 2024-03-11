@@ -3,8 +3,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  database:
-    name: Deploy CouchDB and CouchDB Lucene
+  components:
+    name: Deploy McM components and execute the test suite
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -30,6 +30,30 @@ jobs:
           COUCHDB_PASSWORD: 'test'
           COUCHDB_NODENAME: '127.0.0.1'
           LUCENE_PORT: '5985'
-          SECONDS_TO_WAIT: '10'
+          SECONDS_TO_WAIT: '30'
+          MCM_WARMUP_SECONDS: '10'
+          MCM_COUCHDB_URL: 'http://couchdb:5984/'
+          COUCH_CRED: 'Basic dGVzdDp0ZXN0'
+          MCM_LUCENE_URL: 'http://couchdb-lucene:5985/'
+          MCM_EXAMPLE_DATA_URL: ${{ secrets.MCM_EXAMPLE_DATA_URL }}
+
         run: |
           bash deploy/action.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11.x'
+
+      - name: Install test dependencies
+        run: |
+          export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
+          export TEST_FOLDER_PATH=$REPO_PATH/tests
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r $TEST_FOLDER_PATH/requirements.txt
+
+      - name: Run test suite
+        run: |
+          export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
+          export PYTHONPATH=$REPO_PATH
+          pytest -s -vv

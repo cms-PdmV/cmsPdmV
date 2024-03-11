@@ -1180,9 +1180,10 @@ class StalledReminder(RESTResource):
         """
         Collect the requests that have been running for too long (/since) or will run for too long (/since/remaining) and send a reminder, and below (/since/remaining/below) a certain percentage of completion
         """
+        l_type = locator()
         rdb = database('requests')
         bdb = database('batches')
-        statsDB = database('stats', url='http://vocms074.cern.ch:5984/')
+        statsDB = database('stats', url=l_type.stats_database_url())
         __query = rdb.make_query()
         today = time.mktime(time.gmtime())
         text = "The following requests appear to be not progressing since %s days or will require more than %s days to complete and are below %4.1f%% completed :\n\n" % (time_since, time_remaining, below_completed)
@@ -1237,7 +1238,6 @@ class StalledReminder(RESTResource):
                     by_batch[in_batch].append(line)
                     request_prepids.append(r['prepid'])
 
-        l_type = locator()
         for (b, lines) in by_batch.items():
             text += "In batch %s:\n" % b
             text += '%sbatches?prepid=%s\n' % (l_type.baseurl(), b)

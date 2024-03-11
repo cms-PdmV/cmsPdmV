@@ -13,3 +13,4 @@ node-v8.5.0-linux-x64/
 .config/
 package-lock.json
 *.pid
+*.env
