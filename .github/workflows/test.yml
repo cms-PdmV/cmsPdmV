@@ -49,11 +49,13 @@ jobs:
         run: |
           export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
           export TEST_FOLDER_PATH=$REPO_PATH/tests
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -r $TEST_FOLDER_PATH/requirements.txt
+          python3 -m pip install --upgrade pip poetry
+          cd "${TEST_FOLDER_PATH}" && echo "Current folder: $(pwd -P)"
+          poetry install
 
       - name: Run test suite
         run: |
           export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
-          export PYTHONPATH=$REPO_PATH
-          pytest -s -vv
+          export TEST_FOLDER_PATH=$REPO_PATH/tests
+          cd "${TEST_FOLDER_PATH}"
+          poetry run pytest -s -vv

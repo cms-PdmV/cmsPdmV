@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "mcm-tests"
+version = "0.1.0"
+description = "A black box test suite to check McM's features"
+authors = ["PdmV Development Team <cms-ppd-pdmv-dev@cern.ch>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pdmv-http-client = {git = "https://github.com/cms-PdmV/mcm_scripts.git"}
+pytest = "^8.3.2"
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

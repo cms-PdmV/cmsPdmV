@@ -12,7 +12,7 @@ from pathlib import Path
 
 from requests import Response
 
-from tests.api_tools import Environment, McM
+from mcm_tests.api_tools import Environment, McM
 
 # Default configuration for the test environment
 config = Environment(

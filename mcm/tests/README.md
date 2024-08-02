@@ -1,6 +1,18 @@
 # Test folder
 
-This folder contains all the software and packages related to testing. No module in test folder should be referenced by any other part of the application. Currently, this folder only stores system tests related to check the API and the underlying functionality. For this reason:
+This folder includes a Python package with all the tests cases to check McM's API and its features. Currently, it acts as a black box/isolated test.
 
-1. There is an isolated `requirements.txt` file that described the required packages.
-2. The interpreter version used for writing and executing the test is: **Python 3.11**
+**THIS MODULE MUST NOT BE IMPORTED/USED IN ANY OTHER PART OF MCM'S APPLICATION CODE.**
+
+#### Development version
+
+Create an isolated virtual environment using a Python version >= 3.9 via:
+
+`python3.9 -m venv venv && source ./venv/bin/activate`
+
+Install `poetry` and the required dependencies.
+
+`pip install poetry && poetry install`
+
+Run the test suite via:
+`poetry run pytest -s -vv`

@@ -9,11 +9,10 @@ from importlib.resources import files
 from pathlib import Path
 
 from requests import Response
-import pytest
 
-import tests.campaign as campaign
-from tests.api_tools import McM, Roles
-from tests.base_test_tools import Entity, EntityTest, config
+import mcm_tests.campaign as campaign
+from mcm_tests.api_tools import McM, Roles
+from mcm_tests.base_test_tools import Entity, EntityTest, config
 
 
 class CampaignAPI(Entity):
