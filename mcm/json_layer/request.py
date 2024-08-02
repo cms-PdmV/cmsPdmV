@@ -1344,7 +1344,7 @@ class request(json_base):
         prepid = self.get_attribute('prepid')
         member_of_campaign = self.get_attribute('member_of_campaign')
         scram_arch = self.get_scram_arch().lower()
-        bash_file = ['#!/bin/bash', '']
+        bash_file = ['#!/bin/bash', '', 'echo "Executing this at: $(hostname)"', '']
 
         if not for_validation or automatic_validation:
             bash_file += ['#############################################################',
@@ -2091,6 +2091,7 @@ class request(json_base):
     def collect_outputs(self, mcm_rr, tiers_expected, proc_strings, prime_ds, camp, skip_check=False):
 
         re_to_match = re.compile("/%s(.*)/%s(.*)\\-v(.*)/" % (prime_ds, camp))
+        print("Collect output - re_to_match: ", re_to_match)
         collected = []
         versioned = {}
 

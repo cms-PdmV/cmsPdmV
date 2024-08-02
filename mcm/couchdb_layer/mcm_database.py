@@ -42,7 +42,7 @@ class database:
         """
         Return authentication to couchdb header
         """
-        filename = '/home/pdmvserv/private/couchdb_credentials_json.txt'
+        filename = '/home/mcm/private/couchdb_credentials_json.txt'
         filename = os.getenv('COUCH_CRED', filename)
         with open(filename) as json_file:
             credentials = json.load(json_file)

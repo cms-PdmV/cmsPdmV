@@ -302,6 +302,7 @@ class SubmissionsBase(Handler):
         scram_arch = mcm_r.get_scram_arch()
         directory = locator_type.workLocation()
         command = '#!/bin/bash\n'
+        command += 'echo "$(hostname)"\n'
         command += 'cd %s \n' % directory
         prepid = mcm_r.get_attribute('prepid')
         proxy_file_name = '%s%s_voms_proxy.txt' % (directory, prepid)

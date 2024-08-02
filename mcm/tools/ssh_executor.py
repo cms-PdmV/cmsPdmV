@@ -17,7 +17,7 @@ class ssh_executor:
             server = settings.get_value("node_for_test")
         self.ssh_server = server
         self.ssh_server_port = 22
-        self.ssh_credentials = '/home/pdmvserv/private/credentials'
+        self.ssh_credentials = '/home/mcm/private/credentials'
         self.hname = None
         # TO-DO
         # rename logger -> inject_logger

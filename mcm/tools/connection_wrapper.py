@@ -41,8 +41,8 @@ class ConnectionWrapper():
             self.https = False
             self.port = 80
 
-        self.cert_file = cert_file or os.getenv('USERCRT', '/home/pdmvserv/private/usercert.pem')
-        self.key_file = key_file or os.getenv('USERKEY', '/home/pdmvserv/private/userkey.pem')
+        self.cert_file = cert_file or os.getenv('USERCRT', '/home/mcm/private/usercert.pem')
+        self.key_file = key_file or os.getenv('USERKEY', '/home/mcm/private/userkey.pem')
         self.keep_open = keep_open
         self.connection_attempts = 3
         self.timeout = 120

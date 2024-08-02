@@ -18,31 +18,26 @@ class locator:
 
     def database_url(self):
         if self.isDev():
-            return 'http://vocms0485.cern.ch:5984/'  # dev instance
-        else:
-            return 'http://vocms0490.cern.ch:5984/'  # prod instance
+            return 'http://localhost:5984/'  # dev instance
+        raise RuntimeError('This should not happen')
 
     def lucene_url(self):
         if self.isDev():
-            return 'http://vocms0485.cern.ch:5985/'  # dev instance
-        else:
-            return 'http://vocms0490.cern.ch:5985/'  # prod instance
+            return 'http://localhost:5985/'  # dev instance
+        raise RuntimeError('This should not happen')
 
     def workLocation(self):
         if self.isDev():
             return '/afs/cern.ch/cms/PPD/PdmV/work/McM/dev-submit/'
             # legacy directory return '/afs/cern.ch/cms/PPD/PdmV/tools/prep2/prep2_submit_area/'
-        else:
-            return '/afs/cern.ch/cms/PPD/PdmV/work/McM/submit/'
+        raise RuntimeError('This should not happen')
 
     def baseurl(self):
         if self.isDev():
-            return 'https://cms-pdmv-dev.web.cern.ch/mcm/'
-        else:
-            return 'https://cms-pdmv-prod.web.cern.ch/mcm/'
+            return 'https://ggonzr-personal-proxy.web.cern.ch/mcm/'
+        raise RuntimeError('This should not happen')
 
     def cmsweburl(self):
         if self.isDev():
             return 'https://cmsweb-testbed.cern.ch/'
-        else:
-            return 'https://cmsweb.cern.ch/'
+        raise RuntimeError('This should not happen')
