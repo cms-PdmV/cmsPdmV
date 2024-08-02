@@ -4,8 +4,8 @@ Test the functionality provided via `api.py` module.
 
 import pytest
 
-from mcm_tests.api_tools import Environment, McM, Roles
-from mcm_tests.base_test_tools import config
+from mcm_tests.rest_api.api_tools import Environment, McM, Roles
+from mcm_tests.rest_api.base_test_tools import config
 
 
 class TestEnvironment:

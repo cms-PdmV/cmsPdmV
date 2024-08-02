@@ -10,9 +10,16 @@ python = "^3.9"
 pdmv-http-client = {git = "https://github.com/cms-PdmV/mcm_scripts.git"}
 pytest = "^8.3.2"
 
+[tool.poetry.group.dev.dependencies]
+isort = "^5.13.2"
+black = "^24.4.2"
+
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "INFO"
+
+[tool.isort]
+profile = "black"
 
 [build-system]
 requires = ["poetry-core"]

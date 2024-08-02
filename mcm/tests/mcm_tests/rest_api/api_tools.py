@@ -293,4 +293,3 @@ class McM:
         http_res = self._delete(url)
         res = http_res.json()
         return res, http_res
-
