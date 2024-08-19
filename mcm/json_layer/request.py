@@ -1378,16 +1378,51 @@ class request(json_base):
         run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1 or threads is None)
         self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if run_gen_script else 'NO'))
         if run_gen_script:
+            # Run CMS GEN script using Apptainer containers
+            # and an isolated `venv`
+            cms_gen_file = '%s_gen_script.sh' % (prepid)
+            cms_gen_os = 'el9:x86_64'
+            cms_gen_python = 'python3.9'
+            cms_gen_venv = 'cms_gen_venv_%s' % (prepid)
+            mcm_rest_client = 'git+https://github.com/cms-PdmV/mcm_scripts'
+
+            bash_file += [
+                'cat <<\'EndOfGenScriptFile\' > %s' % (cms_gen_file),
+                '#!/bin/bash',
+                '',
+                'echo "Running CMS GEN request script using cms-sw containers. Architecture: %s"' % (cms_gen_os),
+                '%s -m venv %s && source ./%s/bin/activate' % (cms_gen_python, cms_gen_venv, cms_gen_venv),
+                '',
+                '# Install the PdmV REST client',
+                'pip install %s &> /dev/null' % (mcm_rest_client),
+                '',
+                'echo "Packages installed"',
+                'pip freeze',
+                'echo ""',
+                '',
+            ]
+
             # Download the script
             bash_file += ['# GEN Script begin',
                           'rm -f request_fragment_check.py',
                           'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py',
                           'chmod +x request_fragment_check.py']
+            
+            # Temporal: Remove instructions that source the old version
+            # of the McM REST client
+            bash_file += [
+                '',
+                '# Remove all instructions that import remote modules',
+                "sed -i '/sys.path.append(/d' request_fragment_check.py",
+                '',
+            ]
+
             # Checking script invocation
             request_fragment_check = './request_fragment_check.py --bypass_status --prepid %s' % (prepid)
             if is_dev:
                 # Add --dev, so script would use McM DEV
                 request_fragment_check += ' --dev'
+                request_fragment_check += ' --develop' # Also, remove the internal "check" mechanism
 
             if automatic_validation:
                 # For automatic validation
@@ -1405,6 +1440,23 @@ class request(json_base):
 
             # Execute the GEN script
             bash_file += [request_fragment_check]
+            
+            # Close the CMS GEN subscript and execute it using singularity
+            bash_file += [
+                '',
+                '# End of CMS GEN script file: %s' % (cms_gen_file),
+                'EndOfGenScriptFile',
+                'chmod +x %s' % (cms_gen_file),
+                '',
+            ]
+            bash_file += [
+                '# Run in singularity container',
+                '# Mount afs, eos, cvmfs',
+                '# Mount /etc/grid-security for xrootd',
+                'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s $(echo $(pwd)/%s)' % (cms_gen_os, cms_gen_file),
+                '',
+            ]
+
             # Get exit code of GEN script
             bash_file += ['GEN_ERR=$?']
             if automatic_validation:
