@@ -20,7 +20,7 @@ def expand_range(start, end):
     end = end.split('-')
     range_start = int(start[-1])
     range_end = int(end[-1])
-    numbers = range(range_start, range_end + 1)
+    numbers = list(range(range_start, range_end + 1))
     start = '-'.join(start[:-1])
     end = '-'.join(end[:-1])
     if start != end:

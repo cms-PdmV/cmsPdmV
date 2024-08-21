@@ -17,7 +17,7 @@ def do_with_timeout(func, *args, **kwargs):
         pass
 
     def handler(signum, frame):
-        print('Timeout of %ss reached' % (timeout))
+        print(('Timeout of %ss reached' % (timeout)))
         raise TimeoutException()
 
     if args is None:
@@ -30,7 +30,7 @@ def do_with_timeout(func, *args, **kwargs):
     signal.signal(signal.SIGALRM, handler)
     signal.alarm(timeout)
     try:
-        print('Running %s with timeout %ss' % (func.__name__, timeout))
+        print(('Running %s with timeout %ss' % (func.__name__, timeout)))
         result = func(*args, **kwargs)
     except TimeoutException:
         result = None
@@ -58,15 +58,15 @@ def get_all_campaigns():
 
 def multiple_inspect():
     campaign_prepids = get_all_campaigns()
-    print('Campaigns inspect begin. Number of campaigns to be inspected: %s' % (len(campaign_prepids)))
+    print(('Campaigns inspect begin. Number of campaigns to be inspected: %s' % (len(campaign_prepids))))
     for campaign_index, campaign_prepid in enumerate(campaign_prepids):
         try:
-            print('*** Current campaign: %s (%s/%s) ***' % (campaign_prepid, campaign_index + 1, len(campaign_prepids)))
+            print(('*** Current campaign: %s (%s/%s) ***' % (campaign_prepid, campaign_index + 1, len(campaign_prepids))))
             result = do_with_timeout(inspect_campaign, campaign_prepid, timeout=3600)
-            print('*** Finished inspecting campaign %s, result %s ***' % (campaign_prepid, result))
+            print(('*** Finished inspecting campaign %s, result %s ***' % (campaign_prepid, result)))
             time.sleep(0.5)
         except Exception as e:
-            print('Exception while inspecting campaign %s' % (campaign_prepid))
+            print(('Exception while inspecting campaign %s' % (campaign_prepid)))
             print(e)
 
 

@@ -1,11 +1,11 @@
 import time
 import json
 
-from json_base import json_base
+from .json_base import json_base
 from json_layer.request import request
 from json_layer.campaign import campaign
 from json_layer.mccm import mccm
-from flow import flow
+from .flow import flow
 from couchdb_layer.mcm_database import database
 from tools.priority import priority
 from tools.locker import locker
@@ -35,7 +35,7 @@ class chained_request(json_base):
         def __init__(self, oname, alevel, allowed):
             self.name = str(oname)
             self.level = str(alevel)
-            self.allowed = ' or '.join(map(lambda s: '"%s"' % s, allowed))
+            self.allowed = ' or '.join(['"%s"' % s for s in allowed])
             chained_request.logger.error(
                 '%s has not been approved for any of %s levels : "%s"' % (self.name, self.allowed, self.level))
 
@@ -46,7 +46,7 @@ class chained_request(json_base):
         def __init__(self, oname, alevel, allowed):
             self.name = str(oname)
             self.level = str(alevel)
-            self.allowed = ' or '.join(map(lambda s: '"%s"' % s, allowed))
+            self.allowed = ' or '.join(['"%s"' % s for s in allowed])
             chained_request.logger.error('%s has not reached status %s : "%s"' % (self.name, self.allowed, self.level))
 
         def __str__(self):
@@ -451,7 +451,7 @@ class chained_request(json_base):
                 self.get_attribute('_id'),
                 'The flow %s does not contain sequences information.' % (flow_name))
         other_bad_characters = [' ', '-']
-        if "process_string" in mcm_f.get_attribute('request_parameters') and mcm_f.get_attribute("request_parameters")["process_string"] and any(map(lambda char: char in mcm_f.get_attribute("request_parameters")["process_string"], other_bad_characters)):
+        if "process_string" in mcm_f.get_attribute('request_parameters') and mcm_f.get_attribute("request_parameters")["process_string"] and any([char in mcm_f.get_attribute("request_parameters")["process_string"] for char in other_bad_characters]):
             self.add_to_nonflowing_list('The flow process string (%s) contains a bad character %s' % (mcm_f.get_attribute("request_parameters")["process_string"], ','.join(other_bad_characters)))
             raise self.ChainedRequestCannotFlowException(
                 self.get_attribute('_id'),

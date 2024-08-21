@@ -128,7 +128,7 @@ class UpdateMccm(RESTResource):
 
         old_mccm = MccM(json_input=mccm_json)
         # Find what changed
-        for (key, editable) in old_mccm.get_editable().items():
+        for (key, editable) in list(old_mccm.get_editable().items()):
             old_value = old_mccm.get_attribute(key)
             new_value = mccm.get_attribute(key)
             if not editable and old_value != new_value:
@@ -622,7 +622,7 @@ class MccMReminderGenContacts(RESTResource):
         message_template += 'cancel/delete tickets if they are no longer needed.\n\n'
         base_url = l_type.baseurl()
         contacts = self.get_contacts_by_pwg()
-        for pwg, pwg_mccms in by_pwg.items():
+        for pwg, pwg_mccms in list(by_pwg.items()):
             recipients = contacts.get(pwg)
             if not recipients:
                 self.logger.info('No recipients for %s, will not remind about tickets', pwg)
@@ -776,7 +776,7 @@ class MccMReminderGenConveners(RESTResource):
         base_url = l_type.baseurl()
         for meeting in sorted(list(by_meeting_pwg.keys()), reverse=True):
             by_meeting = by_meeting_pwg[meeting]
-            ticket_count = sum(len(mccms) for _, mccms in by_meeting.items())
+            ticket_count = sum(len(mccms) for _, mccms in list(by_meeting.items()))
             message += '\nMeeting %s (%s tickets)\n' % (meeting, ticket_count)
             for pwg in sorted(list(by_meeting.keys())):
                 pwg_mccms = by_meeting[pwg]

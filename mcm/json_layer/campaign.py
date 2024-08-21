@@ -1,6 +1,6 @@
 import re
-from json_base import json_base
-from sequence import sequence
+from .json_base import json_base
+from .sequence import sequence
 
 
 class campaign(json_base):
@@ -68,7 +68,7 @@ class campaign(json_base):
         return cds
 
     def add_request(self, req_json):
-        from request import request
+        from .request import request
         req = request(json_input=req_json)
         req.transfer_from(self)
         return req.json()

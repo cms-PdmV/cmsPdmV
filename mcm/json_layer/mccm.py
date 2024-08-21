@@ -1,4 +1,4 @@
-from json_base import json_base
+from .json_base import json_base
 from couchdb_layer.mcm_database import database as Database
 from tools.utils import expand_range
 
@@ -77,7 +77,7 @@ class mccm(json_base):
 
     def update_mccm_generated_chains(self, chains_requests_dict):
         generated_chains = self.get_attribute('generated_chains')
-        for chain, requests in chains_requests_dict.iteritems():
+        for chain, requests in chains_requests_dict.items():
             generated_chains.setdefault(chain, []).extend(requests)
 
         mccms_db = Database('mccms')
@@ -92,7 +92,7 @@ class mccm(json_base):
         for entry in request_list:
             if isinstance(entry, list) and len(entry) == 2:
                 requests.extend(expand_range(entry[0], entry[1]))
-            elif isinstance(entry, (basestring, str)):
+            elif isinstance(entry, str):
                 requests.append(entry)
             else:
                 raise Exception('Unrecognized prepid/range %s of type', entry, type(entry))
@@ -107,7 +107,7 @@ class mccm(json_base):
         for request in self.get_request_list():
             frequency[request] = frequency.setdefault(request, 0) + 1
 
-        return [k for k, v in frequency.items() if v > 1]
+        return [k for k, v in list(frequency.items()) if v > 1]
 
     def update_total_events(self):
         """

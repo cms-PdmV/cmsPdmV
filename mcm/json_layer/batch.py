@@ -32,7 +32,7 @@ class batch(json_base):
 
     def remove_request(self, rid):
         b_requests = self.get_attribute('requests')
-        b_requests = filter(lambda r: r['content']['pdmv_prep_id'] != rid, b_requests)
+        b_requests = [r for r in b_requests if r['content']['pdmv_prep_id'] != rid]
         self.set_attribute('requests', b_requests)
         self.reload()
 

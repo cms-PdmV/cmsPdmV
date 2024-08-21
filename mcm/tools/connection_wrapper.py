@@ -4,7 +4,7 @@ Module that contains ConnectionWrapper class
 try:
     import http.client as client
 except ImportError:
-    import httplib as client
+    import http.client as client
 
 import logging
 import os

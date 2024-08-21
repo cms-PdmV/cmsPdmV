@@ -4,7 +4,7 @@ import traceback
 import json
 
 from couchdb_layer.mcm_database import database as Database
-from RestAPIMethod import RESTResource
+from .RestAPIMethod import RESTResource
 from json_layer.campaign import campaign as Campaign
 from json_layer.request import request as Request
 from json_layer.sequence import sequence as Sequence

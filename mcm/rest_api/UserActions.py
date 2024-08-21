@@ -3,7 +3,7 @@
 from json import loads
 from flask import request
 
-from RestAPIMethod import RESTResource
+from .RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 import tools.settings as settings
 from tools.communicator import communicator
@@ -122,7 +122,7 @@ class AskRole(RESTResource):
         # get the production managers emails
         production_managers = udb.search({'role': 'production_manager'}, page=-1)
         # send a notification to prod manager + service
-        to_who = map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')]
+        to_who = [u['email'] for u in production_managers] + [settings.get_value('service_account')]
         to_who.append(user_p.get_email())
         com = communicator()
         l_type = locator()

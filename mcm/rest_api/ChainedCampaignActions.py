@@ -4,7 +4,7 @@ import time
 import json
 from random import shuffle
 
-from RestAPIMethod import RESTResource
+from .RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database as Database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign as ChainedCampaign

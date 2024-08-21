@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import tools.settings as settings
-from json_base import json_base
+from .json_base import json_base
 from copy import deepcopy
 
 
@@ -44,7 +44,7 @@ class sequence(json_base):
                     self._json_base__json[key] = deepcopy(self._json_base__schema[key])
 
     def srepr(self, arg):
-        if isinstance(arg, basestring):  # Python 3: isinstance(arg, str)
+        if isinstance(arg, str):  # Python 3: isinstance(arg, str)
             return arg.decode('utf-8')
         elif isinstance(arg, int):  # in case we have int we should make it string for cmsDriver construction
             return str(arg)
@@ -57,15 +57,15 @@ class sequence(json_base):
         if attribute == 'index':
             return ''
         value = self.get_attribute(attribute)
-        if isinstance(value, basestring) and not value.strip():
+        if isinstance(value, str) and not value.strip():
             return ''
         if attribute == 'nThreads':
-            if isinstance(value, basestring) and not value.isdigit():
+            if isinstance(value, str) and not value.isdigit():
                 return ''
             if int(value) <= 1:
                 return ''
         if attribute == 'nStreams':
-            if isinstance(value, basestring) and not value.isdigit():
+            if isinstance(value, str) and not value.isdigit():
                 return ''
             if int(value) <= 0:
                 return ''
@@ -83,7 +83,7 @@ class sequence(json_base):
 
     def to_string(self):
         text = ''
-        keys = self.json().keys()
+        keys = list(self.json().keys())
         keys.sort()
         for key in keys:
             if key in []:

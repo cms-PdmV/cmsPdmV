@@ -4,14 +4,14 @@ import flask
 
 from json import dumps, loads
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
+from .RestAPIMethod import RESTResource
 from json_layer.chained_request import chained_request
 from json_layer.request import request
 from json_layer.mccm import mccm
 from tools.user_management import access_rights
 from flask_restful import reqparse
 from tools.locker import locker
-from ChainedRequestPrepId import ChainedRequestPrepId
+from .ChainedRequestPrepId import ChainedRequestPrepId
 
 
 class CreateChainedRequest(RESTResource):
@@ -250,7 +250,7 @@ class FlowToNextStep(RESTResource):
                 flow_results.pop('generated_requests')
             res.append(flow_results)
         if len(chains_requests_dict):
-            chain_id = chains_requests_dict.iterkeys().next()
+            chain_id = next(iter(chains_requests_dict.keys()))
             mccm_ticket = mccm.get_mccm_by_generated_chain(chain_id)
             if mccm_ticket is not None:
                 mccm_ticket.update_mccm_generated_chains(chains_requests_dict)
@@ -739,7 +739,7 @@ class ChainsFromTicket(RESTResource):
             self.logger.warning("Mccm prepid %s doesn't exit in db" % ticket_prepid)
             return {}
         self.logger.info("Getting generated chains from ticket %s" % ticket_prepid)
-        generated_chains = list(result[0]['generated_chains'].iterkeys())
+        generated_chains = list(result[0]['generated_chains'].keys())
         generated_chains.sort()
         start = page * limit
         if start > len(generated_chains):
@@ -860,7 +860,7 @@ class TaskChainDict(RESTResource):
                 __total_time_evt += mcm_r.get_sum_time_events()
                 __total_size_evt += sum(mcm_r.get_attribute("size_event"))
 
-        for (r, item) in tasktree.items():
+        for (r, item) in list(tasktree.items()):
             # here we should generate unique list of steps+output tiers
             # as we iterate over requests in tasktree
             __uniq_tiers = []
@@ -898,7 +898,7 @@ class TaskChainDict(RESTResource):
 
         task = 1
         pilot_string = None
-        for (r, item) in sorted(tasktree.items(), key=lambda d: d[1]['rank']):
+        for (r, item) in sorted(list(tasktree.items()), key=lambda d: d[1]['rank']):
             for d in item['dict']:
                 if d['priority_'] > wma['RequestPriority']:
                     wma['RequestPriority'] = d['priority_']
@@ -908,7 +908,7 @@ class TaskChainDict(RESTResource):
                 if d.get('pilot_'):
                     pilot_string = d['pilot_']
 
-                for k in d.keys():
+                for k in list(d.keys()):
                     if k.endswith('_'):
                         d.pop(k)
                 wma['Task%d' % task] = d

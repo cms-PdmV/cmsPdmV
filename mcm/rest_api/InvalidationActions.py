@@ -5,7 +5,7 @@ import itertools
 from json import loads
 from flask import request
 
-from RestAPIMethod import RESTResource
+from .RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from tools.communicator import communicator
 from tools.locator import locator
@@ -136,7 +136,7 @@ class AnnounceInvalidations(RESTResource):
                 self.logger.info("Tried to ANNOUNCE non new invaldation: %s" % (tmp["object"]))
 
         announcer = Announcer()
-        announcer.announce(map(invalidation, __ds_list), map(invalidation, __r_list))
+        announcer.announce(list(map(invalidation, __ds_list)), list(map(invalidation, __r_list)))
         return {"results": True, "ds_to_invalidate": __ds_list, "requests_to_invalidate": __r_list}
 
 
@@ -173,7 +173,7 @@ class ClearInvalidations(RESTResource):
                 self.logger.error("Tried to CLEAN non new invaldation: %s" % (tmp["object"]))
 
         __clearer = Clearer()
-        __clearer.clear(map(invalidation, __ds_list), map(invalidation, __r_list))
+        __clearer.clear(list(map(invalidation, __ds_list)), list(map(invalidation, __r_list)))
         return {"results": True, "ds_to_invalidate": __ds_list,
                 "requests_to_invalidate": __r_list}
 
