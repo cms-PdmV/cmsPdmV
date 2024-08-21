@@ -2,7 +2,7 @@ import os
 import subprocess
 import datetime
 
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
 from tools.locator import locator
@@ -21,8 +21,8 @@ class GetBjobs(RESTResource):
         """
         with ssh_executor() as ssh_exec:
             stdin, stdout, stderr = ssh_exec.execute(self.create_command(options))
-            out = stdout.read()
-            err = stderr.read()
+            out = stdout.read().decode(encoding="utf-8")
+            err = stderr.read().decode(encoding="utf-8")
             if err:
                 return {"results": err}
             return {"results": out}
@@ -131,11 +131,11 @@ class GetLocksInfo(RESTResource):
     def get(self):
         from tools.locker import locker, semaphore_events
         pretty_r_locks = {}
-        for key, lock in locker.lock_dictionary.iteritems():
+        for key, lock in locker.lock_dictionary.items():
             pretty_r_locks[key] = '%s %s' % (key, str(lock))
 
         pretty_locks = {}
-        for key, lock in locker.thread_lock_dictionary.iteritems():
+        for key, lock in locker.thread_lock_dictionary.items():
             pretty_locks[key] = '%s %s' % (key, str(lock))
 
         return {"r_locks": pretty_r_locks,

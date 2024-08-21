@@ -323,7 +323,7 @@ class request(json_base):
                 'The architecture is invalid, probably has the release %s being deprecated' % (self.get_attribute('cmssw_release')))
 
         bad_characters = [' ', '?', '/', '.', '+']
-        if not self.get_attribute('dataset_name') or any(map(lambda char: char in self.get_attribute('dataset_name'), bad_characters)):
+        if not self.get_attribute('dataset_name') or any([char in self.get_attribute('dataset_name') for char in bad_characters]):
             raise self.WrongApprovalSequence(
                 self.get_attribute('status'),
                 'validation',
@@ -336,7 +336,7 @@ class request(json_base):
                 'Dataset name is too long: %s. Max 99 characters' % (len(self.get_attribute('dataset_name'))))
 
         other_bad_characters = [' ', '-']
-        if self.get_attribute('process_string') and any(map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
+        if self.get_attribute('process_string') and any([char in self.get_attribute('process_string') for char in other_bad_characters]):
             raise self.WrongApprovalSequence(
                 self.get_attribute('status'),
                 'validation',
@@ -516,7 +516,7 @@ class request(json_base):
 
         def in_there(seq1, seq2):
             items_that_do_not_matter = ['conditions', 'datatier', 'eventcontent', 'nThreads']
-            for (name, item) in seq1.json().items():
+            for (name, item) in list(seq1.json().items()):
                 if name in items_that_do_not_matter:
                     # there are parameters which do not require specific processing string to be provided
                     continue
@@ -535,7 +535,7 @@ class request(json_base):
         for (i_seq, seqs) in enumerate(mcm_c['sequences']):
             self_sequence = sequence(self.get_attribute('sequences')[i_seq])
             this_matching = set([])
-            for (label, seq_j) in seqs.items():
+            for (label, seq_j) in list(seqs.items()):
                 seq = sequence(seq_j)
                 # label = default , seq = dict
                 if in_there(seq, self_sequence) and in_there(self_sequence, seq):
@@ -789,7 +789,7 @@ class request(json_base):
                 'The architecture is invalid, probably has the release %s being deprecated' % (self.get_attribute('cmssw_release')))
 
         other_bad_characters = [' ', '-']
-        if self.get_attribute('process_string') and any(map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
+        if self.get_attribute('process_string') and any([char in self.get_attribute('process_string') for char in other_bad_characters]):
             raise self.WrongApprovalSequence(
                 self.get_attribute('status'),
                 'submit',
@@ -1183,7 +1183,7 @@ class request(json_base):
         ingredients.append(self.get_attribute('sequences')[i]['conditions'].replace('::All', ''))
         if self.get_attribute('extension'):
             ingredients.append("ext%s" % self.get_attribute('extension'))
-        return "_".join(filter(lambda s: s, ingredients))
+        return "_".join([s for s in ingredients if s])
 
     def get_processing_strings(self):
         keeps = self.get_attribute('keep_output')
@@ -1283,7 +1283,7 @@ class request(json_base):
             if (seq_pileup not in ('', 'NoPileUp')) or (seq_pileup == '' and seq_datamix == 'PreMix'):
                 sequence_dict['pileup_input'] = '"dbs:%s"' % (pileup_dataset_name)
 
-        for key, value in sequence_dict.items():
+        for key, value in list(sequence_dict.items()):
             if not value or key in ('index', 'extra'):
                 continue
 
@@ -1894,7 +1894,7 @@ class request(json_base):
             open_evts_in_das = 0
             if event_number_history:
                 event_number_history = event_number_history[-1]
-                for dataset, content in event_number_history.get('Datasets', {}).iteritems():
+                for dataset, content in event_number_history.get('Datasets', {}).items():
                     dataset_statuses[dataset] = {'pdmv_evts_in_DAS': content.get('Events', 0),
                                                  'pdmv_status_in_DAS': content.get('Type', 'NONE'),
                                                  'pdmv_open_evts_in_DAS': 0}
@@ -2229,8 +2229,7 @@ class request(json_base):
 
                     # make sure no expected tier was left behind
                     if not force:
-                        if not all(map(lambda t: any(map(lambda dn: t == dn.split('/')[-1],
-                                collected)), tiers_expected)):
+                        if not all([any([t == dn.split('/')[-1] for dn in collected]) for t in tiers_expected]):
 
                             not_good.update({'message': 'One of the expected tiers %s has not been produced'
                                     % ( tiers_expected )})
@@ -2452,7 +2451,8 @@ class request(json_base):
         # create a string that supposedly uniquely identifies the request configuration for step
         uniqueString = ''
         if self.get_attribute('fragment'):
-            fragment_hash = hashlib.sha224(self.get_attribute('fragment')).hexdigest()
+            fragment_as_str: str = self.get_attribute('fragment')
+            fragment_hash = hashlib.sha224(fragment_as_str.encode(encoding="utf-8")).hexdigest()
             uniqueString += fragment_hash
         if self.get_attribute('fragment_tag'):
             uniqueString += self.get_attribute('fragment_tag')
@@ -2466,9 +2466,9 @@ class request(json_base):
         return uniqueString
 
     def configuration_identifier(self, step_i):
-        uniqueString = self.unique_string(step_i)
+        uniqueString: str = self.unique_string(step_i)
         # create a hash value that supposedly uniquely defines the configuration
-        hash_id = hashlib.sha224(uniqueString).hexdigest()
+        hash_id = hashlib.sha224(uniqueString.encode(encoding="utf-8")).hexdigest()
         return hash_id
 
     @staticmethod
@@ -2706,8 +2706,9 @@ class request(json_base):
                                 self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
                                                 what='Configuration upload')
                                 return False
-                            output = stdout.read()
-                            error = stderr.read()
+
+                            output = stdout.read().decode(encoding="utf-8")
+                            error = stderr.read().decode(encoding="utf-8")
 
                             if error and not output:  # money on the table that it will break
                                 self.logger.error('Error in wmupload: {0}'.format(error))
@@ -2782,7 +2783,7 @@ class request(json_base):
         return int(num)
 
     def get_list_of_steps(self, in_string):
-        if isinstance(in_string, basestring):
+        if isinstance(in_string, str):
             # in case sequence is defined as string -> legacy support
             return [el.split(":")[0] for el in in_string.split(",")]
         else:
@@ -2828,7 +2829,7 @@ class request(json_base):
         settings_db = database('settings')
         __DT_prio = settings_db.get('datatier_input')["value"]
         validation_info = []
-        for threads, sequences in self.get_attribute('validation').get('results', {}).items():
+        for threads, sequences in list(self.get_attribute('validation').get('results', {}).items()):
             if not isinstance(sequences, list):
                 sequences = [sequences]
 

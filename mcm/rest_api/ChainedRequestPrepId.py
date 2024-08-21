@@ -1,6 +1,6 @@
 from json_layer.chained_request import chained_request as ChainedRequest
 from couchdb_layer.mcm_database import database as Database
-from RestAPIMethod import RESTResourceIndex
+from rest_api.RestAPIMethod import RESTResourceIndex
 from tools.locker import locker
 
 

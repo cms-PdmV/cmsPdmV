@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from json_base import json_base
-from json_base import submission_details
+from json_layer.json_base import json_base
+from json_layer.json_base import submission_details
 
 
 class generator_parameters(json_base):
@@ -27,7 +27,7 @@ class generator_parameters(json_base):
         self.validate()
 
     def isInValid(self):
-        for (k,v) in self._json_base__json.items():
+        for (k,v) in list(self._json_base__json.items()):
             if len(k)>=4 and k[0:5] in ['cross','filte','match'] and v<0:
                 return True
             if 'efficiency' in k and v>1.:

@@ -5,7 +5,7 @@ import random
 
 from random import randint
 from threading import Thread, Lock
-from Queue import Queue
+from queue import Queue
 
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
@@ -38,7 +38,7 @@ class Worker(Thread):
             try:
                 self.logger.info("Worker %s acquired task: %s" % (self.worker_name, func))
                 func(*args, **kargs)
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Exception in '%s' thread: %s Traceback:\n%s" % (
                     self.worker_name, str(e), traceback.format_exc()))
 
@@ -179,8 +179,8 @@ class SubmissionsBase(Handler):
                 self.inject_logger.info('Command used for injecting requests %s: %s' % (self.prepid, cmd))
                 # modify here to have the command to be executed
                 _, stdout, stderr = ssh.execute(cmd)
-                output = stdout.read()
-                error = stderr.read()
+                output = stdout.read().decode(encoding="utf-8")
+                error = stderr.read().decode(encoding="utf-8")
                 if error:
                     self.inject_logger.error('Error while injecting %s. %s' % (self.prepid, error))
                     if '.bashrc: Permission denied' in error:
@@ -517,7 +517,7 @@ class RequestApprover(Handler):
         subject = "There was an error while trying to approve workflows"
         text = "Workflows: %s\nOutput:\n%s\nError output: \n%s" % (self.workflows, output, error)
         com.sendMail(
-            map(lambda u: u['email'], production_managers),
+            [u['email'] for u in production_managers],
             subject,
             text)
 

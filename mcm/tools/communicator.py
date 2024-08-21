@@ -1,13 +1,16 @@
 import smtplib
 import logging
 
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEText import MIMEText
-from email.Utils import COMMASPACE, formatdate
-from email.utils import make_msgid
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import make_msgid, formatdate
 from tools.locator import locator
 import tools.settings as settings
 from tools.locker import locker
+
+
+# Python 3: This is just a split
+COMMASPACE = ', '
 
 
 class communicator:
@@ -26,7 +29,7 @@ class communicator:
     def flush(self, Nmin):
         res = []
         with locker.lock('accumulating_notifcations'):
-            for key in self.cache.keys():
+            for key in list(self.cache.keys()):
                 (subject, sender, addressee) = key
                 if self.cache[key]['N'] <= Nmin:
                     # flush only above a certain amount of messages
@@ -52,7 +55,7 @@ class communicator:
                     self.cache.pop(key)
                     res.append(subject)
                 except Exception as e:
-                    print "Error: unable to send email", e.__class__
+                    print("Error: unable to send email", e.__class__)
             return res
 
     def sendMail(self,
@@ -64,7 +67,7 @@ class communicator:
                  accumulate=False):
 
         if not isinstance(destination, list):
-            print "Cannot send email. destination should be a list of strings"
+            print("Cannot send email. destination should be a list of strings")
             return
 
         destination.sort()
@@ -98,7 +101,7 @@ class communicator:
         if force_com_accumulate or (accumulate and com__accumulate):
             with locker.lock('accumulating_notifcations'):
                 # get a subject where the request name is taken out
-                subject_type = " ".join(filter(lambda w: w.count('-') != 2, msg['Subject'].split()))
+                subject_type = " ".join([w for w in msg['Subject'].split() if w.count('-') != 2])
                 addressees = msg['To']
                 sendee = msg['From']
                 key = (subject_type, sendee, addressees)

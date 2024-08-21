@@ -2,14 +2,14 @@
 import flask
 import traceback
 import time
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 from json import dumps, loads
 from collections import defaultdict
 import re
 
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
-from RequestPrepId import RequestPrepId
+from rest_api.RestAPIMethod import RESTResource
+from rest_api.RequestPrepId import RequestPrepId
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence
@@ -154,7 +154,7 @@ class CloneRequest(RequestRESTResource):
         """
         Make a clone with specific requirements
         """
-        data = loads(flask.request.data.strip())
+        data: dict = flask.request.json
         pid = data['prepid']
         return self.clone_request(pid, data)
 
@@ -230,7 +230,8 @@ class ImportRequest(RequestRESTResource):
         Saving a new request from a given dictionnary
         """
         db = database(self.db_name)
-        return self.import_request(loads(flask.request.data.strip()), db)
+        data: dict = flask.request.json
+        return self.import_request(data, db)
 
 
 class UpdateRequest(RequestRESTResource):
@@ -250,7 +251,8 @@ class UpdateRequest(RequestRESTResource):
 
     def update(self):
         try:
-            res = self.update_request(flask.request.data.strip())
+            data: dict = flask.request.json
+            res = self.update_request(data)
             return res
         except Exception as e:
             # trace = traceback.format_exc()
@@ -283,7 +285,7 @@ class UpdateRequest(RequestRESTResource):
         # operate a check on whether it can be changed
         previous_version = request(db.get(mcm_req.get_attribute('prepid')))
         editable = previous_version.get_editable()
-        for (key, right) in editable.items():
+        for (key, right) in list(editable.items()):
             # does not need to inspect the ones that can be edited
             if right:
                 if previous_version.get_attribute(key) != mcm_req.get_attribute(key):
@@ -662,7 +664,8 @@ class ApproveRequest(RESTResource):
         """
         Approve to next step. Ignore GET parameter, use list of prepids from POST data
         """
-        return self.multiple_approve(flask.request.data)
+        data: dict = flask.request.json
+        return self.multiple_approve(data)
 
     def multiple_approve(self, rid, val=-1, hard=True):
         if ',' in rid:
@@ -1018,7 +1021,7 @@ class NotifyUser(RESTResource):
         """
         Sends the prodived posted text to the user registered to a list of requests request
         """
-        data = loads(flask.request.data.strip())
+        data: dict = flask.request.json
         # read a message from data
         message = data['message']
         l_type = locator()
@@ -1150,7 +1153,7 @@ class RequestsFromFile(RESTResource):
         """
         request_db = database('requests')
         self.logger.info('File was uploaded to listfromfile')
-        data = loads(flask.request.data)
+        data: dict = flask.request.json
         lines = clean_split(data['contents'], '\n')
         ids = []
         for line in lines:
@@ -1197,7 +1200,7 @@ class StalledReminder(RESTResource):
             self.logger.info('Found %d requests that are in status submitted in page %d' % (len(rs), page))
             page += 1
             for r in rs:
-                date_s = filter(lambda h: 'step' in h and h['step'] == 'submitted', r['history'])[-1]['updater']['submission_date']
+                date_s = [h for h in r['history'] if 'step' in h and h['step'] == 'submitted'][-1]['updater']['submission_date']
                 date = time.mktime(time.strptime(date_s, "%Y-%m-%d-%H-%M"))
                 elapsed_t = (today - date)
                 elapsed = (today - date) / 60. / 60. / 24.  # in days
@@ -1238,7 +1241,8 @@ class StalledReminder(RESTResource):
                     by_batch[in_batch].append(line)
                     request_prepids.append(r['prepid'])
 
-        for (b, lines) in by_batch.items():
+        l_type = locator()
+        for (b, lines) in list(by_batch.items()):
             text += "In batch %s:\n" % b
             text += '%sbatches?prepid=%s\n' % (l_type.baseurl(), b)
             for line in lines:
@@ -1254,7 +1258,7 @@ class StalledReminder(RESTResource):
         people_list = production_managers + gen_conveners
         subject = "Gentle reminder of %d requests that appear stalled" % (reminded)
         if reminded != 0:
-            com.sendMail(map(lambda u: u['email'], people_list) + [settings.get_value('service_account')], subject, text)
+            com.sendMail([u['email'] for u in people_list] + [settings.get_value('service_account')], subject, text)
 
 
 class RequestsReminder(RESTResource):
@@ -1296,7 +1300,7 @@ class RequestsReminder(RESTResource):
                     campaigns_and_ids[c].add(mcm_r['prepid'])
 
             # then remove the empty entries, and sort the others
-            for c in campaigns_and_ids.keys():
+            for c in list(campaigns_and_ids.keys()):
                 if not len(campaigns_and_ids[c]):
                     campaigns_and_ids.pop(c)
                 else:
@@ -1309,13 +1313,13 @@ class RequestsReminder(RESTResource):
 
         def count_entries(campaigns_and_ids):
             s = 0
-            for (camp, ids) in campaigns_and_ids.items():
+            for (camp, ids) in list(campaigns_and_ids.items()):
                 s += len(ids)
             return s
 
         def prepare_text_for(campaigns_and_ids, status_for_link, username_for_link=None):
             message = ''
-            for (camp, ids) in campaigns_and_ids.items():
+            for (camp, ids) in list(campaigns_and_ids.items()):
                 message += 'For campaign: %s \n' % camp
                 if username_for_link:
                     message += '%srequests?page=-1&member_of_campaign=%s&status=%s&actor=%s \n' % (
@@ -1342,14 +1346,14 @@ class RequestsReminder(RESTResource):
                 # send the reminder to the production managers
                 ids_for_production_managers = get_all_in_status('approved', extracheck=is_in_chain)
                 for c in ids_for_production_managers:
-                    res.extend(map(lambda i: {"results": True, "prepid": i}, ids_for_production_managers[c]))
+                    res.extend([{"results": True, "prepid": i} for i in ids_for_production_managers[c]])
 
                 if len(ids_for_production_managers):
                     production_managers = udb.search({'role': 'production_manager'}, page=-1)
                     message = 'A few requests that needs to be submitted \n\n'
                     message += prepare_text_for(ids_for_production_managers, 'approved')
                     subject = 'Gentle reminder on %s requests to be submitted' % ( count_entries(ids_for_production_managers))
-                    com.sendMail(map(lambda u: u['email'], production_managers) + [settings.get_value('service_account')], subject, message)
+                    com.sendMail([u['email'] for u in production_managers] + [settings.get_value('service_account')], subject, message)
 
             if not what or 'gen_contact' in what or 'generator_contact' in what:
                 all_ids = set()
@@ -1400,8 +1404,8 @@ class RequestsReminder(RESTResource):
                         yield '.'
 
                 # then remove the non generator
-                gen_contacts = map(lambda u: u['username'], udb.search('search', {'role': 'generator_contact'}, page=-1))
-                for contact in ids_for_users.keys():
+                gen_contacts = [u['username'] for u in udb.search('search', {'role': 'generator_contact'}, page=-1)]
+                for contact in list(ids_for_users.keys()):
                     if who and contact not in who:
                         ids_for_users.pop(contact)
                         continue
@@ -1410,7 +1414,7 @@ class RequestsReminder(RESTResource):
                         ids_for_users.pop(contact)
                         continue
                     yield '.'
-                    for c in ids_for_users[contact].keys():
+                    for c in list(ids_for_users[contact].keys()):
                         if not len(ids_for_users[contact][c]):
                             ids_for_users[contact].pop(c)
                         else:
@@ -1420,12 +1424,12 @@ class RequestsReminder(RESTResource):
                         # ids_for_users[contact][c] = list( ids_for_users[contact][c] )
 
                     # if there is nothing left. remove
-                    if not len(ids_for_users[contact].keys()):
+                    if not len(list(ids_for_users[contact].keys())):
                         ids_for_users.pop(contact)
                         continue
 
                 if len(ids_for_users):
-                    for (contact, campaigns_and_ids) in ids_for_users.items():
+                    for (contact, campaigns_and_ids) in list(ids_for_users.items()):
                         for c in campaigns_and_ids:
                             all_ids.update(campaigns_and_ids[c])
                             yield dumps({'prepid': c}, indent=2)
@@ -1460,7 +1464,8 @@ class UpdateMany(RequestRESTResource):
         """
         Updating an existing multiple requests with an updated dictionnary
         """
-        return self.update_many(loads(flask.request.data.strip()))
+        data: dict = flask.request.json
+        return self.update_many(data)
 
     def update_many(self, data):
         list_of_prepids = data["prepids"]
@@ -1587,7 +1592,7 @@ class PutToForceComplete(RESTResource):
         """
         Put a request to a force complete list
         """
-        data = loads(flask.request.data.strip())
+        data: dict = flask.request.json
         pid = data['prepid']
 
         reqDB = database('requests')
@@ -1671,7 +1676,7 @@ class RequestsPriorityChange(RESTResource):
     def post(self):
         fails = []
         try:
-            requests = loads(flask.request.data.strip())
+            requests: list[dict] = flask.request.json
         except TypeError:
             return {"results": False, "message": "Couldn't read body of request"}
         for request_dict in requests:
@@ -1791,7 +1796,7 @@ class TaskChainRequestDict(RESTResource):
             if task.get('pilot_'):
                 wma['SubRequestType'] = task['pilot_']
 
-            for key in task.keys():
+            for key in list(task.keys()):
                 if key.endswith('_'):
                     task.pop(key)
             wma['Task%d' % task_counter] = task
@@ -1873,7 +1878,7 @@ class RequestsFromDataset(Search):
         index_args = {
             'dataset_name': dataset_name
         }
-        index_args = {self.casting[self.db_name].get(k, k): v for k, v in index_args.items()}
+        index_args = {self.casting[self.db_name].get(k, k): v for k, v in list(index_args.items())}
         # Construct the complex query
         index_res = requests_db.search(index_args, page=-1)
         total_requests = len(index_res)

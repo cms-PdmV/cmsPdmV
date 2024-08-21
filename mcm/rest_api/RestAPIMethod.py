@@ -55,7 +55,7 @@ class RESTResource(Resource):
 
         resp = make_response(data, code)
         if headers:
-            for key, value in headers.iteritems():
+            for key, value in headers.items():
                 resp.headers[key] = value
 
         return resp

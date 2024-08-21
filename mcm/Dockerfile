@@ -11,8 +11,7 @@ RUN npm install
 RUN ./node_modules/grunt/bin/grunt
 
 # Python packages
-FROM python:2.7.18-stretch@sha256:58e0d45ffe8fca0cde7faecb39ff4f9a0329d83c856bb196eda3b385f77ed529 AS build
-
+FROM python:3.11.9-slim-bookworm@sha256:ad5dadd957a398226996bc4846e522c39f2a77340b531b28aaab85b2d361210b AS build
 WORKDIR /usr/app
 RUN pip install --upgrade pip setuptools wheel virtualenv
 RUN virtualenv venv
@@ -22,9 +21,9 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Create image for deployment
-FROM python:2.7.18-stretch@sha256:58e0d45ffe8fca0cde7faecb39ff4f9a0329d83c856bb196eda3b385f77ed529 AS backend
+FROM python:3.11.9-slim-bookworm@sha256:ad5dadd957a398226996bc4846e522c39f2a77340b531b28aaab85b2d361210b AS backend
 RUN pip install --upgrade pip setuptools wheel
-RUN apt purge -y mercurial && apt autoremove -y
+RUN apt-get update && apt-get upgrade -y && apt install -y git curl
 
 # User and application folder
 RUN useradd --no-create-home --shell /bin/bash --uid 1001 pdmv

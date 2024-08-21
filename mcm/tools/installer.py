@@ -88,7 +88,7 @@ class installer:
             self.logger.error(msg)
             raise RuntimeError(msg)
         
-        error = stderr.read()
+        error = stderr.read().decode(encoding="utf-8")
         if error:
             raise RuntimeError("Unable to create the folder: %s - Description: %s" % (path, error))
 
@@ -108,7 +108,7 @@ class installer:
             self.logger.error(msg)
             raise RuntimeError(msg)
         
-        error = stderr.read()
+        error = stderr.read().decode(encoding="utf-8")
         if error:
             raise RuntimeError("Unable to remove the folder: %s - Description: %s" % (path, error))
 

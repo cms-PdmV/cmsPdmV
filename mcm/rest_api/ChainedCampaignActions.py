@@ -4,7 +4,7 @@ import time
 import json
 from random import shuffle
 
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database as Database
 from json_layer.chained_request import chained_request
 from json_layer.chained_campaign import chained_campaign as ChainedCampaign
@@ -24,7 +24,7 @@ class CreateChainedCampaign(RESTResource):
         """
         Create chained campaign with the provided json content
         """
-        data = json.loads(flask.request.data)
+        data: dict = flask.request.json
         chained_campaign_db = Database('chained_campaigns')
         chained_campaign = ChainedCampaign(json_input=data)
         campaigns = chained_campaign.get_attribute('campaigns')
@@ -70,7 +70,7 @@ class UpdateChainedCampaign(RESTResource):
         """
         Update a chained campaign with the provided json content
         """
-        data = json.loads(flask.request.data)
+        data: dict = flask.request.json
         if '_rev' not in data:
             return {'results': False,
                     'message': 'No revision provided'}

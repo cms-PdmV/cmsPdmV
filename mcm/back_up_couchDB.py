@@ -7,7 +7,7 @@ TIME_FORMAT = "%Y_%m_%d_%H_%M"
 BACKUP_DIR = "/afs/cern.ch/work/p/pdmvserv/public/couchBACK_UP"
 current_time = time.strftime(TIME_FORMAT)
 os.system("tar -zcvf "+ current_time+".tar.gz /var/lib/couchdb/*.couch")
-print "Tarred couchDB. Preparing to move it to BACKUP-DIR"
+print("Tarred couchDB. Preparing to move it to BACKUP-DIR")
 current_size = os.path.getsize(os.path.join(os.getcwd(),current_time+".tar.gz")); ##get current backup file size
 #print current_size
 
@@ -28,7 +28,7 @@ current_size = os.path.getsize(os.path.join(os.getcwd(),current_time+".tar.gz"))
 #    "NOT ENOUGH FREE SPACE in:%s" %(BACKUP_DIR)
 t = os.system("mv *.tar.gz "+BACKUP_DIR)
 if t == 0:
-    print "Done"
+    print("Done")
 else:
-    print "ERROR"
+    print("ERROR")
 
