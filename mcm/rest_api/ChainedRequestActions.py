@@ -716,9 +716,9 @@ class ChainsFromTicket(RESTResource):
         self.before_request()
         self.count_call()
         self.parser = reqparse.RequestParser()
-        self.parser.add_argument('ticket', type=str, required=True)
-        self.parser.add_argument('page', type=int, default=0)
-        self.parser.add_argument('limit', type=int, default=20)
+        self.parser.add_argument('ticket', type=str, required=True, location=('values',))
+        self.parser.add_argument('page', type=int, default=0, location=('values',))
+        self.parser.add_argument('limit', type=int, default=20, location=('values',))
 
     def get(self):
         """
@@ -763,8 +763,8 @@ class TaskChainDict(RESTResource):
         self.before_request()
         self.count_call()
         self.parser = reqparse.RequestParser()
-        self.parser.add_argument('scratch', type=str)
-        self.parser.add_argument('upto', type=int)
+        self.parser.add_argument('scratch', type=str, location=('values',))
+        self.parser.add_argument('upto', type=int, required=False, location=('values',))
         self.representations = {'text/plain': self.output_text}
 
     def get(self, chained_request_id):
@@ -955,7 +955,7 @@ class GetSetupForChains(RESTResource):
         self.before_request()
         self.count_call()
         self.parser = reqparse.RequestParser()
-        self.parser.add_argument('scratch', type=str, default='')
+        self.parser.add_argument('scratch', type=str, default='', location=('values',))
         self.kwargs = self.parser.parse_args()
         self.representations = {'text/plain': self.output_text}
 
