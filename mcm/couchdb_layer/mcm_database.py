@@ -47,8 +47,10 @@ class database:
         with open(filename) as json_file:
             credentials = json.load(json_file)
 
-        b64 = '%s:%s' % (credentials['username'], credentials['password'])
-        b64 = base64.b64encode(b64)
+        b64: str = '%s:%s' % (credentials['username'], credentials['password'])
+        
+        # Python 3: Encode it as bytes, compute base64 then decode as str
+        b64 = base64.b64encode(b64.encode(encoding="utf-8")).decode(encoding="utf-8")
         return 'Basic %s' % (b64)
 
     def resolve_hostname_to_ip(self, hostname):
