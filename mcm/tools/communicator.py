@@ -1,13 +1,16 @@
 import smtplib
 import logging
 
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEText import MIMEText
-from email.Utils import COMMASPACE, formatdate
-from email.utils import make_msgid
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import make_msgid, formatdate
 from tools.locator import locator
 import tools.settings as settings
 from tools.locker import locker
+
+
+# Python 3: This is just a split
+COMMASPACE = ', '
 
 
 class communicator:
