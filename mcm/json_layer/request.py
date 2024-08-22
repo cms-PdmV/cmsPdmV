@@ -2706,8 +2706,9 @@ class request(json_base):
                                 self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
                                                 what='Configuration upload')
                                 return False
-                            output = stdout.read()
-                            error = stderr.read()
+
+                            output = stdout.read().decode(encoding="utf-8")
+                            error = stderr.read().decode(encoding="utf-8")
 
                         if error and not output:  # money on the table that it will break
                             self.logger.error('Error in wmupload: {0}'.format(error))
@@ -2716,8 +2717,8 @@ class request(json_base):
                                 raise AFSPermissionError(error)
 
                             return False
-                        cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
 
+                        cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
                         if len(cfgs_to_upload) != len(cfgs_uploaded):
                             self.logger.error(
                                 'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(

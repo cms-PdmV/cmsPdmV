@@ -178,8 +178,8 @@ class SubmissionsBase(Handler):
                 self.inject_logger.info('Command used for injecting requests %s: %s' % (self.prepid, cmd))
                 # modify here to have the command to be executed
                 _, stdout, stderr = ssh.execute(cmd)
-                output = stdout.read()
-                error = stderr.read()
+                output = stdout.read().decode(encoding="utf-8")
+                error = stderr.read().decode(encoding="utf-8")
                 if error:
                     self.inject_logger.error('Error while injecting %s. %s' % (self.prepid, error))
                     if '.bashrc: Permission denied' in error:

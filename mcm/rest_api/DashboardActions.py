@@ -20,8 +20,8 @@ class GetBjobs(RESTResource):
         """
         with ssh_executor() as ssh_exec:
             stdin, stdout, stderr = ssh_exec.execute(self.create_command(options))
-            out = stdout.read()
-            err = stderr.read()
+            out = stdout.read().decode(encoding="utf-8")
+            err = stderr.read().decode(encoding="utf-8")
             if err:
                 return {"results": err}
             return {"results": out}
