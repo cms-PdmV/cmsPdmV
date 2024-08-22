@@ -92,6 +92,10 @@ class database:
         if data is not None and isinstance(data, dict):
             data = json.dumps(data)
 
+        # Python 3: Encode the request body as <cls: bytes>
+        if isinstance(data, str):
+            data = data.encode(encoding="utf-8")
+
         full_url = url + path.lstrip('/')
         self.logger.debug('Built full url: %s', full_url)
         request = urllib.request.Request(full_url, data=data)
