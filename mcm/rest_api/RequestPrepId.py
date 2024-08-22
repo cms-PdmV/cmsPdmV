@@ -1,7 +1,7 @@
 from json_layer.request import request as Request
 from json_layer.campaign import campaign as Campaign
 from couchdb_layer.mcm_database import database as Database
-from .RestAPIMethod import RESTResourceIndex
+from rest_api.RestAPIMethod import RESTResourceIndex
 from tools.locker import locker
 
 

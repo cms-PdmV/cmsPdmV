@@ -2,7 +2,7 @@
 
 import flask
 
-from .RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.batch import batch
 from json_layer.request import request

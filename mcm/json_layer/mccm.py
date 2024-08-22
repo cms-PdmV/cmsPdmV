@@ -1,4 +1,4 @@
-from .json_base import json_base
+from json_layer.json_base import json_base
 from couchdb_layer.mcm_database import database as Database
 from tools.utils import expand_range
 

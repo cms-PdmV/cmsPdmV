@@ -2,7 +2,7 @@ import flask
 
 from collections import defaultdict
 
-from .RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from tools.user_management import access_rights, authenticator, user_pack
 import tools.settings as settings
 from json import dumps, loads

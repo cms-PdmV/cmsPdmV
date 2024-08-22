@@ -8,8 +8,8 @@ from collections import defaultdict
 import re
 
 from couchdb_layer.mcm_database import database
-from .RestAPIMethod import RESTResource
-from .RequestPrepId import RequestPrepId
+from rest_api.RestAPIMethod import RESTResource
+from rest_api.RequestPrepId import RequestPrepId
 from json_layer.request import request
 from json_layer.chained_request import chained_request
 from json_layer.sequence import sequence

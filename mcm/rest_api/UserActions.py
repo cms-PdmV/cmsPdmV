@@ -3,7 +3,7 @@
 from json import loads
 from flask import request
 
-from .RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 import tools.settings as settings
 from tools.communicator import communicator

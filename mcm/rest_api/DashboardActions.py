@@ -2,7 +2,7 @@ import os
 import subprocess
 import datetime
 
-from .RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
 from tools.user_management import access_rights
 
