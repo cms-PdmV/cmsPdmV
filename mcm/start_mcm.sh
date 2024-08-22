@@ -7,4 +7,4 @@ node_modules/grunt/bin/grunt
 echo "Started on: " `date`
 
 # start Flask
-python main.py
+python main.py --debug
