@@ -32,7 +32,8 @@ class CreateMccm(RESTResource):
         """
         Create the mccm with the provided json content
         """
-        mccm = MccM(json.loads(flask.request.data.strip()))
+        json_data: dict = flask.request.json
+        mccm = MccM(json_data)
         pwg = mccm.get_attribute('pwg').upper()
 
         if pwg not in self.possible_pwgs:
@@ -97,7 +98,7 @@ class UpdateMccm(RESTResource):
         """
         Updating a MccM with an updated dictionary
         """
-        data = json.loads(flask.request.data)
+        data: dict = flask.request.json
         if '_rev' not in data:
             return {'results': False,
                     'message': 'No revision provided'}
@@ -286,7 +287,7 @@ class NotifyMccm(RESTResource):
         """
         Sends the prodived posted text to the users who acted on MccM ticket
         """
-        data = json.loads(flask.request.data)
+        data: dict = flask.request.json
         # Message
         message = data['message'].strip()
         if not message:

@@ -154,7 +154,7 @@ class CloneRequest(RequestRESTResource):
         """
         Make a clone with specific requirements
         """
-        data = loads(flask.request.data.strip())
+        data: dict = flask.request.json
         pid = data['prepid']
         return self.clone_request(pid, data)
 
@@ -230,7 +230,8 @@ class ImportRequest(RequestRESTResource):
         Saving a new request from a given dictionnary
         """
         db = database(self.db_name)
-        return self.import_request(loads(flask.request.data.strip()), db)
+        data: dict = flask.request.json
+        return self.import_request(data, db)
 
 
 class UpdateRequest(RequestRESTResource):
@@ -250,7 +251,8 @@ class UpdateRequest(RequestRESTResource):
 
     def update(self):
         try:
-            res = self.update_request(flask.request.data.strip())
+            data: dict = flask.request.json
+            res = self.update_request(data)
             return res
         except Exception as e:
             # trace = traceback.format_exc()
@@ -662,7 +664,8 @@ class ApproveRequest(RESTResource):
         """
         Approve to next step. Ignore GET parameter, use list of prepids from POST data
         """
-        return self.multiple_approve(flask.request.data)
+        data: dict = flask.request.json
+        return self.multiple_approve(data)
 
     def multiple_approve(self, rid, val=-1, hard=True):
         if ',' in rid:
@@ -1018,7 +1021,7 @@ class NotifyUser(RESTResource):
         """
         Sends the prodived posted text to the user registered to a list of requests request
         """
-        data = loads(flask.request.data.strip())
+        data: dict = flask.request.json
         # read a message from data
         message = data['message']
         l_type = locator()
@@ -1150,7 +1153,7 @@ class RequestsFromFile(RESTResource):
         """
         request_db = database('requests')
         self.logger.info('File was uploaded to listfromfile')
-        data = loads(flask.request.data)
+        data: dict = flask.request.json
         lines = clean_split(data['contents'], '\n')
         ids = []
         for line in lines:
@@ -1460,7 +1463,8 @@ class UpdateMany(RequestRESTResource):
         """
         Updating an existing multiple requests with an updated dictionnary
         """
-        return self.update_many(loads(flask.request.data.strip()))
+        data: dict = flask.request.json
+        return self.update_many(data)
 
     def update_many(self, data):
         list_of_prepids = data["prepids"]
@@ -1587,7 +1591,7 @@ class PutToForceComplete(RESTResource):
         """
         Put a request to a force complete list
         """
-        data = loads(flask.request.data.strip())
+        data: dict = flask.request.json
         pid = data['prepid']
 
         reqDB = database('requests')
@@ -1682,7 +1686,7 @@ class RequestsPriorityChange(RESTResource):
     def post(self):
         fails = []
         try:
-            requests = loads(flask.request.data.strip())
+            requests: list[dict] = flask.request.json
         except TypeError:
             return {"results": False, "message": "Couldn't read body of request"}
         for request_dict in requests:

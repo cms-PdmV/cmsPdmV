@@ -103,7 +103,8 @@ class AnnounceBatch(BatchAnnouncer):
         """
         Annouce a given batch id, with the provided notes in json content
         """
-        return self.announce(loads(flask.request.data))
+        data: dict = flask.request.json
+        return self.announce(data)
 
     def announce(self, data):
         if 'prepid' not in data or 'notes' not in data:
@@ -277,7 +278,7 @@ class NotifyBatch(RESTResource):
         This allows to send a message to data operation in the same thread
          of the announcement of a given batch
         """
-        data = loads(flask.request.data)
+        data: dict = flask.request.json
         if 'prepid' not in data or 'notes' not in data:
             raise ValueError('no prepid nor notes in batch announcement api')
         bid = data['prepid']

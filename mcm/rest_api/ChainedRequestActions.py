@@ -27,11 +27,11 @@ class CreateChainedRequest(RESTResource):
         """
         Create a chained request from the provided json content
         """
-        return self.import_request(flask.request.data.strip())
+        return self.import_request(flask.request.json)
 
-    def import_request(self, data):
+    def import_request(self, data: dict):
         db = database(self.db_name)
-        json_input = loads(data)
+        json_input = data
         if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
             self.logger.error('Now pwg or member of campaign attribute for new chained request')
             return {"results": False}
@@ -94,14 +94,14 @@ class UpdateChainedRequest(RESTResource):
         """
         Update a chained request from the provided json content
         """
-        return self.update_request(flask.request.data)
+        return self.update_request(flask.request.json)
 
-    def update_request(self, data):
+    def update_request(self, data: dict):
         if '_rev' not in data:
             return {"results": False, 'message': 'There is no previous revision provided'}
 
         try:
-            chained_req = chained_request(json_input=loads(data))
+            chained_req = chained_request(json_input=data)
         except chained_request.IllegalAttributeName:
             return {"results": False}
 
@@ -220,7 +220,8 @@ class FlowToNextStep(RESTResource):
         """
         Allows to flow a chained request with the dataset and blocks provided in the json
         """
-        return self.flow2(loads(flask.request.data))
+        data: dict = flask.request.json
+        return self.flow2(data)
 
     def get(self, chained_request_id, action='', reserve_campaign=''):
         """
@@ -1117,7 +1118,8 @@ class ChainedRequestsPriorityChange(RESTResource):
 
     def post(self):
         fails = []
-        for chain in loads(flask.request.data):
+        json_data: dict = flask.request.json
+        for chain in json_data:
             chain_prepid = chain['prepid']
             mcm_chained_request = chained_request(self.chained_requests_db.get(chain_prepid))
             action_parameters = chain['action_parameters']

@@ -25,7 +25,7 @@ class CreateCampaign(RESTResource):
         """
         Create a campaign with the provided json content
         """
-        data = json.loads(flask.request.data)
+        data: dict = flask.request.json
         campaign_db = Database('campaigns')
         campaign = Campaign(json_input=data)
         prepid = campaign.get_attribute('prepid')
@@ -84,7 +84,7 @@ class UpdateCampaign(RESTResource):
         """
         Update a campaign with the provided json content
         """
-        data = json.loads(flask.request.data)
+        data: dict = flask.request.json
         if '_rev' not in data:
             return {'results': False,
                     'message': 'No revision provided'}

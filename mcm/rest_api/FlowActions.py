@@ -128,7 +128,7 @@ class CreateFlow(FlowRESTResource):
         """
         Create a flow with the provided json content
         """
-        data = json.loads(flask.request.data)
+        data: dict = flask.request.json
         flow_db = Database('flows')
         flow = Flow(json_input=data)
         prepid = flow.get_attribute('prepid')
@@ -186,7 +186,7 @@ class UpdateFlow(FlowRESTResource):
         """
         Update a campaign with the provided json content
         """
-        data = json.loads(flask.request.data)
+        data: dict = flask.request.json
         if '_rev' not in data:
             return {'results': False,
                     'message': 'No revision provided'}
@@ -398,7 +398,7 @@ class CloneFlow(RESTResource):
         """
         Make a clone of flow
         """
-        data = json.loads(flask.request.data)
+        data: dict = flask.request.json
         flow_id = data['prepid']
         new_flow_id = data['new_prepid']
         if not flow_id or not new_flow_id:
