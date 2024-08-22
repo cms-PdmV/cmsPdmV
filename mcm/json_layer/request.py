@@ -2450,7 +2450,8 @@ class request(json_base):
         # create a string that supposedly uniquely identifies the request configuration for step
         uniqueString = ''
         if self.get_attribute('fragment'):
-            fragment_hash = hashlib.sha224(self.get_attribute('fragment')).hexdigest()
+            fragment_as_str: str = self.get_attribute('fragment')
+            fragment_hash = hashlib.sha224(fragment_as_str.encode(encoding="utf-8")).hexdigest()
             uniqueString += fragment_hash
         if self.get_attribute('fragment_tag'):
             uniqueString += self.get_attribute('fragment_tag')
@@ -2464,9 +2465,9 @@ class request(json_base):
         return uniqueString
 
     def configuration_identifier(self, step_i):
-        uniqueString = self.unique_string(step_i)
+        uniqueString: str = self.unique_string(step_i)
         # create a hash value that supposedly uniquely defines the configuration
-        hash_id = hashlib.sha224(uniqueString).hexdigest()
+        hash_id = hashlib.sha224(uniqueString.encode(encoding="utf-8")).hexdigest()
         return hash_id
 
     @staticmethod
