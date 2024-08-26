@@ -9,11 +9,10 @@ from importlib.resources import files
 from pathlib import Path
 
 from requests import Response
-import pytest
 
-import tests.campaign as campaign
-from tests.api_tools import McM, Roles
-from tests.base_test_tools import Entity, EntityTest, config
+import mcm_tests.rest_api.campaign as campaign
+from mcm_tests.rest_api.api_tools import McM, Roles
+from mcm_tests.rest_api.base_test_tools import Entity, EntityTest, config
 
 
 class CampaignAPI(Entity):
@@ -78,7 +77,7 @@ class CampaignAPI(Entity):
                 This `inspect` process refers to synchronize the progress
                 related to the `request` from ReqMgr2 (CMS' main request manager tool)
                 to the McM application.
-                
+
                 Also, this returns the HTTP response object.
         """
         endpoint = f"restapi/campaigns/inspect/{mockup.get('prepid')}"
@@ -100,7 +99,7 @@ class CampaignAPI(Entity):
                         - The campaign doesn't exists.
                         - Runtime exception when saving to the database.
                         - Any other exception.
-                
+
                 Also, this returns the HTTP response object.
         """
         endpoint = f"restapi/campaigns/status/{mockup.get('prepid')}"

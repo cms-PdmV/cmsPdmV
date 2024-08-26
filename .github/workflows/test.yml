@@ -49,11 +49,27 @@ jobs:
         run: |
           export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
           export TEST_FOLDER_PATH=$REPO_PATH/tests
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -r $TEST_FOLDER_PATH/requirements.txt
+
+          # Install Poetry in an isolated `venv`
+          export POETRY_PATH='/opt/poetry'
+          python3 -m venv ${POETRY_PATH}
+          source ${POETRY_PATH}/bin/activate
+
+          # Now, we are using the `venv`, install `poetry`
+          python -m pip install --upgrade pip poetry
+          cd "${TEST_FOLDER_PATH}" && echo "Current folder: $(pwd -P)"
+          poetry install
 
       - name: Run test suite
         run: |
+          # Load the `venv`
+          export POETRY_PATH='/opt/poetry'
+          source ${POETRY_PATH}/bin/activate
+
+          # Access the test module
           export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
-          export PYTHONPATH=$REPO_PATH
-          pytest -s -vv
+          export TEST_FOLDER_PATH=$REPO_PATH/tests
+          cd "${TEST_FOLDER_PATH}"
+
+          # Execute the tests
+          poetry run pytest -s -vv
