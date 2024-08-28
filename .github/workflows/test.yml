@@ -38,7 +38,11 @@ jobs:
           MCM_EXAMPLE_DATA_URL: ${{ secrets.MCM_EXAMPLE_DATA_URL }}
 
         run: |
-          bash deploy/action.sh
+          echo "Current folder: $(pwd -P)"
+          export REPO_PATH="$(pwd -P)"
+          export TO_INI_PATH="${REPO_PATH}/deploy/couchdb-lucene.ini"
+
+          bash deploy/action.sh --up
 
       - name: Set up Python
         uses: actions/setup-python@v4
