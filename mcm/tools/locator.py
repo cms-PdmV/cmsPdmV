@@ -181,6 +181,50 @@ class locator:
             self.logger.info("Using a custom McM executor node: %s", custom_node)
             return custom_node
         return default_node
+    
+    def service_account_credentials(self):
+        """
+        Returns the `username` and `password` related to the
+        service account for authenticating SSH sessions required
+        by the application.
+
+        Returns:
+            tuple[str, str]: Username, password.
+
+        Raises:
+            ValueError: If any of the values is not provided.
+        """
+        username = os.getenv("MCM_SERVICE_ACCOUNT_USERNAME", "")
+        password = os.getenv("MCM_SERVICE_ACCOUNT_PASSWORD", "")
+
+        if not username:
+            raise ValueError("Set $MCM_SERVICE_ACCOUNT_USERNAME with the service account username")
+        if not password:
+            raise ValueError("Set $MCM_SERVICE_ACCOUNT_PASSWORD with the service account password")
+        
+        return (username, password)
+    
+    def cmsweb_credentials(self):
+        """
+        Returns the certificate path and key path to authenticate
+        request to CMS Web services like ReqMgr2 using client certificate
+        authentication.
+
+        Returns:
+            tuple[str, str]: Certificate path, key path.
+
+        Raises:
+            ValueError: If any of the values is not provided.
+        """
+        certificate = os.getenv("USERCRT", "")
+        key = os.getenv("USERKEY", "")
+
+        if not certificate:
+            raise ValueError("Set $USERCRT with the location of the service account certificate file")
+        if not key:
+            raise ValueError("Set $USERKEY with the location of the service account certificate key file")
+        
+        return (certificate, key)
 
     def host(self):
         """
