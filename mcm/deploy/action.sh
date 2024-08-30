@@ -10,9 +10,21 @@ if ! docker compose version; then
     exit 1
 fi
 
+# Optional: Project name for the Docker Compose deployment
+# If not provided, set it to 'default'
+if [ -z "$DOCKER_COMPOSE_PROJECT" ]; then
+    DOCKER_COMPOSE_PROJECT='default'
+fi
+
 # Sample data URL
 if [ -z "$MCM_EXAMPLE_DATA_URL" ]; then
     echo 'Set $MCM_EXAMPLE_DATA_URL with the URL for downloading the McM data'
+    exit 1
+fi
+
+# Path (or URL) pointing to the Dockerfile definition for the McM application.
+if [ -z "$MCM_DOCKERFILE_PATH" ]; then
+    echo 'Set $MCM_DOCKERFILE_PATH with the path or url pointing to the Dockerfile definition for the McM application'
     exit 1
 fi
 
@@ -36,6 +48,27 @@ DATA_PATH="/tmp/McM_Container_Data_${DATE_WITH_TIME}"
 export COUCHDB_DATA="$DATA_PATH/couchdb"
 export LUCENE_DATA_PATH="$DATA_PATH/lucene/data"
 export LUCENE_CONF_PATH="$DATA_PATH/lucene/config"
+
+# Retrieve all the logs related to the containers
+# with an exit code != 0 related to the current project
+function debug_containers() {
+    echo ""
+    exited_containers=$(docker ps -a --filter "status=exited" --filter "label=com.docker.compose.project=${DOCKER_COMPOSE_PROJECT}" --format "{{.Names}}")
+    for container in $exited_containers; do
+        # Get the exit code of the container
+        exit_code=$(docker inspect --format='{{.State.ExitCode}}' "$container")
+        exit_code_num=$((exit_code + 0))
+
+        if [ "$exit_code_num" -ne 0 ]; then
+            echo "The following container seems to be failing: $container"
+            echo "Exit Code: $exit_code_num"
+            echo "Logs:"
+            docker logs "$container"
+            echo "-----------------------------"
+        fi
+    done
+    echo ""
+}
 
 # Start the deployment
 function up() {
@@ -62,14 +95,17 @@ function up() {
     cp $TO_INI_PATH $LUCENE_CONF_PATH/
 
     # Deployment
-    if ! docker compose -f $REPO_PATH/deploy/mcm-components.yml up -d; then
+    if ! docker compose -f $REPO_PATH/deploy/mcm-components.yml -p $DOCKER_COMPOSE_PROJECT up -d; then
         echo 'Unable to deploy the required components, aborting...'
         exit 1
     fi 
 
     echo "Waiting for $SECONDS_TO_WAIT seconds...."
     sleep $SECONDS_TO_WAIT
+
+    # Display the current status and logs if required
     docker ps -a
+    debug_containers
 
     echo "Services status..."
     echo "CouchDB:"
@@ -84,7 +120,7 @@ function up() {
 function down() {
     echo 'Removing deployment...'
 
-    if ! docker compose -f $REPO_PATH/deploy/mcm-components.yml down; then
+    if ! docker compose -f $REPO_PATH/deploy/mcm-components.yml -p $DOCKER_COMPOSE_PROJECT down; then
         echo 'Unable to remote the deployment. Stop and remove the containers manually...'
         exit 1
     fi
