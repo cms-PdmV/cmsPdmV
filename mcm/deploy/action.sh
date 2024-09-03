@@ -41,6 +41,38 @@ if [ -z "$TO_INI_PATH" ]; then
     exit 1
 fi
 
+# Check the certificate and key file for authenticating CMS Web services is provided.
+if [ -z "$CMSWEB_CERTIFICATE_FILE" ]; then
+    echo 'Set $CMSWEB_CERTIFICATE_FILE with the path to the users certificate file'
+    exit 1
+fi
+
+if [ -z "$CMSWEB_KEY_FILE" ]; then
+    echo 'Set $CMSWEB_KEY_FILE with the path to the users certificate key file'
+    exit 1
+fi
+
+# Credentials for opening a SSH session for performing submissions
+if [ -z "$MCM_SERVICE_ACCOUNT_USERNAME" ]; then
+    echo 'Service account username not provided, using a placeholder...'
+    MCM_SERVICE_ACCOUNT_USERNAME='notexists'
+fi
+
+if [ -z "$MCM_SERVICE_ACCOUNT_PASSWORD" ]; then
+    echo 'Service account password not provided, using a placeholder...'
+    MCM_SERVICE_ACCOUNT_PASSWORD='notexists'
+fi
+
+if [ -z "$MCM_WORK_LOCATION_PATH" ]; then
+    echo 'Work folder for creating artifacts not provided. Setting the default to /tmp'
+    MCM_WORK_LOCATION_PATH='/tmp/'
+fi
+
+if [ -z "$MCM_EXECUTOR_HOST" ]; then
+    echo 'Remote host not provided. Setting the default to localhost'
+    MCM_EXECUTOR_HOST='localhost'
+fi
+
 # Set environment and context.
 DATE_WITH_TIME=`date "+%Y_%m_%d_%H_%M_%S"`
 TMP_FOLDER="/tmp/McM_Containers_Temporal_Data_Folder_${DATE_WITH_TIME}"

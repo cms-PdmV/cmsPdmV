@@ -44,6 +44,12 @@ jobs:
           export TO_INI_PATH="${REPO_PATH}/deploy/couchdb-lucene.ini"
           export MCM_DOCKERFILE_PATH="../"
 
+          # Create an empty file to be a placeholder for the certificates
+          PLACEHOLDER_CERT='/tmp/placeholder.pem'
+          touch "${PLACEHOLDER_CERT}"
+          export CMSWEB_CERTIFICATE_FILE="${PLACEHOLDER_CERT}"
+          export CMSWEB_KEY_FILE="${PLACEHOLDER_CERT}"
+
           deploy/action.sh --up
 
       - name: Set up Python
