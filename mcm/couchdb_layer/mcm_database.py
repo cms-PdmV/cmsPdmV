@@ -280,7 +280,11 @@ class database:
         """
         if page_num < 0:
             # Page <0 means "all", but it still has to be limited to something
-            return 9999, 0
+            return 1000, 0
+
+        if limit < 0 or limit > 1000:
+            # Always enforce a limit
+            limit = 1000
 
         skip = limit * page_num
         return limit, skip
