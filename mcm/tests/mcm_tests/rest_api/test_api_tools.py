@@ -4,7 +4,7 @@ Test the functionality provided via `api.py` module.
 
 import pytest
 
-from mcm_tests.rest_api.api_tools import Environment, McM, Roles
+from mcm_tests.rest_api.api_tools import Environment, McMTesting, Roles
 from mcm_tests.rest_api.base_test_tools import config
 
 
@@ -15,11 +15,11 @@ class TestEnvironment:
     """
 
     @property
-    def mcm(self) -> McM:
+    def mcm(self) -> McMTesting:
         if hasattr(self, "_mcm"):
             return self._mcm
         else:
-            self._mcm = McM(config=config, role=Roles.USER)
+            self._mcm = McMTesting(config=config, role=Roles.USER)
             return self._mcm
 
     def test_init_empty(self):
@@ -54,7 +54,7 @@ class TestEnvironment:
         Check it is possible to contact with the CouchDB
         service.
         """
-        response = self.mcm.couchdb_requests.get(url=config.mcm_couchdb_url)
+        response = self.mcm.session.get(url=config.mcm_couchdb_url)
         content = response.json()
         assert response.status_code == 200
         assert (
@@ -67,7 +67,7 @@ class TestEnvironment:
         Check it is possible to contact with the
         CouchDB Lucene service
         """
-        response = self.mcm.lucene_requests.get(url=config.mcm_couchdb_lucene_url)
+        response = self.mcm.session.get(url=config.mcm_couchdb_lucene_url)
         content = response.json()
         assert response.status_code == 200
         assert "couchdb-lucene" in content

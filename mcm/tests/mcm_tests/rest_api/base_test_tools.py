@@ -12,7 +12,7 @@ from pathlib import Path
 
 from requests import Response
 
-from mcm_tests.rest_api.api_tools import Environment, McM
+from mcm_tests.rest_api.api_tools import Environment, McMTesting
 
 # Default configuration for the test environment
 config = Environment(
@@ -30,10 +30,10 @@ class Entity(abc.ABC):
     chain_requests, etc.
     """
 
-    def __init__(self, mockup_path: Path, mcm: McM) -> None:
+    def __init__(self, mockup_path: Path, mcm: McMTesting) -> None:
         self._mockup_path = mockup_path
         self._original_mockup: dict = self.__load_mockup()
-        self.mcm: McM = mcm
+        self.mcm: McMTesting = mcm
 
     def __load_mockup(self) -> dict:
         """

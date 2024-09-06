@@ -11,7 +11,8 @@ import sys
 from copy import deepcopy
 from enum import Enum
 
-from requests import Response, Session
+from requests import Response
+from rest import McM as McMClient
 
 
 class Roles(Enum):
@@ -102,7 +103,7 @@ class Environment:
             raise ValueError(compress_msg)
 
 
-class McM:
+class McMTesting(McMClient):
     """
     A simple version for McM REST client adapted to
     be used for building the test cases.
@@ -114,14 +115,14 @@ class McM:
     """
 
     def __init__(self, config: Environment, role: Roles):
+        super().__init__(id=None)
         self.config = config
         self.role: Roles = role
         self.logger = self._logger()
-        self.mcm_requests = self._session({"Adfs-Login": role.value})
-        self.lucene_requests = self._session()
-        self.couchdb_requests = self._session(
-            {"Authorization": self.config.mcm_couchdb_credential}
-        )
+
+        # Configure the right target server
+        self.server = self.config.mcm_application_url
+        self.session.headers.update({"Adfs-Login": role.value, "Authorization": self.config.mcm_couchdb_credential})
         if not self.check_test_users():
             self._include_test_users()
 
@@ -138,17 +139,6 @@ class McM:
         logger.addHandler(handler)
         return logger
 
-    def _session(self, headers: dict = {}) -> Session:
-        """
-        Create a pre-configured `request.Session` object.
-
-        Args:
-            headers (dict): Headers to include in the pre-configured session.
-        """
-        s = Session()
-        s.headers.update(headers)
-        return s
-
     def check_test_users(self) -> bool:
         """
         Checks that there is one user per role
@@ -161,7 +151,7 @@ class McM:
         full_url: str = self.config.mcm_couchdb_url + "users/_find"
         all_roles = [r.value for r in Roles]
         query = {"selector": {"_id": {"$in": all_roles}}}
-        response = self.couchdb_requests.post(url=full_url, json=query)
+        response = self.session.post(url=full_url, json=query)
         content = response.json()
         docs = content.get("docs", [])
         return len(docs) == len(all_roles)
@@ -190,106 +180,4 @@ class McM:
 
         # Send the request.
         full_url: str = self.config.mcm_couchdb_url + "users/_bulk_docs"
-        self.couchdb_requests.post(url=full_url, json={"docs": new_users})
-
-    def _get(self, url) -> Response:
-        full_url: str = self.config.mcm_application_url + url
-        return self.mcm_requests.get(url=full_url)
-
-    def _put(self, url, data) -> Response:
-        full_url: str = self.config.mcm_application_url + url
-        return self.mcm_requests.put(url=full_url, json=data)
-
-    def _delete(self, url) -> Response:
-        full_url: str = self.config.mcm_application_url + url
-        return self.mcm_requests.delete(full_url)
-
-    # McM methods
-    def get(
-        self, object_type, object_id=None, query="", method="get", page=-1
-    ) -> dict | None:
-        """
-        Get data from McM
-        object_type - [chained_campaigns, chained_requests, campaigns, requests, flows, etc.]
-        object_id - usually prep id of desired object
-        query - query to be run in order to receive an object, e.g. tags=M17p1A, multiple parameters can be used with & tags=M17p1A&pwg=HIG
-        method - action to be performed, such as get, migrate or inspect
-        page - which page to be fetched. -1 means no paginantion, return all results
-        """
-        object_type = object_type.strip()
-        if object_id:
-            object_id = object_id.strip()
-            self.logger.debug(
-                "Object ID %s provided, method is %s, database %s",
-                object_id,
-                method,
-                object_type,
-            )
-            url = "restapi/%s/%s/%s" % (object_type, method, object_id)
-            http_res = self._get(url)
-            res = http_res.json()
-            return res.get("results") or None
-        elif query:
-            if page != -1:
-                self.logger.debug(
-                    "Fetching page %s of %s for query %s", page, object_type, query
-                )
-                url = "search/?db_name=%s&limit=50&page=%d&%s" % (
-                    object_type,
-                    page,
-                    query,
-                )
-                http_res = self._get(url)
-                res = http_res.json()
-                results = res.get("results", [])
-                self.logger.debug(
-                    "Found %s %s in page %s for query %s",
-                    len(results),
-                    object_type,
-                    page,
-                    query,
-                )
-                return results
-            else:
-                self.logger.debug(
-                    "Page not given, will use pagination to build response"
-                )
-                page_results = [{}]
-                results = []
-                page = 0
-                while page_results:
-                    page_results, _ = self.get(
-                        object_type=object_type, query=query, method=method, page=page
-                    )
-                    results += page_results
-                    page += 1
-
-                return results
-        else:
-            self.logger.error("Neither object ID, nor query is given, doing nothing...")
-
-    def update(self, object_type, object_data) -> tuple[dict, Response]:
-        """
-        Update data in McM
-        object_type - [chained_campaigns, chained_requests, campaigns, requests, flows, etc.]
-        object_data - new JSON of an object to be updated
-        """
-        return self.put(object_type, object_data, method="update")
-
-    def put(self, object_type, object_data, method="save") -> tuple[dict, Response]:
-        """
-        Put data into McM
-        object_type - [chained_campaigns, chained_requests, campaigns, requests, flows, etc.]
-        object_data - new JSON of an object to be updated
-        method - action to be performed, default is 'save'
-        """
-        url = f"restapi/{object_type}/{method}"
-        http_res = self._put(url, object_data)
-        res = http_res.json()
-        return res, http_res
-
-    def delete(self, object_type, object_id) -> tuple[dict, Response]:
-        url = "restapi/%s/delete/%s" % (object_type, object_id)
-        http_res = self._delete(url)
-        res = http_res.json()
-        return res, http_res
+        self.session.post(url=full_url, json={"docs": new_users})
