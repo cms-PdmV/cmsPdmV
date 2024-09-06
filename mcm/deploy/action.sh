@@ -124,7 +124,11 @@ function up() {
     chown -R "$(whoami):docker" $DATA_PATH && chmod -R 777 $DATA_PATH
 
     # Path to CouchDB Lucene config file
+    # Set the correct URLs of CouchDB and set the port
     cp $TO_INI_PATH $LUCENE_CONF_PATH/
+    DECODED_CREDENTIAL=$(echo "${COUCH_CRED#Basic }" | base64 -d)
+    FULL_LUCENE_COUCHDB_URL=$(echo "$MCM_COUCHDB_URL" | sed "s|http://|http://$DECODED_CREDENTIAL@|")
+    sed -i "s#<MCM_COUCHDB_URL>#${FULL_LUCENE_COUCHDB_URL}#g" "${LUCENE_CONF_PATH}/couchdb-lucene.ini"
 
     # Deployment
     if ! docker compose -f $REPO_PATH/deploy/mcm-components.yml -p $DOCKER_COMPOSE_PROJECT up -d; then
@@ -145,7 +149,7 @@ function up() {
     echo "CouchDB Lucene"
     curl -s "http://localhost:$LUCENE_PORT/" | python3 -m json.tool
     echo "McM application"
-    curl -s "http://localhost:8000/restapi/users/get_role" | python3 -m json.tool
+    curl -s "http://localhost:$MCM_PORT/restapi/users/get_role" | python3 -m json.tool
 }
 
 # Take down the deployment
