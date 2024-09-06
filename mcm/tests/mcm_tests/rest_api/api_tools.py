@@ -122,7 +122,19 @@ class McMTesting(McMClient):
 
         # Configure the right target server
         self.server = self.config.mcm_application_url
-        self.session.headers.update({"Adfs-Login": role.value, "Authorization": self.config.mcm_couchdb_credential})
+        credential_headers = {
+            # McM
+            # INFO: Include also the email, firstname and lastname
+            # otherwise, the web server will fail to properly assign
+            # permissions.
+            "Adfs-Login": role.value,
+            "Adfs-Email": "example@example.com",
+            "Adfs-Firstname": role.value,
+            "Adfs-Lastname": role.value,
+            # CouchDB
+            "Authorization": self.config.mcm_couchdb_credential
+        }
+        self.session.headers.update(credential_headers)
         if not self.check_test_users():
             self._include_test_users()
 
@@ -175,7 +187,7 @@ class McMTesting(McMClient):
             new_user["_id"] = role
             new_user["username"] = role
             new_user["role"] = role
-            new_user["fullname"] = f"Test user for role: {role}"
+            new_user["fullname"] = role
             new_users.append(new_user)
 
         # Send the request.

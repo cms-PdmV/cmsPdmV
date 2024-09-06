@@ -10,14 +10,14 @@ from mcm_tests.fixtures import (
     injection_to_reqmgr,
     nanoaod_injector,
     root_request_injector,
-    stdin_enabled,
-    using_mcm_development_oidc,
+    authenticate_by_stdin,
+    mcm_client,
 )
 from mcm_tests.use_cases.full_injection.core import InjectRootRequest, InjectToNanoAOD
 
 
 @pytest.mark.usefixtures(
-    "stdin_enabled", "injection_to_reqmgr", "able_to_access_internal_resources"
+    "injection_to_reqmgr", "able_to_access_internal_resources"
 )
 class TestInjectRootRequest:
     """
@@ -92,7 +92,7 @@ class TestInjectRootRequest:
 
 
 @pytest.mark.usefixtures(
-    "stdin_enabled", "injection_to_reqmgr", "able_to_access_internal_resources"
+    "injection_to_reqmgr", "able_to_access_internal_resources"
 )
 class TestInjectToNanoAOD:
     """

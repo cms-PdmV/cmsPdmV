@@ -8,8 +8,6 @@ from copy import deepcopy
 from importlib.resources import files
 from pathlib import Path
 
-from requests import Response
-
 import mcm_tests.rest_api.campaign as campaign
 from mcm_tests.rest_api.api_tools import McMTesting, Roles
 from mcm_tests.rest_api.base_test_tools import Entity, EntityTest, config

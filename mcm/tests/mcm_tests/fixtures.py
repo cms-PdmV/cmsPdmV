@@ -9,12 +9,22 @@ import pytest
 from pytest import FixtureRequest
 from rest import McM
 
-from mcm_tests.rest_api.api_tools import Environment
+from mcm_tests.rest_api.api_tools import McMTesting, Environment, Roles
 from mcm_tests.use_cases.full_injection.core import InjectRootRequest, InjectToNanoAOD
 
 
 @pytest.fixture
-def stdin_enabled(request: FixtureRequest) -> None:
+def authenticate_by_stdin(request: FixtureRequest) -> bool:
+    """
+    Check if the user is going has enabled the `stdin` to authenticate
+    actions.
+    """
+    enabled = request.config.option.capture == "no"
+    return enabled
+
+
+@pytest.fixture
+def stdin_enabled(authenticate_by_stdin: bool) -> None:
     """
     Check if the current execution allows to
     provide values by `stdin` interactions.
@@ -22,8 +32,7 @@ def stdin_enabled(request: FixtureRequest) -> None:
     Args:
         request: Pytest request fixture.
     """
-    enabled = request.config.option.capture == "no"
-    if not enabled:
+    if not authenticate_by_stdin:
         reason = (
             "Standard input is disabled, it is not possible to "
             "capture human interactions to know when they completed "
@@ -61,42 +70,47 @@ def able_to_access_internal_resources() -> None:
 
 
 @pytest.fixture()
-def using_mcm_development_oidc() -> tuple[McM, Environment]:
+def mcm_client(authenticate_by_stdin: bool) -> tuple[McM, Environment]:
     """
     Retrieves a testing `Environment` configuration and a
     `McM` session pointing to the live `development` McM web application
     instance.
     """
-    test_environment = Environment(
-        mcm_couchdb_url="http://vocms0485.cern.ch:5984/",
-        mcm_couchdb_lucene_url="<Not Required>",
-        mcm_application_url="https://cms-pdmv-dev.web.cern.ch/mcm/",
-        mcm_couchdb_credential="<Not Required>",
-    )
-    mcm_session = McM(id=McM.OIDC, dev=True)
-    return (mcm_session, test_environment)
+    if authenticate_by_stdin:
+        test_environment = Environment(
+            mcm_couchdb_url="http://vocms0485.cern.ch:5984/",
+            mcm_couchdb_lucene_url="<Not Required>",
+            mcm_application_url="https://cms-pdmv-dev.web.cern.ch/mcm/",
+            mcm_couchdb_credential="<Not Required>",
+        )
+        mcm_session = McM(id=McM.OIDC, dev=True)
+        return (mcm_session, test_environment)
+    else:
+        test_environment = Environment()
+        mcm_session = McMTesting(config=test_environment, role=Roles.ADMINISTRATOR)
+        return (mcm_session, test_environment)
 
 
 @pytest.fixture()
 def root_request_injector(
-    using_mcm_development_oidc: tuple[McM, Environment]
+    mcm_client: tuple[McM, Environment]
 ) -> InjectRootRequest:
     """
     Configures an injection handler to submit root request
     from scratch, deleting all the elements after use.
     """
-    mcm, environment = using_mcm_development_oidc
+    mcm, environment = mcm_client
     return InjectRootRequest(mcm=mcm, environment=environment)
 
 
 @pytest.fixture()
 def nanoaod_injector(
-    using_mcm_development_oidc: tuple[McM, Environment]
+    mcm_client: tuple[McM, Environment]
 ) -> InjectToNanoAOD:
     """
     Configures an injector handler to submit a complete MC production sample
     from root requests to NanoAOD samples creating the intermediate campaigns,
     flows, chained campaigns, chained requests and tickets.
     """
-    mcm, environment = using_mcm_development_oidc
+    mcm, environment = mcm_client
     return InjectToNanoAOD(mcm=mcm, environment=environment)
