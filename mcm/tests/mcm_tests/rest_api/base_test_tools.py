@@ -15,12 +15,7 @@ from requests import Response
 from mcm_tests.rest_api.api_tools import Environment, McMTesting
 
 # Default configuration for the test environment
-config = Environment(
-    mcm_couchdb_url="http://localhost:5984/",
-    mcm_couchdb_credential="Basic dGVzdDp0ZXN0",
-    mcm_couchdb_lucene_url="http://localhost:5985/",
-    mcm_application_url="http://localhost:8000/",
-)
+config = Environment()
 
 
 class Entity(abc.ABC):

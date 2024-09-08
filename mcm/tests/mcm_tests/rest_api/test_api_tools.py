@@ -22,21 +22,6 @@ class TestEnvironment:
             self._mcm = McMTesting(config=config, role=Roles.USER)
             return self._mcm
 
-    def test_init_empty(self):
-        """
-        Initialize the class with no attributes.
-        """
-        with pytest.raises(ValueError):
-            Environment()
-
-    def test_some_provided_args(self):
-        """
-        Initialize the class with some attributes
-        provided via the constructor but not all.
-        """
-        with pytest.raises(ValueError):
-            Environment(mcm_application_url="http://localhost:5984/")
-
     def test_full_args(self):
         """
         Initialize the class only via constructor args.

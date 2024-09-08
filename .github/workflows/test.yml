@@ -73,6 +73,13 @@ jobs:
           poetry install
 
       - name: Run test suite
+        env:
+          COUCH_CRED: 'Basic dGVzdDp0ZXN0'
+          MCM_COUCHDB_URL: 'http://localhost:5984/'
+          MCM_LUCENE_URL: 'http://localhost:5985/'
+          MCM_HOST: 'localhost'
+          MCM_PORT: '8000'
+
         run: |
           # Load the `venv`
           export POETRY_PATH='/opt/poetry'
