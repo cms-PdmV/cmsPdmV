@@ -17,6 +17,11 @@ class communicator:
     def __init__(self):
         self.from_opt = 'user'  # could be service at some point
 
+    def _smtp_session(self):
+        smtp = smtplib.SMTP(host="cernmx.cern.ch", port=25)
+        smtp.starttls()
+        return smtp
+
     def flush(self, Nmin):
         res = []
         with locker.lock('accumulating_notifcations'):
@@ -41,8 +46,7 @@ class communicator:
                 # self.logger.info('Sending a message from cache \n%s'% (text))
                 try:
                     msg.attach(MIMEText(text))
-                    smtpObj = smtplib.SMTP()
-                    smtpObj.connect()
+                    smtpObj = self._smtp_session()
                     smtpObj.sendmail(sender, destination, msg.as_string())
                     smtpObj.quit()
                     self.cache.pop(key)
@@ -114,8 +118,7 @@ class communicator:
 
         try:
             msg.attach(MIMEText(text))
-            smtpObj = smtplib.SMTP()
-            smtpObj.connect()
+            smtpObj = self._smtp_session()
             communicator.logger.info('Sending %s to %s...' % (msg['Subject'], msg['To']))
             smtpObj.sendmail(sender, destination, msg.as_string())
             smtpObj.quit()
