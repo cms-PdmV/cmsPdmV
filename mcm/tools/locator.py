@@ -36,7 +36,6 @@ class locator:
                 configuration, False otherwise.
         """
         production = bool(os.getenv("MCM_PRODUCTION"))
-        self.logger.info("Running in production: %s", production)
         return production
 
     def database_url(self):
