@@ -52,6 +52,12 @@ if [ -z "$CMSWEB_KEY_FILE" ]; then
     exit 1
 fi
 
+# McM application port.
+if [ -z "$MCM_PORT" ]; then
+    echo 'Application port not provided. Set it via $MCM_PORT'
+    exit 1
+fi
+
 # Credentials for opening a SSH session for performing submissions
 if [ -z "$MCM_SERVICE_ACCOUNT_USERNAME" ]; then
     echo 'Service account username not provided, using a placeholder...'
@@ -129,6 +135,12 @@ function up() {
     DECODED_CREDENTIAL=$(echo "${COUCH_CRED#Basic }" | base64 -d)
     FULL_LUCENE_COUCHDB_URL=$(echo "$MCM_COUCHDB_URL" | sed "s|http://|http://$DECODED_CREDENTIAL@|")
     sed -i "s#<MCM_COUCHDB_URL>#${FULL_LUCENE_COUCHDB_URL}#g" "${LUCENE_CONF_PATH}/couchdb-lucene.ini"
+
+    # Set the McM base URL. This is required for external integrations
+    # with scripts like the Injection script with the PdmV `wmcontrol`
+    # module.
+    export MCM_BASE_URL="http://$(hostname):${MCM_PORT}/"
+    echo "McM application - Base URL: ${MCM_BASE_URL}"
 
     # Deployment
     if ! docker compose -f $REPO_PATH/deploy/mcm-components.yml -p $DOCKER_COMPOSE_PROJECT up -d; then
