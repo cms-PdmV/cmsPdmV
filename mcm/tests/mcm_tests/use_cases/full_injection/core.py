@@ -70,7 +70,7 @@ class MocksForInjection:
 
         # Tweak some attributes.
         mock["status"] = "started"
-        mock["prepid"] = f"Run3SystemTesting{random.randint(1, 99)}BPixGS"
+        mock["prepid"] = f"Run3SystemTesting{random.randint(1, 9999)}BPixGS"
         mock["no_output"] = False  # For this use case, output must be kept.
         mock["sequences"][0]["default"]["era"] = self.era
         mock["cmssw_release"] = self.cms_sw_version
@@ -89,7 +89,7 @@ class MocksForInjection:
 
         # Tweak some attributes.
         mock["status"] = "started"
-        mock["prepid"] = f"Run3SystemTesting{random.randint(1, 99)}BPixDRPremix"
+        mock["prepid"] = f"Run3SystemTesting{random.randint(1, 9999)}BPixDRPremix"
         mock["no_output"] = False  # For this use case, output must be kept.
 
         # Set the "era" across all sequences
@@ -112,7 +112,7 @@ class MocksForInjection:
 
         # Tweak some attributes.
         mock["status"] = "started"
-        mock["prepid"] = f"Run3SystemTesting{random.randint(1, 99)}BPixMiniAODv4"
+        mock["prepid"] = f"Run3SystemTesting{random.randint(1, 9999)}BPixMiniAODv4"
         mock["no_output"] = False  # For this use case, output must be kept.
 
         # Set the "era" across all sequences
@@ -135,7 +135,7 @@ class MocksForInjection:
 
         # Tweak some attributes.
         mock["status"] = "started"
-        mock["prepid"] = f"Run3SystemTesting{random.randint(1, 99)}BPixNanoAODv12"
+        mock["prepid"] = f"Run3SystemTesting{random.randint(1, 9999)}BPixNanoAODv12"
         mock["no_output"] = False  # For this use case, output must be kept.
 
         # Set the "era" across all sequences
