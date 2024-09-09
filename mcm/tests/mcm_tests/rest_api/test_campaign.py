@@ -3,51 +3,18 @@ This module tests the API operations related with
 the campaign entity.
 """
 
-import uuid
-from copy import deepcopy
-from importlib.resources import files
-from pathlib import Path
-
-import mcm_tests.rest_api.campaign as campaign
-from mcm_tests.rest_api.api_tools import McMTesting, Roles
-from mcm_tests.rest_api.base_test_tools import Entity, EntityTest, config
+from mcm_tests.rest_api.api_tools import McMTesting, Roles, Environment
+from mcm_tests.use_cases.full_injection.core import InjectRootRequest
 
 
-class CampaignAPI(Entity):
+class CampaignAPI:
     """
-    Implements a simple test API client focused
-    only on the campaign operations.
+    Implements some extra operations not related to CRUD
+    operations.
     """
-
     def __init__(self, mcm: McMTesting) -> None:
-        mock_path: Path = files(campaign).joinpath("static/campaign.json")
-        super().__init__(mock_path, mcm)
+        self.mcm = mcm
         self.object_type: str = "campaigns"
-
-    def mockup(self):
-        mock = deepcopy(self._original_mockup)
-        suffix: str = str(uuid.uuid4()).split("-")[0]
-        new_id: str = f"Test{mock.get('prepid', '')}R{suffix}"
-        mock["_id"] = new_id
-        mock["prepid"] = new_id
-        return mock
-
-    def create(self, mockup: dict):
-        return self.mcm.put(self.object_type, mockup)
-
-    def retrieve(self, mockup: dict):
-        return self.mcm.get(self.object_type, mockup.get("prepid"))
-
-    def update(self, mockup: dict):
-        return self.mcm.update(self.object_type, mockup)
-
-    def delete(self, mockup: dict):
-        return self.mcm.delete(self.object_type, mockup.get("prepid"))
-
-    def example(self):
-        mockup = self.mockup()
-        self.create(mockup)
-        return self.retrieve(mockup)
 
     def cms_drivers(self, mockup: dict) -> dict:
         """
@@ -97,75 +64,89 @@ class CampaignAPI(Entity):
         return self.mcm._get(endpoint)
 
 
-class TestCampaign(EntityTest):
+class TestCampaign:
     """
     Test the campaign API.
     """
 
-    @property
-    def entity_api(self) -> CampaignAPI:
-        mcm: McMTesting = McMTesting(config=config, role=Roles.ADMINISTRATOR)
-        return CampaignAPI(mcm)
+    def _configure_as_role(self, role: Roles, create: bool):
+        """
+        Create or mock some objects in McM to use in the
+        assertions using a specific group of permissions.
+        """
+        env = Environment()
+        mcm = McMTesting(config=env, role=role)
+        api = CampaignAPI(mcm=mcm)
+        injector = InjectRootRequest(mcm=mcm, environment=env)
 
-    def test_create(self):
-        # Invalid name
-        invalid_mockup = self.entity_api.mockup()
-        invalid_mockup["prepid"] = "Run3Campaign#1"
-        content = self.entity_api.create(invalid_mockup)
+        self.mcm = mcm
+        self.env = env
+        self.api = api
+        self.injector = injector
+        self.mocks = injector.mock()
 
-        assert content["results"] == False
+        if create:
+            # Only use the campaign without any other linked entity.
+            entities = injector.create(mocks=self.mocks)
+            mcm.delete(object_type="mccms", object_id=entities["mccm_ticket"]["prepid"])
+            mcm.delete(object_type="requests", object_id=entities["root_request"]["prepid"])
+            self.entities = {"campaign": entities["campaign"]}
 
-        # Valid campaign
-        valid_mockup = self.entity_api.mockup()
-        content = self.entity_api.create(valid_mockup)
-
-        assert content["results"] == True
+    def setup_method(self, method):
+        """
+        Create some objects to perform the assertions
+        based on the Root Request scenario.
+        """
+        self._configure_as_role(role=Roles.ADMINISTRATOR, create=True)
+        
+    def teardown_method(self, method):
+        """
+        Clean up resources in McM
+        """
+        self.mcm.delete(object_type="campaigns", object_id=self.entities["campaign"]["prepid"])
 
     def test_retrieve(self):
         # The campaign exists
-        mockup = self.entity_api.mockup()
-        self.entity_api.create(mockup)
-        retrieved = self.entity_api.retrieve(mockup)
+        mockup = self.mocks["campaign"]
+        retrieved = self.mcm.get(object_type=self.api.object_type, object_id=mockup["prepid"])
         del mockup["history"]
         del retrieved["history"]
         del retrieved["_rev"]
+        del retrieved["_id"]
 
         assert mockup == retrieved
 
         # The campaign doesn't exists
-        not_exists = self.entity_api.retrieve(self.entity_api.mockup())
+        not_exists = self.mcm.get(object_type=self.api.object_type, object_id="NotExists")
         assert not_exists == None
 
     def test_update(self):
         # The campaign is updated to a valid status
-        example = self.entity_api.example()
+        example = self.entities["campaign"]
         example["cmssw_release"] = "CMSSW_14_0_0"
-        content = self.entity_api.update(example)
-        retrieved = self.entity_api.retrieve(example)
+        content = self.mcm.update(object_type=self.api.object_type, object_data=example)
+        retrieved = self.mcm.get(object_type=self.api.object_type, object_id=example["prepid"])
 
         assert content["results"] == True
         assert example["_rev"] != retrieved["_rev"]
         assert retrieved["cmssw_release"] == "CMSSW_14_0_0"
 
         # Update a campaign that doesn't exist.
-        example = self.entity_api.example()
         example["prepid"] = "Run3Campaign#2"
-        content = self.entity_api.update(example)
+        content = self.mcm.update(object_type=self.api.object_type, object_data=example)
 
         assert content["results"] == False
 
     def test_delete(self):
         # The campaign exists
-        example = self.entity_api.example()
-        self.entity_api.delete(example)
-        retrieved = self.entity_api.mcm.get(
-            object_type=self.entity_api.object_type, object_id=example["prepid"]
-        )
+        example = self.entities["campaign"]
+        self.mcm.delete(object_type=self.api.object_type, object_id=example["prepid"])
+        retrieved = self.mcm.get(object_type=self.api.object_type, object_id=example["prepid"])
         assert retrieved == None
 
     def test_cmssw_drivers(self):
-        example = self.entity_api.example()
-        content = self.entity_api.cms_drivers(example)
+        example = self.entities["campaign"]
+        content = self.api.cms_drivers(example)
         driver: str = content["results"][0]["default"]
         event_content = example["sequences"][0]["default"]["eventcontent"]
         event_content_param = ",".join(event_content)
@@ -174,14 +155,14 @@ class TestCampaign(EntityTest):
         assert event_content_param in driver
 
         # The campaign doesn't exists
-        mockup = self.entity_api.mockup()
-        content = self.entity_api.cms_drivers(mockup)
+        example["prepid"] = "Run3Campaign#2"
+        content = self.api.cms_drivers(example)
         assert content["results"] == False
 
     def test_inspect(self):
         # The campaign exists
-        example = self.entity_api.example()
-        content = self.entity_api.inspect(example)
+        example = self.entities["campaign"]
+        content = self.api.inspect(example)
         campaign_header: str = f"Starting campaign inspect of {example['prepid']}"
         campaign_footer: str = "Inspecting 0 requests on page 0"
 
@@ -190,16 +171,16 @@ class TestCampaign(EntityTest):
 
     def test_toggle_status(self):
         # Stop a valid campaign
-        example = self.entity_api.example()
-        content = self.entity_api.toggle_status(example)
-        after_toggle = self.entity_api.retrieve(example)
+        example = self.entities["campaign"]
+        content = self.api.toggle_status(example)
+        after_toggle = self.mcm.get(object_type=self.api.object_type, object_id=example["prepid"])
         assert content["results"] == True
         assert after_toggle["status"] == "stopped"
 
         # Start an invalid campaign
         del after_toggle["cmssw_release"]
-        self.entity_api.update(after_toggle)
-        content = self.entity_api.toggle_status(example)
+        self.mcm.update(object_type=self.api.object_type, object_data=after_toggle)
+        content = self.api.toggle_status(example)
         assert content["results"] == False
 
 
@@ -208,20 +189,18 @@ class TestCampaignAsProdMgr(TestCampaign):
     Test the API for the campaign entity impersonating
     a production manager.
     """
-
-    @property
-    def entity_api(self) -> CampaignAPI:
-        mcm: McMTesting = McMTesting(config=config, role=Roles.PRODUCTION_MANAGER)
-        return CampaignAPI(mcm)
-    
+    def setup_method(self, method):
+        """
+        Create some objects to perform the assertions
+        based on the Root Request scenario.
+        """
+        self._configure_as_role(role=Roles.PRODUCTION_MANAGER, create=True)
+        
     def test_delete(self):
         # This role is not able to delete the campaign
-        example = self.entity_api.example()
-        self.entity_api.delete(example)
-
-        retrieved = self.entity_api.mcm.get(
-            object_type=self.entity_api.object_type, object_id=example["prepid"]
-        )
+        example = self.entities["campaign"]
+        self.mcm.delete(object_type=self.api.object_type, object_id=example["prepid"])
+        retrieved = self.mcm.get(object_type=self.api.object_type, object_id=example["prepid"])
         assert retrieved == example
 
 
@@ -230,33 +209,32 @@ class TestCampaignAsUser(TestCampaignAsProdMgr):
     Test the API for the campaign entity
     with the user role.
     """
-
-    @property
-    def entity_api(self) -> CampaignAPI:
-        mcm: McMTesting = McMTesting(config=config, role=Roles.USER)
-        return CampaignAPI(mcm)
-
-    @property
-    def higher_role_entity_api(self) -> CampaignAPI:
-        mcm: McMTesting = McMTesting(config=config, role=Roles.ADMINISTRATOR)
-        return CampaignAPI(mcm)
+    def setup_method(self, method):
+        """
+        Create some objects to perform the assertions
+        based on the Root Request scenario.
+        """
+        self._configure_as_role(role=Roles.ADMINISTRATOR, create=True)
+        self.mcm_as_user = McMTesting(config=self.env, role=Roles.USER)
+        self.api_as_user = CampaignAPI(mcm=self.mcm_as_user)
 
     def test_create(self):
         # Not enough permissions.
-        invalid_mockup = self.entity_api.mockup()
+        invalid_mockup = self.mocks["campaign"]
         invalid_mockup["prepid"] = "Run3Campaign#1"
-        content = self.entity_api.create(invalid_mockup)
+        content = self.mcm_as_user.put(object_type=self.api.object_type, object_data=invalid_mockup)
         assert "You don't have the permission to access the requested resource" in content["message"]
 
     def test_retrieve(self):
-        example = self.higher_role_entity_api.example()
-        retrieved = self.entity_api.retrieve(example)
+        example = self.entities["campaign"]
+        retrieved = self.mcm_as_user.get(object_type=self.api.object_type, object_id=example["prepid"])
         assert example == retrieved
 
     def test_update(self):
         # Not enough permissions.
-        mockup = self.entity_api.mockup()
-        content = self.entity_api.update(mockup)
+        example = self.entities["campaign"]
+        example["cmssw_release"] = "NotExist"
+        content = self.mcm_as_user.update(object_type=self.api.object_type, object_data=example)
         assert "You don't have the permission to access the requested resource" in content["message"]
 
     def test_delete(self):
@@ -264,8 +242,8 @@ class TestCampaignAsUser(TestCampaignAsProdMgr):
         pass
 
     def test_cmssw_drivers(self):
-        example = self.higher_role_entity_api.example()
-        content = self.entity_api.cms_drivers(example)
+        example = self.mocks["campaign"]
+        content = self.api_as_user.cms_drivers(example)
         driver: str = content["results"][0]["default"]
         event_content = example["sequences"][0]["default"]["eventcontent"]
         event_content_param = ",".join(event_content)
@@ -274,18 +252,19 @@ class TestCampaignAsUser(TestCampaignAsProdMgr):
         assert event_content_param in driver
 
         # The campaign doesn't exists
-        mockup = self.entity_api.mockup()
-        content = self.entity_api.cms_drivers(mockup)
+        mockup = self.mocks["campaign"]
+        mockup["prepid"] = "NotExist"
+        content = self.api_as_user.cms_drivers(mockup)
         assert content["results"] == False
 
     def test_inspect(self):
         # Not enough permissions.
-        example = self.higher_role_entity_api.example()
-        content = self.entity_api.inspect(example)
+        example = self.entities["campaign"]
+        content = self.api_as_user.inspect(example)
         assert "You don't have the permission to access the requested resource" in content
 
     def test_toggle_status(self):
         # Not enough permissions.
-        example = self.higher_role_entity_api.example()
-        content = self.entity_api.toggle_status(example)
+        example = self.entities["campaign"]
+        content = self.api_as_user.toggle_status(example)
         assert "You don't have the permission to access the requested resource" in content["message"]

@@ -2,11 +2,9 @@
 Test the functionality provided via `api.py` module.
 """
 
-import pytest
-
 from mcm_tests.rest_api.api_tools import Environment, McMTesting, Roles
-from mcm_tests.rest_api.base_test_tools import config
 
+config = Environment()
 
 class TestEnvironment:
     """

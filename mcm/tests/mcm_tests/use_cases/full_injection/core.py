@@ -16,7 +16,7 @@ from rest.applications.mcm.resubmission import ChainRequestResubmitter
 from rest.utils.logger import LoggerFactory
 
 import mcm_tests.use_cases.full_injection as current_module
-from mcm_tests.rest_api.base_test_tools import Environment
+from mcm_tests.rest_api.api_tools import Environment
 
 
 class MocksForInjection:
