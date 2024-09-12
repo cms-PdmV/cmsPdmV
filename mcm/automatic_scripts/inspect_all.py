@@ -1,10 +1,20 @@
-import sys
 import os
+import sys
+import tempfile
 import time
+from pathlib import Path
 from random import shuffle
+
+# Make sure the McM package is installed:
+# https://github.com/cms-PdmV/mcm_scripts?tab=readme-ov-file#build-package
+from rest import McM
+
 sys.path.append(os.path.abspath(os.path.pardir))
 from couchdb_layer.mcm_database import database
 
+# McM client
+cookie_file = Path(tempfile.TemporaryDirectory().name) / Path("cookie.txt")
+mcm = McM(dev=False, debug=False, cookie=cookie_file)
 
 def do_with_timeout(func, *args, **kwargs):
     """
@@ -41,7 +51,9 @@ def do_with_timeout(func, *args, **kwargs):
 
 
 def inspect_campaign(campaign_prepid):
-    return os.system('curl -k -L -s --cookie %s https://cms-pdmv-prod.web.cern.ch/mcm/restapi/campaigns/inspect/%s' % (os.getenv('PROD_COOKIE'), campaign_prepid))
+    results = mcm.session.get(url=mcm.server + f"restapi/campaigns/inspect/{campaign_prepid}")
+    print("Inspect campaign HTTP request code: ", results.status_code)
+    return results.text
 
 
 def get_all_campaigns():

@@ -1,14 +1,27 @@
-import sys
 import os
+import sys
+import tempfile
 import time
+from pathlib import Path
 from random import shuffle
+
+# Make sure the McM package is installed:
+# https://github.com/cms-PdmV/mcm_scripts?tab=readme-ov-file#build-package
+from rest import McM
+
 sys.path.append(os.path.abspath(os.path.pardir))
 from couchdb_layer.mcm_database import database
+
 from inspect_all import do_with_timeout
 
+# McM client
+cookie_file = Path(tempfile.TemporaryDirectory().name) / Path("cookie.txt")
+mcm = McM(dev=False, debug=False, cookie=cookie_file)
 
 def inspect_chained_request(prepid):
-    return os.system('curl -k -L -s --cookie %s https://cms-pdmv-prod.web.cern.ch/mcm/restapi/chained_requests/inspect/%s' % (os.getenv('PROD_COOKIE'), prepid))
+    results = mcm.session.get(url=mcm.server + f"restapi/chained_requests/inspect/{prepid}")
+    print("Inspect chained request HTTP request code: ", results.status_code)
+    return results.text
 
 
 def get_all_chained_campaigns():
