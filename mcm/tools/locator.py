@@ -258,3 +258,27 @@ class locator:
             return custom_path
         default_path = os.path.join(os.getcwd(), "logs")
         return default_path
+
+    def email_server(self):
+        """
+        Retrieve the email server host and port for opening 
+        SMTP sessions. This can be overwritten using the environment variable
+        `MCM_EMAIL_SERVER` using the following format: <host>:<port>
+
+        Returns:
+            tuple[str, int]: Email server host and port.
+        """
+        custom_server = os.getenv("MCM_EMAIL_SERVER")
+        if custom_server:
+            self.logger.debug("Using a custom server host and port for opening SMTP sessions: %s", custom_server)
+            components = custom_server.strip().split(":")
+            if len(components) != 2:
+                raise ValueError("Unable to extract the email server host and port")
+            if not components[1].isnumeric():
+                raise ValueError("Port is not a number")
+            
+            server = components[0]
+            port = int(components[1])
+            return server, port
+
+        return "cernmx.cern.ch", 25

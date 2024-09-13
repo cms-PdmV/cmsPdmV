@@ -18,7 +18,8 @@ class communicator:
         self.from_opt = 'user'  # could be service at some point
 
     def _smtp_session(self):
-        smtp = smtplib.SMTP(host="cernmx.cern.ch", port=25)
+        host, port = locator().email_server()
+        smtp = smtplib.SMTP(host=host, port=port)
         smtp.starttls()
         return smtp
 
@@ -46,9 +47,8 @@ class communicator:
                 # self.logger.info('Sending a message from cache \n%s'% (text))
                 try:
                     msg.attach(MIMEText(text))
-                    smtpObj = self._smtp_session()
-                    smtpObj.sendmail(sender, destination, msg.as_string())
-                    smtpObj.quit()
+                    with self._smtp_session() as smtpObj:
+                        smtpObj.sendmail(sender, destination, msg.as_string())    
                     self.cache.pop(key)
                     res.append(subject)
                 except Exception as e:
@@ -118,10 +118,9 @@ class communicator:
 
         try:
             msg.attach(MIMEText(text))
-            smtpObj = self._smtp_session()
-            communicator.logger.info('Sending %s to %s...' % (msg['Subject'], msg['To']))
-            smtpObj.sendmail(sender, destination, msg.as_string())
-            smtpObj.quit()
+            with self._smtp_session() as smtpObj:
+                communicator.logger.info('Sending %s to %s...' % (msg['Subject'], msg['To']))
+                smtpObj.sendmail(sender, destination, msg.as_string())
             return new_msg_ID
         except Exception as e:
             communicator.logger.error("Error: unable to send email %s", e)

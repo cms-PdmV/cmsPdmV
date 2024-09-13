@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Check Docker and Docker Compose versions
 if ! docker version; then
     echo 'Docker is not available, install it and start it before running this'
     exit 1
@@ -80,9 +79,8 @@ if [ -z "$MCM_EXECUTOR_HOST" ]; then
 fi
 
 # Set environment and context.
-DATE_WITH_TIME=`date "+%Y_%m_%d_%H_%M_%S"`
-TMP_FOLDER="/tmp/McM_Containers_Temporal_Data_Folder_${DATE_WITH_TIME}"
-DATA_PATH="/tmp/McM_Container_Data_${DATE_WITH_TIME}"
+TMP_FOLDER=$(mktemp -d)
+DATA_PATH=$(mktemp -d)
 export COUCHDB_DATA="$DATA_PATH/couchdb"
 export LUCENE_DATA_PATH="$DATA_PATH/lucene/data"
 export LUCENE_CONF_PATH="$DATA_PATH/lucene/config"
@@ -112,16 +110,12 @@ function debug_containers() {
 function up() {
     echo 'Starting deployment...'
 
-    # Create a temporal folder to download the sample data
-    rm -rf "${TMP_FOLDER}" && mkdir -p "${TMP_FOLDER}"
-
     # Download and decompress
     echo 'Downloading McM data....'
     curl -s $MCM_EXAMPLE_DATA_URL | tar -xzC "${TMP_FOLDER}/"
 
-    # Create a temporal folder to store the container's data
+    # Create a temporary folder to store the container's data
     echo 'Creating data folders'
-    rm -rf "${DATA_PATH}"
     mkdir -p "$DATA_PATH/lucene/data" && mkdir -p "$DATA_PATH/lucene/config"
     mv "${TMP_FOLDER}/couchdb" $DATA_PATH
 

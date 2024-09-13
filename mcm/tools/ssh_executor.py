@@ -3,8 +3,8 @@ import time
 import logging
 import random
 
-from tools.logger import InjectionLogAdapter
 from tools.locator import locator
+from tools.logger import InjectionLogAdapter
 from threading import BoundedSemaphore
 import tools.settings as settings
 

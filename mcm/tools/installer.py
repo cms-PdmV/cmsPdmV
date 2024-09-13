@@ -1,6 +1,6 @@
 import logging
 import os
-import shutil
+import errno
 
 from tools.locator import locator
 
@@ -66,22 +66,14 @@ class installer:
         Returns:
             bool: True if the folder exists, False otherwise.
         """
-        _, stdout, stderr = self.ssh_session.execute("ls -l '%s'" % (path))
-        if not stdout and not stderr:
-            msg = "SSH error to check if the folder exists"
-            self.logger.error(msg)
-            raise RuntimeError(msg)
-        
-        output = stdout.read()
-        error = stderr.read()
-        if output and not error:
-            # Most probably we found a valid path
+        try:
+            _ = self.ssh_session.ssh_client.open_sftp().listdir(path)
             return True
-        if error and not output:
-            # Check the proper message is in the `stderr`
-            if "No such file or directory" in error:
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                # Folder doesn't exists
                 return False
-            raise RuntimeError("Unexpected message for checking if a folder exists: %s" % (error))
+            raise e
         
     def _create_folder(self, path):
         """

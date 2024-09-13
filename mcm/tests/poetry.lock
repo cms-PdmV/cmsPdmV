@@ -280,7 +280,7 @@ requests = "^2.32.3"
 type = "git"
 url = "https://github.com/cms-PdmV/mcm_scripts.git"
 reference = "HEAD"
-resolved_reference = "511d5432e53e5202fdbd98583b0fbf72e5b539c4"
+resolved_reference = "ce3e131efa36aa7d1608247bac852bfd3d7d2fb4"
 
 [[package]]
 name = "platformdirs"

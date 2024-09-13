@@ -16,7 +16,7 @@ from mcm_tests.use_cases.full_injection.core import InjectRootRequest, InjectToN
 @pytest.fixture
 def authenticate_by_stdin(request: FixtureRequest) -> bool:
     """
-    Check if the user is going has enabled the `stdin` to authenticate
+    Check if the user has enabled the `stdin` to authenticate
     actions.
     """
     enabled = request.config.option.capture == "no"
