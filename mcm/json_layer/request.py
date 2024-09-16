@@ -2690,17 +2690,16 @@ class request(json_base):
 
                 command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
                 if execute:
-                    with installer(prepid, care_on_existing=False):
-                        request_arch = self.get_scram_arch()
-                        if not request_arch:
-                            self.logger.error('the release %s architecture is invalid' % self.get_attribute('member_of_campaign'))
-                            self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
-                            return False
+                    machine_name = l_type.mcm_executor_node()
+                    with ssh_executor(server=machine_name) as executor:
+                        with installer(prepid, executor, care_on_existing=False):
+                            request_arch = self.get_scram_arch()
+                            if not request_arch:
+                                self.logger.error('the release %s architecture is invalid' % self.get_attribute('member_of_campaign'))
+                                self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
+                                return False
 
-                        machine_name = l_type.mcm_executor_node()
-                        with ssh_executor(server=machine_name) as executor:
                             _, stdout, stderr = executor.execute(command)
-
                             if not stdout and not stderr:
                                 self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
                                 self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
@@ -2710,42 +2709,42 @@ class request(json_base):
                             output = stdout.read()
                             error = stderr.read()
 
-                        if error and not output:  # money on the table that it will break
-                            self.logger.error('Error in wmupload: {0}'.format(error))
-                            self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')
-                            if '.bashrc: Permission denied' in error:
-                                raise AFSPermissionError(error)
+                            if error and not output:  # money on the table that it will break
+                                self.logger.error('Error in wmupload: {0}'.format(error))
+                                self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')
+                                if '.bashrc: Permission denied' in error:
+                                    raise AFSPermissionError(error)
 
-                            return False
-                        cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
+                                return False
+                            cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
 
-                        if len(cfgs_to_upload) != len(cfgs_uploaded):
-                            self.logger.error(
-                                'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
-                                    cfgs_to_upload, cfgs_uploaded, output, error))
-                            self.inject_logger.error(
-                                'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
-                                    cfgs_to_upload, cfgs_uploaded, output, error))
-                            self.test_failure(
-                                'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
-                                    cfgs_to_upload, cfgs_uploaded, output, error), what='Configuration upload')
-                            return False
-
-                        for i, line in zip(sorted(cfgs_to_upload),
-                                           cfgs_uploaded):  # filling the config ids for request and config database with uploaded configurations
-                            docid = line.split()[-1]
-                            additional_config_ids[i] = docid
-                            hash_id = self.configuration_identifier(i)
-                            saved = config_db.save({"_id": hash_id, "docid": docid,
-                                    "prepid": prepid, "unique_string": self.unique_string(i)})
-
-                            to_release.remove(hash_id)
-                            locker.release(hash_id)
-                            if not saved:
+                            if len(cfgs_to_upload) != len(cfgs_uploaded):
+                                self.logger.error(
+                                    'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                        cfgs_to_upload, cfgs_uploaded, output, error))
                                 self.inject_logger.error(
-                                    'Could not save the configuration {0}'.format(self.configuration_identifier(i)))
+                                    'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                        cfgs_to_upload, cfgs_uploaded, output, error))
+                                self.test_failure(
+                                    'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                        cfgs_to_upload, cfgs_uploaded, output, error), what='Configuration upload')
+                                return False
 
-                        self.inject_logger.info("Full upload result: {0}".format(output))
+                            for i, line in zip(sorted(cfgs_to_upload),
+                                            cfgs_uploaded):  # filling the config ids for request and config database with uploaded configurations
+                                docid = line.split()[-1]
+                                additional_config_ids[i] = docid
+                                hash_id = self.configuration_identifier(i)
+                                saved = config_db.save({"_id": hash_id, "docid": docid,
+                                        "prepid": prepid, "unique_string": self.unique_string(i)})
+
+                                to_release.remove(hash_id)
+                                locker.release(hash_id)
+                                if not saved:
+                                    self.inject_logger.error(
+                                        'Could not save the configuration {0}'.format(self.configuration_identifier(i)))
+
+                            self.inject_logger.info("Full upload result: {0}".format(output))
             if execute:
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
                 self.inject_logger.info("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids))

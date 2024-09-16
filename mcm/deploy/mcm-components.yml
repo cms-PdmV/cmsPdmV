@@ -1,9 +1,7 @@
 # This deploys all the required components to start McM
 # The database, the search engine and the application
-version: "3.8"
 services:
-  couchdb:
-    container_name: "mcm-couchdb"
+  mcm-couchdb:
     image: docker.io/couchdb:3.3.3@sha256:b8c85ebce55d1c0c676ce7a9beaff87f514c0df25afd5fa844e744985c0c2fd1
     environment:
       - NODENAME=${COUCHDB_NODENAME}
@@ -22,24 +20,23 @@ services:
       retries: 3
       start_period: 10s
   
-  config-couchdb:
-    container_name: "mcm-couchdb-wizard"
+  mcm-couchdb-wizard:
     image: docker.io/library/alpine:latest
     environment:
       - COUCHDB_USER=${COUCHDB_USER}
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
     depends_on:
-      - couchdb
+      - mcm-couchdb
     command: |
       sh -c 'apk add curl &&
-             curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@couchdb:5984/_users &&
-             curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@couchdb:5984/_replicator &&
-             curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@couchdb:5984/_global_changes'
+             curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@mcm-couchdb:5984/_users &&
+             curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@mcm-couchdb:5984/_replicator &&
+             curl -s -X PUT http://$COUCHDB_USER:$COUCHDB_PASSWORD@mcm-couchdb:5984/_global_changes' &&
+             exit 0
     networks:
       - mcm
     
-  couchdb-lucene:
-    container_name: "mcm-couchdb-lucene"
+  mcm-couchdb-lucene:
     image: docker.io/pdmvserv/couchdb-lucene:2.2.0@sha256:efdde9c34c2d3ce3896f25289e02001b258452e1a8931bba31a01c78c074d1be
     volumes:
       - ${LUCENE_DATA_PATH}:/opt/couchdb-lucene/indexes
@@ -47,20 +44,30 @@ services:
     ports:
       - ${LUCENE_PORT}:5985
     depends_on:
-      - couchdb
+      - mcm-couchdb
     networks:
       - mcm
 
   mcm-application:
-    container_name: mcm
-    build: ../
-    image: pdmv/mcm:test
+    build: ${MCM_DOCKERFILE_PATH}
     environment:
       - MCM_DEBUG=True
       - MCM_WARMUP_SECONDS=${MCM_WARMUP_SECONDS}
       - MCM_COUCHDB_URL=${MCM_COUCHDB_URL}
       - COUCH_CRED=${COUCH_CRED}
       - MCM_LUCENE_URL=${MCM_LUCENE_URL}
+      - MCM_BASE_URL=${MCM_BASE_URL}
+      
+      # Files are mount as secrets in the following paths
+      - USERCRT=/run/secrets/cmsweb_certificate_file
+      - USERKEY=/run/secrets/cmsweb_key_file
+
+      # The following variables control the SSH session
+      # used in the submission process
+      - MCM_SERVICE_ACCOUNT_USERNAME=${MCM_SERVICE_ACCOUNT_USERNAME}
+      - MCM_SERVICE_ACCOUNT_PASSWORD=${MCM_SERVICE_ACCOUNT_PASSWORD}
+      - MCM_WORK_LOCATION_PATH=${MCM_WORK_LOCATION_PATH}
+      - MCM_EXECUTOR_HOST=${MCM_EXECUTOR_HOST}
     command: |
       /bin/bash -c '
         echo "Warming up for $MCM_WARMUP_SECONDS seconds";
@@ -68,12 +75,21 @@ services:
         echo "Starting McM...";
         python main.py'
     ports:
-      - 8000:8000
+      - "${MCM_PORT}:8000"
     depends_on: 
-      - couchdb
+      - mcm-couchdb
+      - mcm-couchdb-lucene
+    secrets:
+      - cmsweb_certificate_file
+      - cmsweb_key_file
     networks:
       - mcm
 
 networks:
   mcm:
-    name: mcm
+
+secrets:
+  cmsweb_certificate_file:
+    file: ${CMSWEB_CERTIFICATE_FILE}
+  cmsweb_key_file:
+    file: ${CMSWEB_KEY_FILE}

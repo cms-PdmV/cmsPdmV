@@ -31,14 +31,26 @@ jobs:
           COUCHDB_NODENAME: '127.0.0.1'
           LUCENE_PORT: '5985'
           SECONDS_TO_WAIT: '30'
+          MCM_PORT: '8000'
           MCM_WARMUP_SECONDS: '10'
-          MCM_COUCHDB_URL: 'http://couchdb:5984/'
+          MCM_COUCHDB_URL: 'http://mcm-couchdb:5984/'
           COUCH_CRED: 'Basic dGVzdDp0ZXN0'
-          MCM_LUCENE_URL: 'http://couchdb-lucene:5985/'
+          MCM_LUCENE_URL: 'http://mcm-couchdb-lucene:5985/'
           MCM_EXAMPLE_DATA_URL: ${{ secrets.MCM_EXAMPLE_DATA_URL }}
 
         run: |
-          bash deploy/action.sh
+          echo "Current folder: $(pwd -P)"
+          export REPO_PATH="$(pwd -P)"
+          export TO_INI_PATH="${REPO_PATH}/deploy/couchdb-lucene.ini"
+          export MCM_DOCKERFILE_PATH="../"
+
+          # Create an empty file to be a placeholder for the certificates
+          PLACEHOLDER_CERT='/tmp/placeholder.pem'
+          touch "${PLACEHOLDER_CERT}"
+          export CMSWEB_CERTIFICATE_FILE="${PLACEHOLDER_CERT}"
+          export CMSWEB_KEY_FILE="${PLACEHOLDER_CERT}"
+
+          deploy/action.sh --up
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -61,6 +73,13 @@ jobs:
           poetry install
 
       - name: Run test suite
+        env:
+          COUCH_CRED: 'Basic dGVzdDp0ZXN0'
+          MCM_COUCHDB_URL: 'http://localhost:5984/'
+          MCM_LUCENE_URL: 'http://localhost:5985/'
+          MCM_HOST: 'localhost'
+          MCM_PORT: '8000'
+
         run: |
           # Load the `venv`
           export POETRY_PATH='/opt/poetry'

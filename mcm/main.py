@@ -535,6 +535,7 @@ def main():
             pid_file.write(str(pid))
 
     error_logger.info('Starting McM, host=%s, port=%s, debug=%s', host, port, debug)
+    error_logger.info('Running in production mode: %s', l_type.isProd())
     # Run flask
     app.run(host=host, port=port, threaded=True, debug=debug)
 

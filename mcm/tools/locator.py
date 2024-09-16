@@ -36,7 +36,6 @@ class locator:
                 configuration, False otherwise.
         """
         production = bool(os.getenv("MCM_PRODUCTION"))
-        self.logger.info("Running in production: %s", production)
         return production
 
     def database_url(self):
@@ -54,7 +53,7 @@ class locator:
             RuntimeError: In case the value is not provided.
         """
         db_url = os.getenv("MCM_COUCHDB_URL", "")
-        self.logger.info("McM CouchDB URL: %s", db_url)
+        self.logger.debug("McM CouchDB URL: %s", db_url)
         if not db_url:
             raise RuntimeError("Set MCM_COUCHDB_URL to the McM CouchDB connection url")
         return db_url
@@ -74,7 +73,7 @@ class locator:
             RuntimeError: In case the value is not provided.
         """
         lucene_url = os.getenv("MCM_LUCENE_URL", "")
-        self.logger.info("McM CouchDB Lucene URL: %s", lucene_url)
+        self.logger.debug("McM CouchDB Lucene URL: %s", lucene_url)
         if not lucene_url:
             raise RuntimeError(
                 "Set MCM_LUCENE_URL to the McM CouchDB Lucene connection url"
@@ -93,7 +92,7 @@ class locator:
         """
         custom_work_path = os.getenv("MCM_WORK_LOCATION_PATH")
         if custom_work_path:
-            self.logger.info("Using the custom work folder: %s", custom_work_path)
+            self.logger.debug("Using the custom work folder: %s", custom_work_path)
             return custom_work_path
 
         if self.isDev():
@@ -113,7 +112,7 @@ class locator:
         """
         custom_base_url = os.getenv("MCM_BASE_URL")
         if custom_base_url:
-            self.logger.info("Using the custom base URL: %s", custom_base_url)
+            self.logger.debug("Using the custom base URL: %s", custom_base_url)
             return custom_base_url
 
         if self.isDev():
@@ -157,7 +156,7 @@ class locator:
         custom_url = os.getenv("MCM_STATS2_DB_URL")
         default_url = "http://vocms074.cern.ch:5984/"
         if custom_url:
-            self.logger.info("Stats2 custom connection URL: %s", custom_url)
+            self.logger.debug("Stats2 custom connection URL: %s", custom_url)
             return custom_url
 
         return default_url
@@ -178,9 +177,53 @@ class locator:
         custom_node = os.getenv("MCM_EXECUTOR_HOST")
         default_node = "vocms0481.cern.ch"
         if custom_node:
-            self.logger.info("Using a custom McM executor node: %s", custom_node)
+            self.logger.debug("Using a custom McM executor node: %s", custom_node)
             return custom_node
         return default_node
+    
+    def service_account_credentials(self):
+        """
+        Returns the `username` and `password` related to the
+        service account for authenticating SSH sessions required
+        by the application.
+
+        Returns:
+            tuple[str, str]: Username, password.
+
+        Raises:
+            ValueError: If any of the values is not provided.
+        """
+        username = os.getenv("MCM_SERVICE_ACCOUNT_USERNAME", "")
+        password = os.getenv("MCM_SERVICE_ACCOUNT_PASSWORD", "")
+
+        if not username:
+            raise ValueError("Set $MCM_SERVICE_ACCOUNT_USERNAME with the service account username")
+        if not password:
+            raise ValueError("Set $MCM_SERVICE_ACCOUNT_PASSWORD with the service account password")
+        
+        return (username, password)
+    
+    def cmsweb_credentials(self):
+        """
+        Returns the certificate path and key path to authenticate
+        request to CMS Web services like ReqMgr2 using client certificate
+        authentication.
+
+        Returns:
+            tuple[str, str]: Certificate path, key path.
+
+        Raises:
+            ValueError: If any of the values is not provided.
+        """
+        certificate = os.getenv("USERCRT", "")
+        key = os.getenv("USERKEY", "")
+
+        if not certificate:
+            raise ValueError("Set $USERCRT with the location of the service account certificate file")
+        if not key:
+            raise ValueError("Set $USERKEY with the location of the service account certificate key file")
+        
+        return (certificate, key)
 
     def host(self):
         """
@@ -211,7 +254,31 @@ class locator:
         """
         custom_path = os.getenv("MCM_LOG_FOLDER")
         if custom_path:
-            self.logger.info("Using a custom log folder: %s", custom_path)
+            self.logger.debug("Using a custom log folder: %s", custom_path)
             return custom_path
         default_path = os.path.join(os.getcwd(), "logs")
         return default_path
+
+    def email_server(self):
+        """
+        Retrieve the email server host and port for opening 
+        SMTP sessions. This can be overwritten using the environment variable
+        `MCM_EMAIL_SERVER` using the following format: <host>:<port>
+
+        Returns:
+            tuple[str, int]: Email server host and port.
+        """
+        custom_server = os.getenv("MCM_EMAIL_SERVER")
+        if custom_server:
+            self.logger.debug("Using a custom server host and port for opening SMTP sessions: %s", custom_server)
+            components = custom_server.strip().split(":")
+            if len(components) != 2:
+                raise ValueError("Unable to extract the email server host and port")
+            if not components[1].isnumeric():
+                raise ValueError("Port is not a number")
+            
+            server = components[0]
+            port = int(components[1])
+            return server, port
+
+        return "cernmx.cern.ch", 25

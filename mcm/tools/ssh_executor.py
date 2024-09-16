@@ -3,6 +3,7 @@ import time
 import logging
 import random
 
+from tools.locator import locator
 from tools.logger import InjectionLogAdapter
 from threading import BoundedSemaphore
 import tools.settings as settings
@@ -17,7 +18,6 @@ class ssh_executor:
             server = settings.get_value("node_for_test")
         self.ssh_server = server
         self.ssh_server_port = 22
-        self.ssh_credentials = '/home/pdmvserv/private/credentials'
         self.hname = None
         # TO-DO
         # rename logger -> inject_logger
@@ -37,7 +37,7 @@ class ssh_executor:
         self.ssh_client = paramiko.SSHClient()
         # paramiko.util.log_to_file(self.__ssh_logfile, 10)
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        us, pw = self.__get_ssh_credentials()
+        us, pw = locator().service_account_credentials()
 
         if not us:
             self.logger.error('Credentials could not be retrieved. Reason: username was None')
@@ -58,32 +58,6 @@ class ssh_executor:
         except Exception as ex:
             self.logger.error('Could not allocate socket for SSH. Reason: %s' % ex)
             return
-
-    def __get_ssh_credentials(self):
-        try:
-            f = open(self.ssh_credentials, 'r')
-            data = f.readlines()
-            f.close()
-        except IOError as ex:
-            self.error_logger.error('Could not access credential file. IOError: %s' % ex)
-            return None, None
-
-        username, password = None, None
-        for line in data:
-            if 'username:' in line:
-                toks = line.split(':')
-                if len(toks) < 2:
-                    self.logger.error('Username was None')
-                    raise paramiko.AuthenticationException('Username not found.')
-                username = toks[1].strip()
-            elif 'password' in line:
-                toks = line.split(':')
-                if len(toks) < 2:
-                    self.logger.error('Password was None')
-                    raise paramiko.AuthenticationException('Password not found.')
-                password = toks[1].strip()
-
-        return username, password
 
     def __remote_exec(self, cmd=''):
         if not cmd:
