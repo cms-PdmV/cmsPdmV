@@ -73,7 +73,7 @@ class installer:
             if e.errno == errno.ENOENT:
                 # Folder doesn't exists
                 return False
-            raise e
+            raise
         
     def _create_folder(self, path):
         """
