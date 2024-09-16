@@ -1344,7 +1344,14 @@ class request(json_base):
         prepid = self.get_attribute('prepid')
         member_of_campaign = self.get_attribute('member_of_campaign')
         scram_arch = self.get_scram_arch().lower()
-        bash_file = ['#!/bin/bash', '']
+        bash_file = [
+            '#!/bin/bash', 
+            '',
+            '# Binds for singularity containers',
+            '# Mount /afs, /eos, /cvmfs, /etc/grid-security for xrootd',
+            "export APPTAINER_BINDPATH='/afs,/cvmfs,/cvmfs/grid.cern.ch/etc/grid-security:/etc/grid-security,/eos,/etc/pki/ca-trust,/run/user,/var/run/user'",
+            '',
+        ]
 
         if not for_validation or automatic_validation:
             bash_file += ['#############################################################',
@@ -1442,10 +1449,6 @@ class request(json_base):
             ]
             bash_file += [
                 '# Run in singularity container',
-                '# Mount afs, eos, cvmfs',
-                '# Mount /etc/grid-security for xrootd',
-                # Note the following line is also appended to the singularity run command
-                'APPTAINER_BINDPATH=/afs,/cvmfs,/cvmfs/grid.cern.ch/etc/grid-security:/etc/grid-security,/eos,/etc/pki/ca-trust,/run/user,/var/run/user; '
                 'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s $(echo $(pwd)/%s)' % (cms_gen_os, cms_gen_file),
                 '',
             ]
@@ -1745,15 +1748,13 @@ class request(json_base):
             # Validation will run on CMS CAF nodes (HTCondor, lxplus)
             bash_file += [
                 '# Run in singularity container',
-                '# Mount afs, eos, cvmfs',
-                '# Mount /etc/grid-security for xrootd',
                 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
+                'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
             ]
         else:
             bash_file += [
                 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                'singularity run -B /afs -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
+                'singularity run --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
             ]
 
         # Empty line at the end of the file
