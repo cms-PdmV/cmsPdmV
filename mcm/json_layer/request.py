@@ -1406,23 +1406,14 @@ class request(json_base):
             bash_file += ['# GEN Script begin',
                           'rm -f request_fragment_check.py',
                           'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py',
-                          'chmod +x request_fragment_check.py']
+                          'chmod +x request_fragment_check.py',
+                          '',]
             
-            # Temporal: Remove instructions that source the old version
-            # of the McM REST client
-            bash_file += [
-                '',
-                '# Remove all instructions that import remote modules',
-                "sed -i '/sys.path.append(/d' request_fragment_check.py",
-                '',
-            ]
-
             # Checking script invocation
             request_fragment_check = './request_fragment_check.py --bypass_status --prepid %s' % (prepid)
             if is_dev:
                 # Add --dev, so script would use McM DEV
                 request_fragment_check += ' --dev'
-                request_fragment_check += ' --develop' # Also, remove the internal "check" mechanism
 
             if automatic_validation:
                 # For automatic validation
@@ -1453,7 +1444,9 @@ class request(json_base):
                 '# Run in singularity container',
                 '# Mount afs, eos, cvmfs',
                 '# Mount /etc/grid-security for xrootd',
-                'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s $(echo $(pwd)/%s)' % (cms_gen_os, cms_gen_file),
+                # Note the following line is also appended to the singularity run command
+                'APPTAINER_BINDPATH=/afs,/cvmfs,/cvmfs/grid.cern.ch/etc/grid-security:/etc/grid-security,/eos,/etc/pki/ca-trust,/run/user,/var/run/user; '
+                'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s $(echo $(pwd)/%s)' % (cms_gen_os, cms_gen_file),
                 '',
             ]
 
