@@ -324,7 +324,7 @@ class database:
 
         # Tell the user when MAX_READ is reached
         if len(data) == self.MAX_READ:
-            raise ValueError('The database returned too much data')
+            raise ValueError('The database returned too much data. Use a better query and pagination to collect a smaller set of results')
 
         data = json.loads(data)
         if options.get('include_docs'):
@@ -497,7 +497,7 @@ class database:
 
             # Tell the user when MAX_READ is reached
             if len(data) == self.MAX_READ:
-                raise ValueError('The database returned too much data')
+                raise ValueError('The database returned too much data. Use a better query and pagination to collect a smaller set of results')
 
             data = json.loads(data)
             if total_rows:
