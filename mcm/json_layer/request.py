@@ -1925,34 +1925,13 @@ class request(json_base):
                                             'content': {}})
                 continue
 
-            event_number_history = stats_doc.get('EventNumberHistory', [])
-            if event_number_history:
-                most_recent_update = event_number_history[-1]
-                expected_final_steps = ["normal-archived"]
-                all_invalid = all([
-                    content.get("Type", "") == "INVALID"
-                    for content in most_recent_update.get('Datasets', {}).values()
-                ])
-                issues_on_operation_side = (
-                    len(set(status_history_from_reqmngr).intersection(set(expected_final_steps))) > 0
-                    and all_invalid
-                )
-                if issues_on_operation_side:
-                    self.logger.warning(
-                        'Adding empty %s because the output datasets are INVALID '
-                        'but the workflow has the wrong status in ReqMgr2. '
-                        % (reqmgr_name)
-                    )
-                    new_mcm_reqmgr_list.append({'name': reqmgr_name,
-                                                'content': {}})
-                    continue
-
             submission_timestamp = stats_request_transition[0].get('UpdateTime', 0)
             last_update_timestamp = stats_doc.get('LastUpdate', 0)
             submission_date = time.strftime('%y%m%d', time.gmtime(submission_timestamp))
             submission_time = time.strftime('%H%M%S', time.gmtime(submission_timestamp))
             last_update_time = time.strftime('%a %b %d %H:%M:%S %Y', time.gmtime(last_update_timestamp))
             output_datasets = stats_doc.get('OutputDatasets', [])
+            event_number_history = stats_doc.get('EventNumberHistory', [])
             dataset_name = output_datasets[0] if len(output_datasets) else ''
             dataset_statuses = {}
             events_in_das = 0
