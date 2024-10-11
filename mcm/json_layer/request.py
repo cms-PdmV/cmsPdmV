@@ -1864,6 +1864,64 @@ class request(json_base):
 
         self.reload()
 
+    def _attempt_filter_workflows(self, mcm_reqmgr_name_list, stats_workflows):
+        """
+        Attempts to pick the latest injected workflows using the records available
+        in McM. After an injection process finishes, only the latest workflow name
+        is available on the `reqmgr_name` attribute with no content.
+
+        Note this filter process is not idempotent. In case the request has been
+        updated with previous data from Stats2, it is not possible to get the latest
+        workflow and nothing will be filtered. Such behavior is acceptable.
+
+        Args:
+            mcm_reqmgr_name_list (list[str]): List of ReqMgr2 workflow names available for
+                the request in McM.
+            stats_workflows (list[dict]): Stats2 workflow records related to the McM
+                request.
+
+        Returns:
+            list[dict]: Stats2 workflows possibly filtered by the latest injected
+                workflow. This could return the original list if there reference to
+                the latest injected workflow is not available or an empty list if
+                the latest injected workflow was not found in the provided list.
+        """
+        stats_workflows_dict = {
+            stats_workflow.get('RequestName'): stats_workflow
+            for stats_workflow in stats_workflows
+        }
+        workflows_to_consider = [
+            stats_workflows_dict.get(mcm_reqmgr_name)
+            for mcm_reqmgr_name in mcm_reqmgr_name_list
+            if stats_workflows_dict.get(mcm_reqmgr_name)
+        ]
+
+        self.logger.info("Workflows to consider: %s", [doc.get('RequestName') for doc in workflows_to_consider])
+        try:
+            # Pick the time related to the `new` transition
+            reference_time_of_new = min([
+                stats_doc.get('RequestTransition')[0].get('UpdateTime')
+                for stats_doc in workflows_to_consider
+            ])
+        except:
+            # There's no record for the latest injected workflow in Stats2.
+            return []
+
+        stats_reqmgr_name_list = [
+            reqmgr_name
+            for reqmgr_name, content in stats_workflows_dict.iteritems()
+            if content.get('RequestTransition') and
+                len(content['RequestTransition']) > 0 and
+                content['RequestTransition'][0].get('UpdateTime') is not None and
+                content['RequestTransition'][0]['UpdateTime'] >= reference_time_of_new
+        ]
+        self.logger.info(
+            "The following workflows may not be related to the last injection: %s",
+            set(stats_workflows_dict.keys()) - set(stats_reqmgr_name_list)
+        )
+
+        return stats_reqmgr_name_list
+
     def get_stats(self, forced=False):
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
         prepid = self.get_attribute('prepid')
@@ -1872,9 +1930,18 @@ class request(json_base):
                                                   page=0,
                                                   limit=-1,
                                                   options={'key': prepid})
+
         mcm_reqmgr_list = self.get_attribute('reqmgr_name')
         mcm_reqmgr_name_list = [x['name'] for x in mcm_reqmgr_list]
-        stats_reqmgr_name_list = [stats_wf['RequestName'] for stats_wf in stats_workflows]
+        stats_workflows_dict = {
+            stats_workflow.get('RequestName'): stats_workflow
+            for stats_workflow in stats_workflows
+        }
+        stats_reqmgr_name_list = self._attempt_filter_workflows(mcm_reqmgr_name_list, stats_workflows)
+        if not stats_reqmgr_name_list:
+            # The workflows in mcm are too fresh and have not yet been registered in stats. update will have to wait.
+            return False
+
         all_reqmgr_name_list = list(set(mcm_reqmgr_name_list).union(set(stats_reqmgr_name_list)))
         all_reqmgr_name_list = sorted(all_reqmgr_name_list, key=lambda workflow: '_'.join(workflow.split('_')[-3:]))
         # self.logger.debug('Stats workflows for %s: %s' % (self.get_attribute('prepid'),
@@ -1893,12 +1960,7 @@ class request(json_base):
                                      'aborted-completed'])
         total_events = 0
         for reqmgr_name in all_reqmgr_name_list:
-            stats_doc = None
-            for stats_workflow in stats_workflows:
-                if stats_workflow.get('RequestName') == reqmgr_name:
-                    stats_doc = stats_workflow
-                    break
-
+            stats_doc = stats_workflows_dict.get(reqmgr_name, None)
             if not stats_doc and stats_db.document_exists(reqmgr_name):
                 self.logger.info('Workflow %s is in Stats DB, but workflow does not have request %s in it\'s list' % (reqmgr_name,
                                                                                                                       self.get_attribute('prepid')))
