@@ -11,8 +11,6 @@ import time
 import logging
 import math
 import random
-import datetime
-import pytz
 from math import sqrt
 from json import loads, dumps
 from operator import itemgetter
@@ -1866,81 +1864,6 @@ class request(json_base):
 
         self.reload()
 
-    def _filter_workflows(self, all_reqmgr_name_list):
-        """
-        Filter a workflow list to pick only those submitted
-        after the latest request injection from McM 
-        based on the McM request history.
-
-        Args:
-            all_reqmgr_name_list (list[str]): List with workflow names.
-                For instance: pdmvserv_task_EXO-RunIISummer15GS-17992__v1_T_231206_053736_1415
-
-        Returns:
-            A subset of workflow names created after the latest request injection.
-        """
-        prepid = self.get_attribute("prepid")
-        history = self.get_attribute("history") or []
-
-        # Filter only those history records related to
-        # submitted step
-        submitted = []
-        for record in history:
-            action = record.get("action")
-            step = record.get("step")
-
-            submitted_record = action == "set status" and step == "submitted"
-            if submitted_record:
-                submitted.append(record)
-
-        if not submitted:
-            self.logger.error(
-                "Unable to find submitted history records for the request: %s. Returning original list",
-                prepid
-            )
-            return all_reqmgr_name_list
-
-        # Parse the date from the McM history record
-        # as UTC.
-        def _parse_mcm_datetime(dt_str):
-            as_datetime = datetime.datetime.strptime(dt_str, "%Y-%m-%d-%H-%M")
-            tz_included = pytz.timezone("Europe/Zurich").localize(as_datetime)
-            as_utc = tz_included.astimezone(pytz.timezone("UTC"))
-            return as_utc
-        
-        # Take the most recent by date
-        sorted_submitted = sorted(
-            submitted, 
-            key=lambda x: _parse_mcm_datetime(x["updater"]["submission_date"]), 
-            reverse=True
-        )
-        most_recent_submitted = sorted_submitted[0]
-        most_recent_date = _parse_mcm_datetime(most_recent_submitted["updater"]["submission_date"])
-
-        # Parse the date using the ReqMgr2 workflow name
-        # as UTC.
-        def _parse_reqmgr2_datetime(workflow):
-            # Following the docs sample: 231206_053736
-            datetime_str = '_'.join(workflow.split('_')[-3:-1])
-            as_datetime = datetime.datetime.strptime(datetime_str, "%y%m%d_%H%M%S")
-            tz_included = pytz.timezone("UTC").localize(as_datetime)
-            
-            # It is already as UTC.
-            # Just to make both examples simple to understand
-            as_utc = tz_included.astimezone(pytz.timezone("UTC"))
-            return as_utc
-
-        workflows_latest_submission = [
-            w
-            for w in all_reqmgr_name_list
-            if _parse_reqmgr2_datetime(w) >= most_recent_date
-        ]
-        
-        self.logger.info("Filter workflows, original list: %s", all_reqmgr_name_list)
-        self.logger.info("Filter workflows, filtered list: %s", workflows_latest_submission)
-        return workflows_latest_submission
-
-
     def get_stats(self, forced=False):
         stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
         prepid = self.get_attribute('prepid')
@@ -1969,8 +1892,6 @@ class request(json_base):
                                      'failed-archived',
                                      'aborted-completed'])
         total_events = 0
-        # Filter the workflow names to pick the latests
-        all_reqmgr_name_list = self._filter_workflows(all_reqmgr_name_list)
         for reqmgr_name in all_reqmgr_name_list:
             stats_doc = None
             for stats_workflow in stats_workflows:

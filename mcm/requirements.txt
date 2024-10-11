@@ -2,4 +2,3 @@ flask
 flask_restful
 paramiko
 cachelib # For werkzeug cache
-pytz
