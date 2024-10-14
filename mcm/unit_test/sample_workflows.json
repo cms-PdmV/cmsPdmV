@@ -1,0 +1,2147 @@
+[
+    {
+      "AcquisitionEra": "Run3Summer23wmLHEGS",
+      "CMSSWVersion": "CMSSW_13_0_14",
+      "Campaigns": [
+        "Run3Summer23wmLHEGS",
+        "Run3Summer23DRPremix",
+        "Run3Summer23DRPremix",
+        "Run3Summer23MiniAODv4",
+        "Run3Summer23NanoAODv12"
+      ],
+      "EventNumberHistory": [
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v1/AODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v1/GEN-SIM-RAW": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v1/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v1/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701273830
+        }
+      ],
+      "LastUpdate": 1725014633,
+      "LumiList": {},
+      "OutputDatasets": [
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v1/GEN-SIM-RAW",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v1/AODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v1/MINIAODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v1/NANOAODSIM"
+      ],
+      "PrepID": "task_TSG-Run3Summer23wmLHEGS-00022",
+      "ProcessingString": "130X_mcRun3_2023_realistic_v14",
+      "RequestName": "pdmvserv_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_231129_144445_7918",
+      "RequestPriority": 90000,
+      "RequestTransition": [
+        {
+          "Status": "new",
+          "UpdateTime": 1701269085
+        },
+        {
+          "Status": "assignment-approved",
+          "UpdateTime": 1701269914
+        },
+        {
+          "Status": "rejected",
+          "UpdateTime": 1701271598
+        },
+        {
+          "Status": "rejected-archived",
+          "UpdateTime": 1701474383
+        }
+      ],
+      "RequestType": "TaskChain",
+      "Requests": [
+        "TSG-Run3Summer23wmLHEGS-00022",
+        "TSG-Run3Summer23DRPremix-00008",
+        "TSG-Run3Summer23DRPremix-00008",
+        "TSG-Run3Summer23MiniAODv4-00008",
+        "TSG-Run3Summer23NanoAODv12-00008"
+      ],
+      "SizePerEvent": 30.782,
+      "TimePerEvent": 0.3402,
+      "TotalEvents": 1000000,
+      "TotalInputLumis": -1,
+      "_id": "pdmvserv_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_231129_144445_7918",
+      "_rev": "7-c4552cfcb56a4a1284ea8a3934ef6338"
+    },
+    {
+      "AcquisitionEra": {
+        "TSG-Run3Summer23DRPremix-00008_0": "Run3Summer23DRPremix",
+        "TSG-Run3Summer23DRPremix-00008_1": "Run3Summer23DRPremix",
+        "TSG-Run3Summer23MiniAODv4-00008_0": "Run3Summer23MiniAODv4",
+        "TSG-Run3Summer23NanoAODv12-00008_0": "Run3Summer23NanoAODv12",
+        "TSG-Run3Summer23wmLHEGS-00022_0": "Run3Summer23wmLHEGS"
+      },
+      "CMSSWVersion": "CMSSW_13_0_14",
+      "Campaigns": [
+        "Run3Summer23wmLHEGS",
+        "Run3Summer23DRPremix",
+        "Run3Summer23DRPremix",
+        "Run3Summer23MiniAODv4",
+        "Run3Summer23NanoAODv12"
+      ],
+      "EventNumberHistory": [
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701274640
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 39040,
+              "Size": 21090708893,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 180648,
+              "Size": 472598714705,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701712848
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 222128,
+              "Size": 119943358738,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 543232,
+              "Size": 1420696236350,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701719692
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 590568,
+              "Size": 319084047837,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 732576,
+              "Size": 1916086092174,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 220088,
+              "Size": 20870613415,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701726812
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 909720,
+              "Size": 491472912754,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 952176,
+              "Size": 2490232270005,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 575928,
+              "Size": 54608427263,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701736858
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 932168,
+              "Size": 503577730185,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 952176,
+              "Size": 2490232270005,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 631072,
+              "Size": 59838163761,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701741442
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 955104,
+              "Size": 515963297927,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 978528,
+              "Size": 2559169232611,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 722328,
+              "Size": 68515645444,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701748237
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 955104,
+              "Size": 515963297927,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 978528,
+              "Size": 2559169232611,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 751608,
+              "Size": 71294997267,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701754988
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 961448,
+              "Size": 519382630449,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 981456,
+              "Size": 2566871102079,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 816024,
+              "Size": 77394370626,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701763028
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 968280,
+              "Size": 523072323160,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 981456,
+              "Size": 2566871102079,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 816024,
+              "Size": 77394370626,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701769493
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 968280,
+              "Size": 523072323160,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 981456,
+              "Size": 2566871102079,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 837984,
+              "Size": 79471981809,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1701777143
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 968280,
+              "Size": 523072323160,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 981456,
+              "Size": 2566871102079,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 859944,
+              "Size": 81553928975,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 21960,
+              "Size": 54024381,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1701791301
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 968280,
+              "Size": 523072323160,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 981456,
+              "Size": 2566871102079,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 859944,
+              "Size": 81553928975,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 193824,
+              "Size": 446609144,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1701798303
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 968280,
+              "Size": 523072323160,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 981456,
+              "Size": 2566871102079,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 928264,
+              "Size": 88036566183,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 861896,
+              "Size": 1981311387,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1701805905
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 968280,
+              "Size": 523072323160,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 981456,
+              "Size": 2566871102079,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 948760,
+              "Size": 89985132115,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 930704,
+              "Size": 2140734105,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1701812676
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 971208,
+              "Size": 524655115748,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 981456,
+              "Size": 2566871102079,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 951688,
+              "Size": 90264951670,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 972184,
+              "Size": 2240498949,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1701820200
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 971208,
+              "Size": 524655115748,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 981456,
+              "Size": 2566871102079,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 974136,
+              "Size": 92396327587,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 978528,
+              "Size": 2257433148,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1701826901
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 994632,
+              "Size": 537320719605,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 994632,
+              "Size": 2601271054632,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 994632,
+              "Size": 94379791331,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 994632,
+              "Size": 2334398310,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1701834418
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 994632,
+              "Size": 537320719605,
+              "Type": "VALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 994632,
+              "Size": 2601271054632,
+              "Type": "VALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 994632,
+              "Size": 94379791331,
+              "Type": "VALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 994632,
+              "Size": 2334398310,
+              "Type": "VALID"
+            }
+          },
+          "Time": 1701841524
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM": {
+              "Events": 994632,
+              "Size": 537320719605,
+              "Type": "INVALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW": {
+              "Events": 994632,
+              "Size": 2601271054632,
+              "Type": "INVALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM": {
+              "Events": 994632,
+              "Size": 94379791331,
+              "Type": "INVALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM": {
+              "Events": 994632,
+              "Size": 2334398310,
+              "Type": "INVALID"
+            }
+          },
+          "Time": 1705665138
+        }
+      ],
+      "LastUpdate": 1725014615,
+      "LumiList": {},
+      "OutputDatasets": [
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/GEN-SIM-RAW",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v14-v2/AODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v2/MINIAODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v14-v2/NANOAODSIM"
+      ],
+      "PrepID": "task_TSG-Run3Summer23wmLHEGS-00022",
+      "ProcessingString": "130X_mcRun3_2023_realistic_v14",
+      "RequestName": "cmsunified_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_231129_152638_4107",
+      "RequestPriority": 90000,
+      "RequestTransition": [
+        {
+          "Status": "new",
+          "UpdateTime": 1701271598
+        },
+        {
+          "Status": "assignment-approved",
+          "UpdateTime": 1701271609
+        },
+        {
+          "Status": "assigned",
+          "UpdateTime": 1701272503
+        },
+        {
+          "Status": "staging",
+          "UpdateTime": 1701272687
+        },
+        {
+          "Status": "staged",
+          "UpdateTime": 1701275204
+        },
+        {
+          "Status": "acquired",
+          "UpdateTime": 1701276818
+        },
+        {
+          "Status": "running-open",
+          "UpdateTime": 1701468038
+        },
+        {
+          "Status": "running-closed",
+          "UpdateTime": 1701488630
+        },
+        {
+          "Status": "completed",
+          "UpdateTime": 1701833186
+        },
+        {
+          "Status": "closed-out",
+          "UpdateTime": 1701836954
+        },
+        {
+          "Status": "announced",
+          "UpdateTime": 1701837856
+        },
+        {
+          "Status": "normal-archived",
+          "UpdateTime": 1702037467
+        }
+      ],
+      "RequestType": "StepChain",
+      "Requests": [
+        "TSG-Run3Summer23wmLHEGS-00022",
+        "TSG-Run3Summer23DRPremix-00008",
+        "TSG-Run3Summer23DRPremix-00008",
+        "TSG-Run3Summer23MiniAODv4-00008",
+        "TSG-Run3Summer23NanoAODv12-00008"
+      ],
+      "SizePerEvent": 1893.0302235294116,
+      "TimePerEvent": 58.947350228479166,
+      "TotalEvents": 1000000,
+      "TotalInputLumis": 2050,
+      "_id": "cmsunified_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_231129_152638_4107",
+      "_rev": "32-5ded02e2c10191a1bda07a723124ad5b"
+    },
+    {
+      "AcquisitionEra": "Run3Summer23wmLHEGS",
+      "CMSSWVersion": "CMSSW_13_0_14",
+      "Campaigns": [
+        "Run3Summer23wmLHEGS",
+        "Run3Summer23DRPremix",
+        "Run3Summer23DRPremix",
+        "Run3Summer23MiniAODv4",
+        "Run3Summer23NanoAODv12"
+      ],
+      "EventNumberHistory": [
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v1/AODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v1/GEN-SIM-RAW": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v1/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v1/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1707148263
+        }
+      ],
+      "LastUpdate": 1725014623,
+      "LumiList": {},
+      "OutputDatasets": [
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v1/GEN-SIM-RAW",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v1/AODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v1/MINIAODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v1/NANOAODSIM"
+      ],
+      "PrepID": "task_TSG-Run3Summer23wmLHEGS-00022",
+      "ProcessingString": "130X_mcRun3_2023_realistic_v14",
+      "RequestName": "pdmvserv_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_240205_144803_2983",
+      "RequestPriority": 90000,
+      "RequestTransition": [
+        {
+          "Status": "new",
+          "UpdateTime": 1707144483
+        },
+        {
+          "Status": "assignment-approved",
+          "UpdateTime": 1707145263
+        },
+        {
+          "Status": "rejected",
+          "UpdateTime": 1707146707
+        },
+        {
+          "Status": "rejected-archived",
+          "UpdateTime": 1707324171
+        }
+      ],
+      "RequestType": "TaskChain",
+      "Requests": [
+        "TSG-Run3Summer23wmLHEGS-00022",
+        "TSG-Run3Summer23DRPremix-00030",
+        "TSG-Run3Summer23DRPremix-00030",
+        "TSG-Run3Summer23MiniAODv4-00030",
+        "TSG-Run3Summer23NanoAODv12-00030"
+      ],
+      "SizePerEvent": 30.782,
+      "TimePerEvent": 0.3402,
+      "TotalEvents": 1000000,
+      "TotalInputLumis": -1,
+      "_id": "pdmvserv_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_240205_144803_2983",
+      "_rev": "7-e06091a53c4ed8ebb4d0f497e385b83f"
+    },
+    {
+      "AcquisitionEra": {
+        "TSG-Run3Summer23DRPremix-00030_0": "Run3Summer23DRPremix",
+        "TSG-Run3Summer23DRPremix-00030_1": "Run3Summer23DRPremix",
+        "TSG-Run3Summer23MiniAODv4-00030_0": "Run3Summer23MiniAODv4",
+        "TSG-Run3Summer23NanoAODv12-00030_0": "Run3Summer23NanoAODv12",
+        "TSG-Run3Summer23wmLHEGS-00022_0": "Run3Summer23wmLHEGS"
+      },
+      "CMSSWVersion": "CMSSW_13_0_14",
+      "Campaigns": [
+        "Run3Summer23wmLHEGS",
+        "Run3Summer23DRPremix",
+        "Run3Summer23DRPremix",
+        "Run3Summer23MiniAODv4",
+        "Run3Summer23NanoAODv12"
+      ],
+      "EventNumberHistory": [
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1707148366
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 25792,
+              "Size": 67643667761,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1707385711
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 70122,
+              "Size": 37698829339,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 149110,
+              "Size": 391478092760,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1707393349
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 183768,
+              "Size": 98817365247,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 480130,
+              "Size": 1260726496012,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1707400498
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 429352,
+              "Size": 230887990796,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 563954,
+              "Size": 1481035613449,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 137580,
+              "Size": 12981616646,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1707407243
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 739662,
+              "Size": 397746490277,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 872652,
+              "Size": 2292111601405,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 259286,
+              "Size": 24477938951,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1707414336
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 844442,
+              "Size": 454126744215,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 958088,
+              "Size": 2516576047032,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 488190,
+              "Size": 46085977563,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1707421678
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 930684,
+              "Size": 500515331132,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 966148,
+              "Size": 2537766657082,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 630852,
+              "Size": 59568592823,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1707428496
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 941968,
+              "Size": 506577804777,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 972596,
+              "Size": 2554720968576,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 658256,
+              "Size": 62156827314,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1707436262
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 952446,
+              "Size": 512218554984,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 976626,
+              "Size": 2565283825869,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 718706,
+              "Size": 67872682427,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 228904,
+              "Size": 500656235,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1707443049
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 958894,
+              "Size": 515688047373,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 981462,
+              "Size": 2578009206462,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 750140,
+              "Size": 70846990904,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 228904,
+              "Size": 500656235,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1707450344
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 998388,
+              "Size": 536980112622,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 996776,
+              "Size": 2618228163590,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 999194,
+              "Size": 94428846733,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 999194,
+              "Size": 2326596152,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1707457658
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 998388,
+              "Size": 536980112622,
+              "Type": "VALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 996776,
+              "Size": 2618228163590,
+              "Type": "VALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 999194,
+              "Size": 94428846733,
+              "Type": "VALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 999194,
+              "Size": 2326596152,
+              "Type": "VALID"
+            }
+          },
+          "Time": 1707487988
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM": {
+              "Events": 998388,
+              "Size": 536980112622,
+              "Type": "INVALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW": {
+              "Events": 996776,
+              "Size": 2618228163590,
+              "Type": "INVALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM": {
+              "Events": 999194,
+              "Size": 94428846733,
+              "Type": "INVALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM": {
+              "Events": 999194,
+              "Size": 2326596152,
+              "Type": "INVALID"
+            }
+          },
+          "Time": 1711251863
+        }
+      ],
+      "LastUpdate": 1725014521,
+      "LumiList": {},
+      "OutputDatasets": [
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/GEN-SIM-RAW",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_postBPix_v5-v2/AODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v2/MINIAODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM"
+      ],
+      "PrepID": "task_TSG-Run3Summer23wmLHEGS-00022",
+      "ProcessingString": "130X_mcRun3_2023_realistic_v14",
+      "RequestName": "cmsunified_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_240205_152507_934",
+      "RequestPriority": 90000,
+      "RequestTransition": [
+        {
+          "Status": "new",
+          "UpdateTime": 1707146707
+        },
+        {
+          "Status": "assignment-approved",
+          "UpdateTime": 1707146718
+        },
+        {
+          "Status": "assigned",
+          "UpdateTime": 1707147753
+        },
+        {
+          "Status": "staging",
+          "UpdateTime": 1707147781
+        },
+        {
+          "Status": "staged",
+          "UpdateTime": 1707150319
+        },
+        {
+          "Status": "acquired",
+          "UpdateTime": 1707150750
+        },
+        {
+          "Status": "running-open",
+          "UpdateTime": 1707152594
+        },
+        {
+          "Status": "running-closed",
+          "UpdateTime": 1707169447
+        },
+        {
+          "Status": "completed",
+          "UpdateTime": 1707452335
+        },
+        {
+          "Status": "closed-out",
+          "UpdateTime": 1707475761
+        },
+        {
+          "Status": "announced",
+          "UpdateTime": 1707482290
+        },
+        {
+          "Status": "normal-archived",
+          "UpdateTime": 1707672655
+        }
+      ],
+      "RequestType": "StepChain",
+      "Requests": [
+        "TSG-Run3Summer23wmLHEGS-00022",
+        "TSG-Run3Summer23DRPremix-00030",
+        "TSG-Run3Summer23DRPremix-00030",
+        "TSG-Run3Summer23MiniAODv4-00030",
+        "TSG-Run3Summer23NanoAODv12-00030"
+      ],
+      "SizePerEvent": 1893.4518705882351,
+      "TimePerEvent": 35.72377025022897,
+      "TotalEvents": 1000000,
+      "TotalInputLumis": 1241,
+      "_id": "cmsunified_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_240205_152507_934",
+      "_rev": "24-602e7173d91402f39e965b6307a546fb"
+    },
+    {
+      "AcquisitionEra": {
+        "TSG-Run3Summer23DRPremix-00048_0": "Run3Summer23DRPremix",
+        "TSG-Run3Summer23DRPremix-00048_1": "Run3Summer23DRPremix",
+        "TSG-Run3Summer23MiniAODv4-00048_0": "Run3Summer23MiniAODv4",
+        "TSG-Run3Summer23NanoAODv12-00048_0": "Run3Summer23NanoAODv12",
+        "TSG-Run3Summer23wmLHEGS-00022_0": "Run3Summer23wmLHEGS"
+      },
+      "CMSSWVersion": "CMSSW_13_0_14",
+      "Campaigns": [
+        "Run3Summer23wmLHEGS",
+        "Run3Summer23DRPremix",
+        "Run3Summer23DRPremix",
+        "Run3Summer23MiniAODv4",
+        "Run3Summer23NanoAODv12"
+      ],
+      "EventNumberHistory": [
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v1/AODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v1/GEN-SIM-RAW": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v1/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v1/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1711251937
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v3/AODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v3/GEN-SIM-RAW": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v3/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v3/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1711291845
+        }
+      ],
+      "LastUpdate": 1725014720,
+      "LumiList": {},
+      "OutputDatasets": [
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v3/GEN-SIM-RAW",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v3/AODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v3/MINIAODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v3/NANOAODSIM"
+      ],
+      "PrepID": "task_TSG-Run3Summer23wmLHEGS-00022",
+      "ProcessingString": "130X_mcRun3_2023_realistic_v14",
+      "RequestName": "pdmvserv_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_240324_024809_7105",
+      "RequestPriority": 90000,
+      "RequestTransition": [
+        {
+          "Status": "new",
+          "UpdateTime": 1711248489
+        },
+        {
+          "Status": "assignment-approved",
+          "UpdateTime": 1711277614
+        },
+        {
+          "Status": "assigned",
+          "UpdateTime": 1711285890
+        },
+        {
+          "Status": "aborted",
+          "UpdateTime": 1711286029
+        },
+        {
+          "Status": "aborted-completed",
+          "UpdateTime": 1711286528
+        },
+        {
+          "Status": "aborted-archived",
+          "UpdateTime": 1711477705
+        }
+      ],
+      "RequestType": "TaskChain",
+      "Requests": [
+        "TSG-Run3Summer23wmLHEGS-00022",
+        "TSG-Run3Summer23DRPremix-00048",
+        "TSG-Run3Summer23DRPremix-00048",
+        "TSG-Run3Summer23MiniAODv4-00048",
+        "TSG-Run3Summer23NanoAODv12-00048"
+      ],
+      "SizePerEvent": 30.782,
+      "TimePerEvent": 0.3402,
+      "TotalEvents": 1000000,
+      "TotalInputLumis": -1,
+      "_id": "pdmvserv_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_240324_024809_7105",
+      "_rev": "8-affa057118ffe5f21c15bd909fbfe57e"
+    },
+    {
+      "AcquisitionEra": {
+        "TSG-Run3Summer23DRPremix-00048_0": "Run3Summer23DRPremix",
+        "TSG-Run3Summer23DRPremix-00048_1": "Run3Summer23DRPremix",
+        "TSG-Run3Summer23MiniAODv4-00048_0": "Run3Summer23MiniAODv4",
+        "TSG-Run3Summer23NanoAODv12-00048_0": "Run3Summer23NanoAODv12",
+        "TSG-Run3Summer23wmLHEGS-00022_0": "Run3Summer23wmLHEGS"
+      },
+      "CMSSWVersion": "CMSSW_13_0_14",
+      "Campaigns": [
+        "Run3Summer23wmLHEGS",
+        "Run3Summer23DRPremix",
+        "Run3Summer23DRPremix",
+        "Run3Summer23MiniAODv4",
+        "Run3Summer23NanoAODv12"
+      ],
+      "EventNumberHistory": [
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1711291735
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 132744,
+              "Size": 351592458591,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1711676876
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 64480,
+              "Size": 34935998185,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 557506,
+              "Size": 1478181559395,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1711683958
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 426934,
+              "Size": 231099385810,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 911340,
+              "Size": 2416052969137,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 45136,
+              "Size": 4316516573,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1711691318
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 727572,
+              "Size": 393759687233,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 924236,
+              "Size": 2450291416963,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 522848,
+              "Size": 49974399080,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1711698276
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 893608,
+              "Size": 483672122513,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 940356,
+              "Size": 2493058409577,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 673570,
+              "Size": 64381348863,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 0,
+              "Size": 0,
+              "Type": "NONE"
+            }
+          },
+          "Time": 1711705755
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 921012,
+              "Size": 498525872124,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 964536,
+              "Size": 2557148902356,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 764648,
+              "Size": 73079403870,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 192634,
+              "Size": 422923450,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711712498
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 937132,
+              "Size": 507255893455,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 968566,
+              "Size": 2567873056419,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 764648,
+              "Size": 73079403870,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 192634,
+              "Size": 422923450,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711720091
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 946804,
+              "Size": 512493919874,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 978238,
+              "Size": 2593475210416,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 821874,
+              "Size": 78540980634,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 192634,
+              "Size": 422923450,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711727222
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 946804,
+              "Size": 512493919874,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 979850,
+              "Size": 2597761868151,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 821874,
+              "Size": 78540980634,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 192634,
+              "Size": 422923450,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711734196
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 954058,
+              "Size": 516416525842,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 979850,
+              "Size": 2597761868151,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 821874,
+              "Size": 78540980634,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 192634,
+              "Size": 422923450,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711741376
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 954058,
+              "Size": 516416525842,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 983074,
+              "Size": 2606328477204,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 821874,
+              "Size": 78540980634,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 192634,
+              "Size": 422923450,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711748667
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 954058,
+              "Size": 516416525842,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 987910,
+              "Size": 2619144874092,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 821874,
+              "Size": 78540980634,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 192634,
+              "Size": 422923450,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711770541
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 958088,
+              "Size": 518608660659,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 988716,
+              "Size": 2621279921043,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 901668,
+              "Size": 86189026841,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 758200,
+              "Size": 1722072065,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711777872
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 969372,
+              "Size": 524721392617,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 988716,
+              "Size": 2621279921043,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 913758,
+              "Size": 87353469179,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 936326,
+              "Size": 2132597123,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711786388
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 969372,
+              "Size": 524721392617,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 988716,
+              "Size": 2621279921043,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 929072,
+              "Size": 88822142699,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 936326,
+              "Size": 2132597123,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711792327
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 969372,
+              "Size": 524721392617,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 988716,
+              "Size": 2621279921043,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 953252,
+              "Size": 91139347226,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 977432,
+              "Size": 2234440709,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711799199
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 971790,
+              "Size": 526029778854,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 988716,
+              "Size": 2621279921043,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 959700,
+              "Size": 91762616997,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 983880,
+              "Size": 2254908084,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711808211
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 979044,
+              "Size": 529953744586,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 988716,
+              "Size": 2621279921043,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 962118,
+              "Size": 91999200682,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 986298,
+              "Size": 2266263498,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711817207
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 980656,
+              "Size": 530829203098,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 988716,
+              "Size": 2621279921043,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 963730,
+              "Size": 92156517640,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 987910,
+              "Size": 2273013597,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711822919
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 982268,
+              "Size": 531706443553,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 988716,
+              "Size": 2621279921043,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 964536,
+              "Size": 92235841193,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 987910,
+              "Size": 2273013597,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711835420
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 982268,
+              "Size": 531706443553,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 988716,
+              "Size": 2621279921043,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 969372,
+              "Size": 92698856684,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 992746,
+              "Size": 2286786199,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711860478
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 984686,
+              "Size": 533014210939,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 990328,
+              "Size": 2625548638226,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 969372,
+              "Size": 92698856684,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 992746,
+              "Size": 2286786199,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711875149
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 990328,
+              "Size": 536069841646,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 991134,
+              "Size": 2627693358488,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 974208,
+              "Size": 93164971766,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 992746,
+              "Size": 2286786199,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711882104
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 991940,
+              "Size": 536940131559,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 991134,
+              "Size": 2627693358488,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 975820,
+              "Size": 93321494874,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 992746,
+              "Size": 2286786199,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711890187
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 991940,
+              "Size": 536940131559,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 992746,
+              "Size": 2631950594626,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 975820,
+              "Size": 93321494874,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 993552,
+              "Size": 2291392473,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711905004
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 994358,
+              "Size": 538242290904,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 993552,
+              "Size": 2634098469214,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 978238,
+              "Size": 93555561204,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 993552,
+              "Size": 2291392473,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711932583
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 995164,
+              "Size": 538676757162,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 995164,
+              "Size": 2638362203630,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 979044,
+              "Size": 93634718418,
+              "Type": "PRODUCTION"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 994358,
+              "Size": 2296002439,
+              "Type": "PRODUCTION"
+            }
+          },
+          "Time": 1711961075
+        },
+        {
+          "Datasets": {
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM": {
+              "Events": 995164,
+              "Size": 538676757162,
+              "Type": "VALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW": {
+              "Events": 995164,
+              "Size": 2638362203630,
+              "Type": "VALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM": {
+              "Events": 995164,
+              "Size": 95177594557,
+              "Type": "VALID"
+            },
+            "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM": {
+              "Events": 995164,
+              "Size": 2300575993,
+              "Type": "VALID"
+            }
+          },
+          "Time": 1712055222
+        }
+      ],
+      "LastUpdate": 1725014579,
+      "LumiList": {},
+      "OutputDatasets": [
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/GEN-SIM-RAW",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23DRPremix-130X_mcRun3_2023_realistic_v15-v4/AODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v4/MINIAODSIM",
+        "/GluGlutoHHto4B_kl-2p45_kt-1p00_c2-0p00_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v4/NANOAODSIM"
+      ],
+      "PrepID": "task_TSG-Run3Summer23wmLHEGS-00022",
+      "ProcessingString": "130X_mcRun3_2023_realistic_v14",
+      "RequestName": "cmsunified_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_240324_131348_9030",
+      "RequestPriority": 90000,
+      "RequestTransition": [
+        {
+          "Status": "new",
+          "UpdateTime": 1711286028
+        },
+        {
+          "Status": "assignment-approved",
+          "UpdateTime": 1711286050
+        },
+        {
+          "Status": "assigned",
+          "UpdateTime": 1711287697
+        },
+        {
+          "Status": "staging",
+          "UpdateTime": 1711288190
+        },
+        {
+          "Status": "staged",
+          "UpdateTime": 1711291836
+        },
+        {
+          "Status": "acquired",
+          "UpdateTime": 1711292234
+        },
+        {
+          "Status": "running-open",
+          "UpdateTime": 1711298957
+        },
+        {
+          "Status": "running-closed",
+          "UpdateTime": 1711353854
+        },
+        {
+          "Status": "completed",
+          "UpdateTime": 1712048078
+        },
+        {
+          "Status": "closed-out",
+          "UpdateTime": 1712050242
+        },
+        {
+          "Status": "announced",
+          "UpdateTime": 1712052569
+        },
+        {
+          "Status": "normal-archived",
+          "UpdateTime": 1716706864
+        }
+      ],
+      "RequestType": "StepChain",
+      "Requests": [
+        "TSG-Run3Summer23wmLHEGS-00022",
+        "TSG-Run3Summer23DRPremix-00048",
+        "TSG-Run3Summer23DRPremix-00048",
+        "TSG-Run3Summer23MiniAODv4-00048",
+        "TSG-Run3Summer23NanoAODv12-00048"
+      ],
+      "SizePerEvent": 1893.4518705882351,
+      "TimePerEvent": 35.72377025022897,
+      "TotalEvents": 1000000,
+      "TotalInputLumis": 1241,
+      "_id": "cmsunified_task_TSG-Run3Summer23wmLHEGS-00022__v1_T_240324_131348_9030",
+      "_rev": "40-bc990824a4d32e5c0fe53a1f84c9cf4b"
+    }
+]
