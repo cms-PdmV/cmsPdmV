@@ -2285,7 +2285,8 @@ class request(json_base):
                     # in case it keeps any output and produced 0 events
                     # means something is wrong in production
                     if (self.get_attribute('completed_events') <= 0
-                            and self.get_attribute("keep_output").count(True) > 0):
+                            and self.get_attribute("keep_output").count(True) > 0
+                            and not force):
 
                         not_good.update({
                             'message': '%s completed but with no statistics. stats DB lag. saving the request anyway.' % (
