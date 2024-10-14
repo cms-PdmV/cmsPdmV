@@ -1882,7 +1882,7 @@ class request(json_base):
 
         Returns:
             list[dict]: Stats2 workflows possibly filtered by the latest injected
-                workflow. This could return the original list if there reference to
+                workflow. This could return the original list if the reference to
                 the latest injected workflow is not available or an empty list if
                 the latest injected workflow was not found in the provided list.
         """
