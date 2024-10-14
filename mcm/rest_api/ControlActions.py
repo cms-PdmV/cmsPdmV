@@ -124,21 +124,23 @@ class Search(RESTResource):
             for mccm in mccms:
                 args['prepid__'].extend(mccm.get('generated_chains', []).keys())
 
-        try:
-            if not args and not sort_on:
-                # If there are no args, use simpler fetch
-                res = database.get_all(page, limit, with_total_rows=True)
-            else:
-                # Add types to arguments
-                args = {self.casting[db_name].get(k, k): v for k, v in args.items()}
-                # Construct the complex query
-                res = database.search(args, page, limit, include_fields, True, sort_on, sort_asc)
+        if not args and not sort_on:
+            # If there are no args, use simpler fetch
+            res = database.get_all(page, limit, with_total_rows=True)
+        else:
+            # Add types to arguments
+            args = {self.casting[db_name].get(k, k): v for k, v in args.items()}
+            # Construct the complex query
+            res = database.search(args, page, limit, include_fields, True, sort_on, sort_asc)
 
-            res['results'] = res.pop('rows', [])
-            return self.output_text(res, 200, {'Content-Type': 'application/json'})
-        except Exception as e:
-            return self.output_text({'message': str(e)}, 500, {'Content-Type': 'application/json'})
+        response_code = 200
+        error_message = res.get('message')
+        if error_message and 'The database returned too much data' in error_message:
+            # The client performed a query that outbounds the limit.
+            response_code = 400
 
+        res['results'] = res.pop('rows', [])
+        return self.output_text(res, response_code, {'Content-Type': 'application/json'})
 
 class CacheInfo(RESTResource):
 
