@@ -261,7 +261,6 @@ class UpdateRequest(RequestRESTResource):
             return {'results': False, 'message': 'Failed to update a request from API %s' % trace}
 
     def update_request(self, data):
-        data = loads(data)
         db = database(self.db_name)
         if '_rev' not in data:
             self.logger.error('Could not locate the CouchDB revision number in object: %s' % data)
