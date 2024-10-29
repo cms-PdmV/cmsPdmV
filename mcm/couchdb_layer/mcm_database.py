@@ -17,6 +17,8 @@ class database:
     # Cache timeout in seconds
     CACHE_TIMEOUT = 60 * 60
     IP_CACHE_TIMEOUT = 15 * 60
+    MAX_READ = int(10e6)  # 10MB should be enough for anyone
+
     cache = SimpleCache()
     ip_cache = SimpleCache()
 
@@ -128,11 +130,11 @@ class database:
         for attempt in range(1, self.max_attempts + 1):
             try:
                 data = self.opener.open(db_request)
-                return json.loads(data.read())
+                return json.loads(data.read(self.MAX_READ))
             except urllib2.HTTPError as http_error:
                 code = http_error.code
                 if code == 404 and include_deleted:
-                    data = http_error.read()
+                    data = http_error.read(self.MAX_READ)
                     # Database returned 404 - not found
                     # Document might have never existed or it could be deleted
                     data_json = json.loads(data)
@@ -193,13 +195,16 @@ class database:
         Non existing documents are changed with None
         Order is preserved
         """
-        request = self.couch_request('%s/_bulk_get' % (self.db_name),
-                                     method='POST',
-                                     data={'docs': [{'id': x} for x in ids]})
-        data = self.opener.open(request)
-        results = json.loads(data.read())['results']
-        results = [r['docs'][-1]['ok'] for r in results if r.get('docs') if r['docs'][-1].get('ok')]
-        return results
+        try:
+            request = self.couch_request('%s/_bulk_get' % (self.db_name),
+                                        method='POST',
+                                        data={'docs': [{'id': x} for x in ids]})
+            data = self.opener.open(request)
+            results = json.loads(data.read(self.MAX_READ))['results']
+            results = [r['docs'][-1]['ok'] for r in results if r.get('docs') if r['docs'][-1].get('ok')]
+            return results
+        except ValueError:
+            return []
 
     def document_exists(self, prepid, include_deleted=False):
         """
@@ -261,7 +266,7 @@ class database:
         self.logger.info('Saving "%s" (%s) in "%s"...', doc_id, doc_rev, self.db_name)
         request = self.couch_request(self.db_name, 'POST', data=doc)
         try:
-            data = self.opener.open(request).read()
+            data = self.opener.open(request).read(self.MAX_READ)
             data = json.loads(data)
             success = data.get('ok') is True
             if not success:
@@ -278,7 +283,11 @@ class database:
         """
         if page_num < 0:
             # Page <0 means "all", but it still has to be limited to something
-            return 9999, 0
+            return 1000, 0
+
+        if limit < 0 or limit > 1000:
+            # Always enforce a limit
+            limit = 1000
 
         skip = limit * page_num
         return limit, skip
@@ -314,7 +323,20 @@ class database:
         self.logger.debug('Query view %s', url)
         request = self.couch_request(url)
         try:
-            data = json.loads(self.opener.open(request).read())
+            data = self.opener.open(request).read(self.MAX_READ)
+            # Tell the user when MAX_READ is reached
+            if len(data) == self.MAX_READ:
+                error_msg = (
+                    'The database returned too much data. '
+                    'Use a better query and pagination to collect a smaller set of results'
+                )
+                self.logger.error(error_msg)
+                if with_total_rows:
+                    return {'rows': [], 'total_rows': 0, 'message': error_msg}
+
+                return []
+
+            data = json.loads(data)
             if options.get('include_docs'):
                 rows = [r['doc'] for r in data.get('rows', [])]
             elif design_doc == 'unique':
@@ -430,8 +452,8 @@ class database:
 
     def search(self, query_dict, page=0, limit=20, include_fields=None, total_rows=False, sort=None, sort_asc=True):
         """
-        Query couchdb-lucene with given query dict
-        Return a dict of results "rows" and number of "total_rows"
+        Query couchdb-lucene with given query dict. By default, returns a list of dicts.
+        If total_rows is True, returns a dict of results "rows" and number of "total_rows" instead.
         """
         limit, skip = self.pagify(page, limit)
         query = self.make_query(query_dict)
@@ -466,8 +488,20 @@ class database:
                                              data=options)
         for attempt in range(1, self.max_attempts + 1):
             try:
-                data = self.opener.open(lucene_request)
-                data = json.loads(data.read())
+                data = self.opener.open(lucene_request).read(self.MAX_READ)
+                # Tell the user when MAX_READ is reached
+                if len(data) == self.MAX_READ:
+                    error_msg = (
+                        'The database returned too much data. '
+                        'Use a better query and pagination to collect a smaller set of results'
+                    )
+                    self.logger.error(error_msg)
+                    if total_rows:
+                        return {'rows': [], 'total_rows': 0, 'message': error_msg}
+
+                    return []
+
+                data = json.loads(data)
                 if total_rows:
                     return {'rows': [r['doc'] for r in data.get('rows', [])],
                             'total_rows': data.get('total_rows', 0)}
