@@ -3189,8 +3189,16 @@ class request(json_base):
         command += '    cat /tmp/%s\n' % (filename)
         command += '    rm /tmp/%s\n' % (filename)
         command += 'fi\n'
-        result = str(os.popen(command).read())
-        return result
 
-
-
+        try:
+            machine_name = l_type.mcm_executor_node()
+            with ssh_executor(server=machine_name) as executor:
+                _, stdout, _ = executor.execute(command)
+                output = stdout.read().decode(encoding="utf-8")
+                return output
+        except Exception as e:
+            self.logger.error(
+                "Unable to retrieve the GEN script output via SSH sessions: ",
+                e, stack_info=True
+            )
+            return "Unable to retrieve the GEN script output via SSH sessions"
