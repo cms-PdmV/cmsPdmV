@@ -1344,7 +1344,14 @@ class request(json_base):
         prepid = self.get_attribute('prepid')
         member_of_campaign = self.get_attribute('member_of_campaign')
         scram_arch = self.get_scram_arch().lower()
-        bash_file = ['#!/bin/bash', '']
+        bash_file = [
+            '#!/bin/bash', 
+            '',
+            '# Binds for singularity containers',
+            '# Mount /afs, /eos, /cvmfs, /etc/grid-security for xrootd',
+            "export APPTAINER_BINDPATH='/afs,/cvmfs,/cvmfs/grid.cern.ch/etc/grid-security:/etc/grid-security,/eos,/etc/pki/ca-trust,/run/user,/var/run/user'",
+            '',
+        ]
 
         if not for_validation or automatic_validation:
             bash_file += ['#############################################################',
@@ -1378,11 +1385,37 @@ class request(json_base):
         run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1 or threads is None)
         self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if run_gen_script else 'NO'))
         if run_gen_script:
+            # Run CMS GEN script using Apptainer containers
+            # and an isolated `venv`
+            cms_gen_file = '%s_gen_script.sh' % (prepid)
+            cms_gen_os = 'el9:x86_64'
+            cms_gen_python = 'python3.9'
+            cms_gen_venv = 'cms_gen_venv_%s' % (prepid)
+            mcm_rest_client = 'git+https://github.com/cms-PdmV/mcm_scripts'
+
+            bash_file += [
+                'cat <<\'EndOfGenScriptFile\' > %s' % (cms_gen_file),
+                '#!/bin/bash',
+                '',
+                'echo "Running CMS GEN request script using cms-sw containers. Architecture: %s"' % (cms_gen_os),
+                '%s -m venv %s && source ./%s/bin/activate' % (cms_gen_python, cms_gen_venv, cms_gen_venv),
+                '',
+                '# Install the PdmV REST client',
+                'pip install %s &> /dev/null' % (mcm_rest_client),
+                '',
+                'echo "Packages installed"',
+                'pip freeze',
+                'echo ""',
+                '',
+            ]
+
             # Download the script
             bash_file += ['# GEN Script begin',
                           'rm -f request_fragment_check.py',
                           'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py',
-                          'chmod +x request_fragment_check.py']
+                          'chmod +x request_fragment_check.py',
+                          '',]
+            
             # Checking script invocation
             request_fragment_check = './request_fragment_check.py --bypass_status --prepid %s' % (prepid)
             if is_dev:
@@ -1405,6 +1438,21 @@ class request(json_base):
 
             # Execute the GEN script
             bash_file += [request_fragment_check]
+            
+            # Close the CMS GEN subscript and execute it using singularity
+            bash_file += [
+                '',
+                '# End of CMS GEN script file: %s' % (cms_gen_file),
+                'EndOfGenScriptFile',
+                'chmod +x %s' % (cms_gen_file),
+                '',
+            ]
+            bash_file += [
+                '# Run in singularity container',
+                'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s $(echo $(pwd)/%s)' % (cms_gen_os, cms_gen_file),
+                '',
+            ]
+
             # Get exit code of GEN script
             bash_file += ['GEN_ERR=$?']
             if automatic_validation:
@@ -1700,15 +1748,13 @@ class request(json_base):
             # Validation will run on CMS CAF nodes (HTCondor, lxplus)
             bash_file += [
                 '# Run in singularity container',
-                '# Mount afs, eos, cvmfs',
-                '# Mount /etc/grid-security for xrootd',
                 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                'singularity run -B /afs -B /eos -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
+                'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
             ]
         else:
             bash_file += [
                 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
-                'singularity run -B /afs -B /cvmfs -B /etc/grid-security -B /etc/pki/ca-trust --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
+                'singularity run --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
             ]
 
         # Empty line at the end of the file
@@ -1818,6 +1864,64 @@ class request(json_base):
 
         self.reload()
 
+    def _attempt_filter_workflows(self, mcm_reqmgr_name_list, stats_workflows):
+        """
+        Attempts to pick the latest injected workflows using the records available
+        in McM. After an injection process finishes, only the latest workflow name
+        is available on the `reqmgr_name` attribute with no content.
+
+        Note this filter process is not idempotent. In case the request has been
+        updated with previous data from Stats2, it is not possible to get the latest
+        workflow and nothing will be filtered. Such behavior is acceptable.
+
+        Args:
+            mcm_reqmgr_name_list (list[str]): List of ReqMgr2 workflow names available for
+                the request in McM.
+            stats_workflows (list[dict]): Stats2 workflow records related to the McM
+                request.
+
+        Returns:
+            list[dict]: Stats2 workflows possibly filtered by the latest injected
+                workflow. This could return the original list if the reference to
+                the latest injected workflow is not available or an empty list if
+                the latest injected workflow was not found in the provided list.
+        """
+        stats_workflows_dict = {
+            stats_workflow.get('RequestName'): stats_workflow
+            for stats_workflow in stats_workflows
+        }
+        workflows_to_consider = [
+            stats_workflows_dict.get(mcm_reqmgr_name)
+            for mcm_reqmgr_name in mcm_reqmgr_name_list
+            if stats_workflows_dict.get(mcm_reqmgr_name)
+        ]
+
+        self.logger.info("Workflows to consider: %s", [doc.get('RequestName') for doc in workflows_to_consider])
+        try:
+            # Pick the time related to the `new` transition
+            reference_time_of_new = min([
+                stats_doc.get('RequestTransition')[0].get('UpdateTime')
+                for stats_doc in workflows_to_consider
+            ])
+        except:
+            # There's no record for the latest injected workflow in Stats2.
+            return []
+
+        stats_reqmgr_name_list = [
+            reqmgr_name
+            for reqmgr_name, content in stats_workflows_dict.items()
+            if content.get('RequestTransition') and
+                len(content['RequestTransition']) > 0 and
+                content['RequestTransition'][0].get('UpdateTime') is not None and
+                content['RequestTransition'][0]['UpdateTime'] >= reference_time_of_new
+        ]
+        self.logger.info(
+            "The following workflows may not be related to the last injection: %s",
+            set(stats_workflows_dict.keys()) - set(stats_reqmgr_name_list)
+        )
+
+        return stats_reqmgr_name_list
+
     def get_stats(self, forced=False):
         l_type = locator()
         stats_db = database('requests', url=l_type.stats_database_url())
@@ -1827,9 +1931,18 @@ class request(json_base):
                                                   page=0,
                                                   limit=-1,
                                                   options={'key': prepid})
+
         mcm_reqmgr_list = self.get_attribute('reqmgr_name')
         mcm_reqmgr_name_list = [x['name'] for x in mcm_reqmgr_list]
-        stats_reqmgr_name_list = [stats_wf['RequestName'] for stats_wf in stats_workflows]
+        stats_workflows_dict = {
+            stats_workflow.get('RequestName'): stats_workflow
+            for stats_workflow in stats_workflows
+        }
+        stats_reqmgr_name_list = self._attempt_filter_workflows(mcm_reqmgr_name_list, stats_workflows)
+        if not stats_reqmgr_name_list:
+            # The workflows in mcm are too fresh and have not yet been registered in stats. update will have to wait.
+            return False
+
         all_reqmgr_name_list = list(set(mcm_reqmgr_name_list).union(set(stats_reqmgr_name_list)))
         all_reqmgr_name_list = sorted(all_reqmgr_name_list, key=lambda workflow: '_'.join(workflow.split('_')[-3:]))
         # self.logger.debug('Stats workflows for %s: %s' % (self.get_attribute('prepid'),
@@ -1848,12 +1961,7 @@ class request(json_base):
                                      'aborted-completed'])
         total_events = 0
         for reqmgr_name in all_reqmgr_name_list:
-            stats_doc = None
-            for stats_workflow in stats_workflows:
-                if stats_workflow.get('RequestName') == reqmgr_name:
-                    stats_doc = stats_workflow
-                    break
-
+            stats_doc = stats_workflows_dict.get(reqmgr_name, None)
             if not stats_doc and stats_db.document_exists(reqmgr_name):
                 self.logger.info('Workflow %s is in Stats DB, but workflow does not have request %s in it\'s list' % (reqmgr_name,
                                                                                                                       self.get_attribute('prepid')))
@@ -2240,7 +2348,8 @@ class request(json_base):
                     # in case it keeps any output and produced 0 events
                     # means something is wrong in production
                     if (self.get_attribute('completed_events') <= 0
-                            and self.get_attribute("keep_output").count(True) > 0):
+                            and self.get_attribute("keep_output").count(True) > 0
+                            and not force):
 
                         not_good.update({
                             'message': '%s completed but with no statistics. stats DB lag. saving the request anyway.' % (

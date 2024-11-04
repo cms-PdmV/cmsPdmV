@@ -46,6 +46,48 @@ class UpdateList(RESTResource):
         try:
             data = loads(request.data.strip())
             db = database('lists')
+            if '_rev' not in data:
+                self.logger.error('Could not locate the CouchDB revision number (_rev) in object: %s' % data)
+                return self.output_text(
+                    {"results": False, 'message': 'Could not locate revision number (_rev) in the object'},
+                    400,
+                    {'Content-Type': 'application/json'}
+                )
+            if '_id' not in data:
+                self.logger.error("List '_id' has not been provided")
+                return self.output_text(
+                    {"results": False, 'message': "List '_id' has not been provided"},
+                    400,
+                    {'Content-Type': 'application/json'}
+                )
+            if 'prepid' not in data:
+                self.logger.error("List 'prepid' has not been provided")
+                return self.output_text(
+                    {"results": False, 'message': "List 'prepid' has not been provided"},
+                    400,
+                    {'Content-Type': 'application/json'}
+                )
+            if data['_id'] != data['prepid']:
+                self.logger.error("List '_id' and 'prepid' do not have the same value")
+                return self.output_text(
+                    {"results": False, 'message': "List '_id' and 'prepid' do not have the same value"},
+                    400,
+                    {'Content-Type': 'application/json'}
+                )
+            if not db.document_exists(data['_id']):
+                return self.output_text(
+                    {"results": False, 'message': 'List %s does not exist' % (data['_id'])},
+                    404,
+                    {'Content-Type': 'application/json'}
+                )
+            else:
+                if db.get(data['_id'])['_rev'] != data['_rev']:
+                    response_body =  {
+                        "results": False,
+                        'message': 'Revision clash, retrieve the latest document version, modifiy it and try again'
+                    }
+                    return self.output_text(response_body, 400, {'Content-Type': 'application/json'})
+
             self.logger.info('Updating list %s...' % (data.get('prepid')))
             return {'results': db.update(data), 'message': ''}
         except Exception:
