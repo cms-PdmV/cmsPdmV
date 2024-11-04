@@ -103,7 +103,7 @@ class GetLogs(RESTResource):
     access_limit = access_rights.user
 
     def __init__(self):
-        self.path = locator.logs_folder()
+        self.path = locator().logs_folder()
         self.before_request()
         self.count_call()
 
