@@ -1344,6 +1344,8 @@ class request(json_base):
         prepid = self.get_attribute('prepid')
         member_of_campaign = self.get_attribute('member_of_campaign')
         scram_arch = self.get_scram_arch().lower()
+        release_for_latest_python = settings.get_value('release_for_latest_python') or 'el9:x86_64'
+
         bash_file = [
             '#!/bin/bash', 
             '',
@@ -1388,8 +1390,7 @@ class request(json_base):
             # Run CMS GEN script using Apptainer containers
             # and an isolated `venv`
             cms_gen_file = '%s_gen_script.sh' % (prepid)
-            cms_gen_os = 'el9:x86_64'
-            cms_gen_python = 'python3.9'
+            cms_gen_python = 'python3'
             cms_gen_venv = 'cms_gen_venv_%s' % (prepid)
             mcm_rest_client = 'git+https://github.com/cms-PdmV/mcm_scripts'
 
@@ -1397,7 +1398,7 @@ class request(json_base):
                 'cat <<\'EndOfGenScriptFile\' > %s' % (cms_gen_file),
                 '#!/bin/bash',
                 '',
-                'echo "Running CMS GEN request script using cms-sw containers. Architecture: %s"' % (cms_gen_os),
+                'echo "Running CMS GEN request script using cms-sw containers. Architecture: %s"' % (release_for_latest_python),
                 '%s -m venv %s && source ./%s/bin/activate' % (cms_gen_python, cms_gen_venv, cms_gen_venv),
                 '',
                 '# Install the PdmV REST client',
@@ -1449,7 +1450,7 @@ class request(json_base):
             ]
             bash_file += [
                 '# Run in singularity container',
-                'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s $(echo $(pwd)/%s)' % (cms_gen_os, cms_gen_file),
+                'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s $(echo $(pwd)/%s)' % (release_for_latest_python, cms_gen_file),
                 '',
             ]
 
@@ -1705,17 +1706,18 @@ class request(json_base):
                               'echo "Filter efficiency fraction: "$(bc -l <<< "scale=10; ($producedEvents) / $processedEvents")'
                              ]
 
+        # Configuration upload: Tweak parameters step.
         if not for_validation and configs_to_upload:
-            test_string = '--wmtest' if is_dev else ''
-            bash_file += ['\n\n# Upload configs',
-                          'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
-                          'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
-                          'if [[ $(head -n 1 `which cmsDriver.py`) =~ "python3" ]]; then',
-                          '  python3 `which wmupload.py` %s -u pdmvserv -g ppd %s || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
-                          'else',
-                          '  wmupload.py %s -u pdmvserv -g ppd %s || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
-                          'fi',
-                         ]
+            bash_file += [
+                '\n\n# Tweak parameters and store them in a file',
+                'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
+                'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
+                'if [[ $(head -n 1 `which cmsDriver.py`) =~ "python3" ]]; then',
+                '  python3 `which wmupload.py` --create-tweak %s || exit $? ;' % (' '.join(configs_to_upload)),
+                'else',
+                '  wmupload.py --create-tweak %s || exit $? ;' % (' '.join(configs_to_upload)),
+                'fi',
+            ]
 
         bash_file += [
             '',
@@ -1755,6 +1757,29 @@ class request(json_base):
             bash_file += [
                 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"',
                 'singularity run --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME $(echo $(pwd)/%s)' % (test_file_name)
+            ]
+
+        # Configuration upload: Submit configuration step.
+        if not for_validation and configs_to_upload:
+            test_string = '--wmtest' if is_dev else ''
+            upload_script_file = '%s_upload_script.sh' % (prepid)
+            bash_file += [
+                '',
+                'cat <<\'EndOfUploadScriptFile\' > %s' % (upload_script_file),
+                '#!/bin/bash',
+                '',
+                '# Upload configs',
+                'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
+                'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
+                'python3 `which wmupload.py` %s -u pdmvserv -g ppd %s --from-tweak || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
+                '',
+                '# End of Request Upload script file: %s' % (upload_script_file),
+                'EndOfUploadScriptFile',
+                'chmod +x %s' % (upload_script_file),
+                '',
+                '# Run in singularity container',
+                'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s $(echo $(pwd)/%s)' % (release_for_latest_python, upload_script_file),
+                '',
             ]
 
         # Empty line at the end of the file
