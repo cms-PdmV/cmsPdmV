@@ -299,56 +299,78 @@ class SubmissionsBase(Handler):
 
     def make_injection_command(self, mcm_r=None):
         locator_type = locator()
-        scram_arch = mcm_r.get_scram_arch()
         directory = locator_type.workLocation()
-        command = '#!/bin/bash\n'
-        command += 'cd %s \n' % directory
         prepid = mcm_r.get_attribute('prepid')
         proxy_file_name = '%s%s_voms_proxy.txt' % (directory, prepid)
-        command += '# Make voms proxy\n'
-        command += 'voms-proxy-init --voms cms --out %s --hours 4\n' % (proxy_file_name)
-        command += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
-
-        executable_file_name = '%supload_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
-
-        command += 'cat > %s << \'EndOfInjectFile\'\n' % (executable_file_name)
-        command += '#!/bin/bash\n'
-        command += 'cd %s \n' % (directory)
+        executable_file_name = '%sinjection_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
+        release_for_latest_python = settings.get_value('release_for_latest_python') or 'el9:x86_64'
         
-        command += mcm_r.make_release()
+        # Configuration for the `wmcontrol` instruction
         test_params = ''
         if locator_type.isDev():
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
 
-        command += 'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}\n'
-        command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
-        command += 'wmcontrol.py --dont_approve --url-dict %spublic/restapi/%s/get_dict/%s %s \n' % (locator_type.baseurl(),
-                                                                                                     self.database_name,
-                                                                                                     self.prepid,
-                                                                                                     test_params)
-        
-        command += '\n\nEndOfInjectFile\n'
-        command += 'chmod +x %s\n' % (executable_file_name)
-        os_name = scram_arch.split('_')[0]
+        # Create the injection script
+        bash_file = [
+            '#!/bin/bash',
+            '',
+            '# Binds for singularity containers',
+            '# Mount /afs, /eos, /cvmfs, /etc/grid-security for xrootd',
+            "export APPTAINER_BINDPATH='/afs,/cvmfs,/cvmfs/grid.cern.ch/etc/grid-security:/etc/grid-security,/eos,/etc/pki/ca-trust,/run/user,/var/run/user'",
+            '',
+            '#############################################################',
+            '#         This script is used by McM when it performs       #',
+            '#              the request injection to ReqMgr2             #',
+            '#                                                           #',
+            '#      !!! THIS FILE IS NOT MEANT TO BE RUN BY YOU !!!      #',
+            '# If you want to run validation script yourself you need to #',
+            '#     get a "Get test" script which can be retrieved by     #',
+            '#  clicking a button next to one you just clicked. It will  #',
+            '# say "Get test command" when you hover your mouse over it  #',
+            '#      If you try to run this, you will have a bad time     #',
+            '#############################################################',
+            ''
+        ]
 
-        # Use a valid tag for CentOS 7 available in /cvmfs
-        if os_name == 'slc7':
-            os_name = 'el7'
+        # Request a VOMS proxy certificate
+        bash_file += [
+            'cd %s' % (directory),
+            '',
+            '# Make a VOMS proxy certificate',
+            'voms-proxy-init --voms cms --out %s --hours 4' % (proxy_file_name),
+            'export X509_USER_PROXY=%s' % (proxy_file_name),
+            '',
+        ]
 
-        container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
-        command += 'if [ -e "%s/%s:amd64" ]; then\n' % (container_path, os_name)
-        command += '  CONTAINER_NAME="%s:amd64"\n' % (os_name)
-        command += 'elif [ -e "%s/%s:x86_64" ]; then\n' % (container_path, os_name)
-        command += '  CONTAINER_NAME="%s:x86_64"\n' % (os_name)
-        command += 'else\n'
-        command += '  echo "Could not find amd64 or x86_64 for %s"\n' % (os_name)
-        command += '  exit 1\n'
-        command += 'fi\n'
-        command += 'export SINGULARITY_CACHEDIR="/tmp/$(whoami)/singularity"\n'
-        command += 'singularity run -B /afs -B /cvmfs -B /etc/pki/ca-trust --no-home /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/$CONTAINER_NAME %s\n' % (executable_file_name)
-        command += 'rm -f %s\n' % (executable_file_name)
+        # Create the injection script to execute `wmcontrol`
+        bash_file += [
+            'cat <<\'EndOfInjectFile\' > %s' % (executable_file_name),
+            '#!/bin/bash',
+            '',
+            'cd %s' % (directory),
+            'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
+            'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
+            'python3 `which wmcontrol.py` --dont_approve --url-dict %spublic/restapi/%s/get_dict/%s %s' % (
+                locator_type.baseurl(), self.database_name, self.prepid, test_params
+            ),
+            '',
+            '# End of injection script',
+            'EndOfInjectFile',
+            '',
+        ]
 
-        command += 'rm -f %s' % (proxy_file_name)
+        # Execution using singularity
+        bash_file += [
+            'chmod +x %s' % (executable_file_name),
+            '# Run in singularity container',
+            'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s %s' % (release_for_latest_python, executable_file_name),
+            '',
+            'rm -f %s' % (executable_file_name),
+            'rm -f %s' % (proxy_file_name),
+            '',
+        ]
+
+        command = '\n'.join(bash_file)
         self.logger.info('Inject command:\n\n%s\n\n' % (command))
         return command
 
