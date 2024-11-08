@@ -3,7 +3,9 @@ This module tests the API operations related with
 the request entity.
 """
 
-import json
+import pytest
+
+from mcm_tests.fixtures import injection_to_reqmgr
 from mcm_tests.rest_api.api_tools import McMTesting, Roles, Environment
 from mcm_tests.use_cases.full_injection.core import InjectRootRequest
 
@@ -39,6 +41,7 @@ class TestRequests:
         retrieved_root_request = self.mcm.get(object_type="requests", object_id=root_request.get("prepid", ""))
         assert root_request == retrieved_root_request
 
+    @pytest.mark.usefixtures("injection_to_reqmgr")
     def test_reset_delete(self):
         # If the request is injected, it is required to invalidate it first
         # And reset the request
@@ -98,6 +101,7 @@ class TestRequests:
         assert new_request_data != None and isinstance(new_request_data, dict)
         assert new_request_data.get("notes") == custom_note
 
+    @pytest.mark.usefixtures("injection_to_reqmgr")
     def test_inspect(self):
         root_request = self.entities["root_request"]
         root_request_prepid = root_request.get("prepid", "")
@@ -201,6 +205,7 @@ class TestRequests:
         assert request_from_range
         assert request_from_range[0] == root_request
 
+    @pytest.mark.usefixtures("injection_to_reqmgr")
     def test_force_complete(self):
         root_request = self.entities["root_request"]
         root_request_prepid = root_request.get("prepid", "")
@@ -227,6 +232,7 @@ class TestRequestsAsProdMgr(TestRequests):
         self._configure_as_role(role=Roles.ADMINISTRATOR)
         self.mcm = McMTesting(config=self.env, role=Roles.PRODUCTION_MANAGER)
 
+    @pytest.mark.usefixtures("injection_to_reqmgr")
     def test_force_complete(self):
         root_request = self.entities["root_request"]
         root_request_prepid = root_request.get("prepid", "")

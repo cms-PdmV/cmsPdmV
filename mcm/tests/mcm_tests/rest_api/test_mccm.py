@@ -3,6 +3,9 @@ This module tests the API operations related with
 the MccM entity (tickets).
 """
 
+import pytest
+
+from mcm_tests.fixtures import injection_to_reqmgr
 from mcm_tests.rest_api.api_tools import McMTesting, Roles, Environment
 from mcm_tests.use_cases.full_injection.core import InjectToNanoAOD, InjectRootRequest
 
@@ -99,6 +102,7 @@ class TestMccM:
         assert cancel_result.get("results") == True
         assert all(value == False for value in editable_fields.values()), "No field should be editable!"
 
+    @pytest.mark.usefixtures("injection_to_reqmgr")
     def test_check_all_approved(self):
         # No request related to this ticket has been created
         # or it is not submit approval

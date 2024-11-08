@@ -3,10 +3,14 @@ This module tests the API operations related with
 the chained request entity.
 """
 
+import pytest
+
+from mcm_tests.fixtures import injection_to_reqmgr
 from mcm_tests.rest_api.api_tools import McMTesting, Roles, Environment
 from mcm_tests.use_cases.full_injection.core import InjectToNanoAOD, InjectRootRequest
 
 
+@pytest.mark.usefixtures("injection_to_reqmgr")
 class TestChainedRequest:
     """
     Test the chained request entity.
