@@ -4,7 +4,8 @@ the flows entity.
 """
 
 import random
-from mcm_tests.rest_api.api_tools import McMTesting, Roles, Environment
+
+from mcm_tests.rest_api.api_tools import Environment, McMTesting, Roles
 from mcm_tests.use_cases.full_injection.core import InjectToNanoAOD
 
 

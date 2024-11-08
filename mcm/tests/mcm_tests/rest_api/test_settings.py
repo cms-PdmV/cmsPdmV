@@ -4,7 +4,8 @@ the settings entity.
 """
 
 import time
-from mcm_tests.rest_api.api_tools import McMTesting, Roles, Environment
+
+from mcm_tests.rest_api.api_tools import Environment, McMTesting, Roles
 
 
 class TestSettings:

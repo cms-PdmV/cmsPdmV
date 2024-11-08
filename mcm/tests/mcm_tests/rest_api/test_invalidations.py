@@ -4,12 +4,12 @@ the invalidations entity.
 """
 
 import types
-import pytest
 
+import pytest
 from rest.applications.mcm.invalidate_request import InvalidateDeleteRequests
 
 from mcm_tests.fixtures import injection_to_reqmgr
-from mcm_tests.rest_api.api_tools import McMTesting, Roles, Environment
+from mcm_tests.rest_api.api_tools import Environment, McMTesting, Roles
 from mcm_tests.use_cases.full_injection.core import InjectRootRequest
 
 
