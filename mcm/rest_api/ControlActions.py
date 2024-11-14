@@ -133,9 +133,14 @@ class Search(RESTResource):
             # Construct the complex query
             res = database.search(args, page, limit, include_fields, True, sort_on, sort_asc)
 
-        res['results'] = res.pop('rows', [])
-        return self.output_text(res, 200, {'Content-Type': 'application/json'})
+        response_code = 200
+        error_message = res.get('message')
+        if error_message and 'The database returned too much data' in error_message:
+            # The client performed a query that outbounds the limit.
+            response_code = 400
 
+        res['results'] = res.pop('rows', [])
+        return self.output_text(res, response_code, {'Content-Type': 'application/json'})
 
 class CacheInfo(RESTResource):
 

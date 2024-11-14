@@ -1617,11 +1617,22 @@ class PutToForceComplete(RESTResource):
                 ",".join(curr_user.get_pwgs()), req.get_attribute("pwg"))
 
             return {"prepid": pid, "results": False, 'message': message}
-        # check if request if at least 50% complete
-        if req.get_attribute("completed_events") < req.get_attribute("total_events") * 0.5 and curr_user.get_attribute('role') != 'administrator':
-            self.logger.info('%s is below 50percent completion' % (pid))
-            message = 'Request is below 50 percent completion'
-            return {"prepid": pid, "results": False, 'message': message}
+
+        # Non-administrators can only force-complete requests with at least half
+        # the requested statistics produced.
+        if curr_user.get_attribute('role') != 'administrator':
+            # Check that the request keeps at least one output, otherwise it's
+            # always either 0% or 100% complete. See #1114.
+            if not any(req.get_attribute("keep_output")):
+                self.logger.info('%s has no output', pid)
+                message = 'Request keeps no output, try another request in the chain'
+                return {"prepid": pid, "results": False, 'message': message}
+
+            # Check if request if at least 50% complete
+            if req.get_attribute("completed_events") < req.get_attribute("total_events") * 0.5:
+                self.logger.info('%s is below 50 percent completion', pid)
+                message = 'Request is below 50 percent completion'
+                return {"prepid": pid, "results": False, 'message': message}
 
         if pid in forcecomplete_list['value']:
             self.logger.info('%s already in forcecompletion' % (pid))
