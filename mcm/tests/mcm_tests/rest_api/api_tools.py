@@ -128,7 +128,7 @@ class McMTesting(McMClient):
             # otherwise, the web server will fail to properly assign
             # permissions.
             "Adfs-Login": role.value,
-            "Adfs-Email": "example@example.com",
+            "Adfs-Email": "cms-mcm-testing-noreply@cern.ch",
             "Adfs-Firstname": role.value,
             "Adfs-Lastname": role.value,
             # CouchDB
@@ -176,7 +176,7 @@ class McMTesting(McMClient):
             "notes": "I am test user :)",
             "seen_notifications": [],
             "pwg": [],
-            "email": "example@example.com",
+            "email": "cms-mcm-testing-noreply@cern.ch",
             "history": [],
         }
         new_users: list[dict] = []
