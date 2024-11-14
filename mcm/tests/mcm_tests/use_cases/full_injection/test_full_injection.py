@@ -7,11 +7,11 @@ import pytest
 
 from mcm_tests.fixtures import (
     able_to_access_internal_resources,
+    authenticate_by_stdin,
     injection_to_reqmgr,
+    mcm_client,
     nanoaod_injector,
     root_request_injector,
-    authenticate_by_stdin,
-    mcm_client,
 )
 from mcm_tests.use_cases.full_injection.core import InjectRootRequest, InjectToNanoAOD
 

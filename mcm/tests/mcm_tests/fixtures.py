@@ -9,7 +9,7 @@ import pytest
 from pytest import FixtureRequest
 from rest import McM
 
-from mcm_tests.rest_api.api_tools import McMTesting, Environment, Roles
+from mcm_tests.rest_api.api_tools import Environment, McMTesting, Roles
 from mcm_tests.use_cases.full_injection.core import InjectRootRequest, InjectToNanoAOD
 
 
@@ -41,7 +41,7 @@ def stdin_enabled(authenticate_by_stdin: bool) -> None:
         pytest.skip(reason)
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def injection_to_reqmgr() -> None:
     """
     Executes or skips this test group based on the
@@ -55,28 +55,32 @@ def injection_to_reqmgr() -> None:
         )
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def able_to_access_internal_resources() -> None:
     """
     Checks that the test runtime environment is being executed
     inside CERN internal network, as some resources are only accessible
     within it.
     """
-    able_to_access = bool(os.getenv("ABLE_TO_ACCESS_INTERNAL_RESOURCES"))
-    if not able_to_access:
-        raise pytest.skip(
-            "Execute this test with a test environment deployed inside CERN internal network!"
-        )
+    return bool(os.getenv("ABLE_TO_ACCESS_INTERNAL_RESOURCES"))
 
 
 @pytest.fixture()
-def mcm_client(authenticate_by_stdin: bool) -> tuple[McM, Environment]:
+def mcm_client(
+    authenticate_by_stdin: bool, 
+    able_to_access_internal_resources: bool
+) -> tuple[McM, Environment]:
     """
     Retrieves a testing `Environment` configuration and a
     `McM` session pointing to the live `development` McM web application
     instance.
     """
     if authenticate_by_stdin:
+        if not able_to_access_internal_resources:
+            raise pytest.skip(
+                "Execute this test with a test environment deployed inside CERN internal network!"
+            )
+
         test_environment = Environment(
             mcm_couchdb_url="http://vocms0485.cern.ch:5984/",
             mcm_couchdb_lucene_url="<Not Required>",
