@@ -77,10 +77,31 @@ class GetRevision(RESTResource):
         """
         returns the current tag of the software running
         """
-        import subprocess
-        output = subprocess.Popen(["git", "describe", "--tags", "--abbrev=0"], stdout=subprocess.PIPE)
-        revision = output.communicate()[0]
-        return revision
+        # Git tag and response code
+        result_tag = "unknown"
+        response_code = 500
+        try:
+            import subprocess
+            output = subprocess.Popen(
+                ["git", "describe", "--tags", "--abbrev=0"], 
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            stdout, stderr = output.communicate()
+            if stdout:
+                result_tag = stdout
+                response_code = 200
+            elif stderr:
+                self.logger.error("Unable to get revision: %s", stderr)
+                if "No names found, cannot describe anything" in stderr:
+                    result_tag = "unknown"
+                    response_code = 404
+
+        except Exception as e:
+            self.logger.error("Unable to get revision: %s", e, exc_info=True)
+
+        return self.output_text(result_tag, response_code, {'Content-Type': 'text/plain'})
 
 
 class GetStartTime(RESTResource):
