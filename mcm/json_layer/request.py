@@ -2910,7 +2910,12 @@ class request(json_base):
         for seq in self.get_attribute('sequences'):
             local_num = 0
             if 'nThreads' in seq:
-                local_num = seq['nThreads']
+                seq_threads = seq['nThreads']
+                if isinstance(seq_threads, str) and seq_threads.isnumeric():
+                    local_num = int(seq_threads)
+                elif isinstance(seq_threads, int):
+                    local_num = seq_threads
+
             if local_num > num:
                 num = local_num
 
