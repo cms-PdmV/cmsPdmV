@@ -556,8 +556,9 @@ class RequestApprover(Handler):
                     if not stdout and not stderr:
                         self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
                         return
-                    output = stdout.read()
-                    error = stderr.read()
+
+                    output = stdout.read().decode(encoding="utf-8")
+                    error = stderr.read().decode(encoding="utf-8")
 
                 self.logger.info('Wmapprove output: %s' % output)
                 if not error and 'Something went wrong' not in output:
@@ -573,7 +574,7 @@ class RequestApprover(Handler):
                     'message': message}
         except Exception as e:
             message = 'Error while approving requests, batch id: %s, message: %s' % (self.batch_id, str(e))
-            self.logger.error(message)
+            self.logger.error(message, exc_info=True)
             self.send_email_failure('', message)
             return {
                 'results': False,
