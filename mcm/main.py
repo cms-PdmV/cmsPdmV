@@ -542,7 +542,6 @@ def main():
 
 # Execute this function when stopping flask
 def at_flask_exit(*args):
-    RESTResource.counter.close()
     com = communicator()
     com.flush(0)
 
