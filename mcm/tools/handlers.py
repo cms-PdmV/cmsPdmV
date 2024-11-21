@@ -518,18 +518,89 @@ class RequestApprover(Handler):
 
     def make_command(self):
         l_type = locator()
-        command = ''
-        proxy_file_name = '/tmp/%032x_voms_proxy.txt' % (random.getrandbits(128))
-        command += 'voms-proxy-init --voms cms --out %s --hours 1\n' % (proxy_file_name)
-        command += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
-        command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
+        proxy_file_name = './%032x_voms_proxy.txt' % (random.getrandbits(128))
+        approve_script_name = './approve_%s_file.sh' % (self.batch_id)
+
+        # Pick a release including latest Python features
+        try:
+            release_for_latest_python = settings.get_value('release_for_latest_python')
+        except Exception as e:
+            self.logger.error(
+                "Unable to retrieve the Python release for singularity: %s", 
+                e,
+                exc_info=True
+            )
+            release_for_latest_python = 'el9:x86_64'
+
+        # Script target
         test_path = ''
         test_params = ''
         if l_type.isDev():
             test_path = '_testful'
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
-        command += 'python /afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s/wmapprove.py --workflows %s %s\n' % (test_path, self.workflows, test_params)
-        command += 'rm -f %s\n' % (proxy_file_name)
+
+        # Create the approve script
+        bash_file = [
+            '#!/bin/bash',
+            '',
+            '# Binds for singularity containers',
+            '# Mount /afs, /eos, /cvmfs, /etc/grid-security for xrootd',
+            "export APPTAINER_BINDPATH='/afs,/cvmfs,/cvmfs/grid.cern.ch/etc/grid-security:/etc/grid-security,/eos,/etc/pki/ca-trust,/run/user,/var/run/user'",
+            '',
+            '#############################################################',
+            '#        This script is used by McM to approve requests     #',
+            '#            in ReqMgr2 after batch announcement.           #',
+            '#        Setting the workflow to assignment-approved so     #',
+            '#               computing starts processing it.             #',
+            '#                                                           #',
+            '#      !!! THIS FILE IS NOT MEANT TO BE RUN BY YOU !!!      #',
+            '# If you want to run validation script yourself you need to #',
+            '#     get a "Get test" script. Click on the button that     #',
+            '# says "Get test command" when you hover your mouse over it #',
+            '#      If you try to run this, you will have a bad time     #',
+            '#############################################################',
+            ''
+        ]
+
+        # Folder for storing the approve script and the proxy certificate
+        bash_file += [
+            '',
+            'echo "Executing approve script at: $(hostname)"',
+            '',
+            "export APPROVE_FOLDER=$(mktemp -d -t 'McM_Approve_XXXXXXXXXX')",
+            'echo "Approve folder available at: $APPROVE_FOLDER"',
+            'cd $APPROVE_FOLDER/',
+            'voms-proxy-init --voms cms --out %s --hours 1' % (proxy_file_name),
+            ''
+        ]
+
+        # Create the injection script to execute `wmcontrol`
+        bash_file += [
+            'cat <<\'EndOfApproveFile\' > %s' % (approve_script_name),
+            '#!/bin/bash',
+            '',
+            'export X509_USER_PROXY=%s' % (proxy_file_name),
+            'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
+            'python3 /afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s/wmapprove.py --workflows %s %s' % (test_path, self.workflows, test_params),
+            '',
+            '# End of approve script',
+            'EndOfApproveFile',
+            ''
+        ]
+
+        # Execution using singularity
+        bash_file += [
+            'chmod +x %s' % (approve_script_name),
+            '# Run in singularity container',
+            'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s %s' % (release_for_latest_python, approve_script_name),
+            '',
+            '# Remove the temporary folder',
+            'rm -rf "$APPROVE_FOLDER"',
+            ''
+        ]
+
+        command = '\n'.join(bash_file)
+        self.logger.info('Approve command:\n\n%s\n\n' % (command))
         return command
 
     def send_email_failure(self, output, error):
@@ -547,7 +618,6 @@ class RequestApprover(Handler):
         l_type = locator()
         command = self.make_command()
         try:
-            self.logger.info("Command being used for approve requests: " + command)
             trails = 1
             while trails < 3:
                 self.logger.info("Wmapprove trail number: %s" % trails)
