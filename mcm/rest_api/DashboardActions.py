@@ -60,7 +60,7 @@ class GetLogFeed(RESTResource):
         else:
             command = 'cat %s' % (name)
 
-        read_process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+        read_process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True, text=True)
         data = read_process.communicate()[0]
         return {"results": data}
 
