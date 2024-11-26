@@ -2347,7 +2347,7 @@ class request(json_base):
                         self.set_attribute('output_dataset', collected)
                         self.set_attribute('completed_events', counted)
 
-                    if not valid:
+                    if not valid and not force:
                         not_good.update({'message' : 'Not all outputs are valid'})
                         saved = db.save(self.json())
                         return not_good
