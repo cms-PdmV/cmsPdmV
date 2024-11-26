@@ -247,10 +247,31 @@ class request(json_base):
 
     def get_events_for_dataset(self, workflows, dataset):
         self.logger.debug("Running num_events search for dataset")
+        total_events = None
         for elem in workflows:
             if dataset in elem["content"].get("pdmv_dataset_statuses", []):
-                return elem["content"]["pdmv_dataset_statuses"][dataset]["pdmv_evts_in_DAS"]
-        # TO-DO do we need to put a default return? As all the time there must be a DS
+                events = elem["content"]["pdmv_dataset_statuses"][dataset].get("pdmv_evts_in_DAS")
+                if isinstance(events, int):
+                    total_events = events
+                    break
+            if dataset in elem["content"].get("pdmv_dataset_list", []):
+                events = elem["content"].get("pdmv_evts_in_DAS")
+                if isinstance(events, int):
+                    total_events = events
+                    break
+
+        if isinstance(total_events, int):
+            return total_events
+
+        self.logger.error(
+            "Unable to retrieve the number of events for dataset %s checking the following workflows: %s",
+            dataset,
+            dumps(workflows, indent=4)
+        )
+        raise self.BadParameterValue(
+            "Unable to retrieve the number of events for dataset %s"
+            % (dataset)
+        )
 
     def check_with_previous(self, previous_id, rdb, what, and_set=False):
         previous_one = rdb.get(previous_id)
