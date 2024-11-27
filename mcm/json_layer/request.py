@@ -1753,9 +1753,11 @@ class request(json_base):
         os_name = scram_arch.split('_')[0]
         container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
 
-        # Use a valid tag for CentOS 7 available in /cvmfs
+        # Patch old container prefix related to SLC
         if os_name == 'slc7':
             os_name = 'el7'
+        elif os_name == 'slc5':
+            os_name = 'el5'
 
         bash_file += [
             'if [ -e "%s/%s:amd64" ]; then' % (container_path, os_name),
