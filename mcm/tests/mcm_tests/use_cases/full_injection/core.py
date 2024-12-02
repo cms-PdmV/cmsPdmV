@@ -34,31 +34,31 @@ class MocksForInjection:
         self.era = "Run3"
 
         self._gs_root_campaign: Path = files(current_module).joinpath(
-            "static/gs_root_campaign.json"
+            "static/RunIII/gs_root_campaign.json"
         )
         self._root_request: Path = files(current_module).joinpath(
-            "static/root_request.json"
+            "static/RunIII/root_request.json"
         )
         self._mccm_ticket: Path = files(current_module).joinpath(
-            "static/mccm_ticket.json"
+            "static/RunIII/mccm_ticket.json"
         )
         self._dr_campaign: Path = files(current_module).joinpath(
-            "static/dr_campaign.json"
+            "static/RunIII/dr_campaign.json"
         )
         self._miniaod_campaign: Path = files(current_module).joinpath(
-            "static/miniaod_campaign.json"
+            "static/RunIII/miniaod_campaign.json"
         )
         self._nanoaod_campaign: Path = files(current_module).joinpath(
-            "static/nanoaod_campaign.json"
+            "static/RunIII/nanoaod_campaign.json"
         )
         self._flow_to_dr: Path = files(current_module).joinpath(
-            "static/flow_to_dr.json"
+            "static/RunIII/flow_to_dr.json"
         )
         self._flow_to_miniaod: Path = files(current_module).joinpath(
-            "static/flow_to_miniaod.json"
+            "static/RunIII/flow_to_miniaod.json"
         )
         self._flow_to_nanoaod: Path = files(current_module).joinpath(
-            "static/flow_to_nanoaod.json"
+            "static/RunIII/flow_to_nanoaod.json"
         )
 
     def _create_mock_campaign(self) -> dict:
