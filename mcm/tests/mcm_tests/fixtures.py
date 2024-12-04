@@ -10,7 +10,7 @@ from pytest import FixtureRequest
 from rest import McM
 
 from mcm_tests.rest_api.api_tools import Environment, McMTesting, Roles
-from mcm_tests.use_cases.full_injection.core import InjectRootRequest, InjectToNanoAOD
+from mcm_tests.use_cases.full_injection.core import InjectRootRequest, InjectToNanoAOD, InjectRun2Requests
 
 
 @pytest.fixture
@@ -118,3 +118,15 @@ def nanoaod_injector(
     """
     mcm, environment = mcm_client
     return InjectToNanoAOD(mcm=mcm, environment=environment)
+
+
+@pytest.fixture()
+def run2_injector(
+    mcm_client: tuple[McM, Environment]
+) -> InjectRun2Requests:
+    """
+    Configures an injector handler to submit a complete MC production sample
+    related to Run2.
+    """
+    mcm, environment = mcm_client
+    return InjectRun2Requests(mcm=mcm, environment=environment)
