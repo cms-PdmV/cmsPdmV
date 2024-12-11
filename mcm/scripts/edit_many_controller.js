@@ -24,8 +24,8 @@ angular.module('testApp').controller('resultsCtrl',
     if($scope.dbName == "requests")
     {
       // get the editable -> set false in list
-      $scope.not_editable_list = ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version", "History"]; //user non-editable columns
-      $scope.non_multiple_editable= ["Cmssw release", "Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version", "History"]; //user non-editable columns
+      $scope.not_editable_list = ["Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version", "History"]; //user non-editable columns
+      $scope.non_multiple_editable= ["Prepid", "Member of campaign", "Pwg", "Status", "Approval", "Type", "Priority", "Completion date", "Member of chain", "Config id", "Flown with", "Reqmgr name", "Completed events","Energy", "Version", "History"]; //user non-editable columns
       var promise = $http.get("restapi/requests/editable/"+$scope.prepid)
       promise.then(function(data)
       {
