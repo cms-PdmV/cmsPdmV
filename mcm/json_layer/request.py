@@ -210,6 +210,8 @@ class request(json_base):
                 # "validation-validation", "define-" and "approve-" requests
                 editable['input_dataset'] = True
                 editable['extension'] = True
+                editable['dataset_name'] = True
+                editable['process_string'] = True
 
             if self.current_user_level == 2 and self.get_attribute('approval') in ('validation', 'define', 'approve'):
                 # Allow generator conveners to edit dataset name for
