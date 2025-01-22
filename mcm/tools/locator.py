@@ -282,3 +282,11 @@ class locator:
             return server, port
 
         return "cernmx.cern.ch", 25
+
+    def use_gssapi_with_mic_for_auth(self):
+        """
+        In case `gssapi_with_mic` is available, use a Kerberos ticket
+        for authenticating SSH sessions. Enable this behavior by
+        setting the environment variable: $MCM_GSSAPI_WITH_MIC.
+        """
+        return bool(os.getenv("MCM_GSSAPI_WITH_MIC"))

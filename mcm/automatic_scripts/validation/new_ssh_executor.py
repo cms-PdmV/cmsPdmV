@@ -1,6 +1,8 @@
+import os
 import logging
 import json
 import paramiko
+import paramiko.ssh_gss
 
 
 class SSHExecutor():
@@ -30,11 +32,46 @@ class SSHExecutor():
         self.logger.info('Credentials loaded successfully: %s', credentials['username'])
         self.ssh_client = paramiko.SSHClient()
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.ssh_client.connect(self.remote_host,
-                                username=credentials["username"],
-                                password=credentials["password"],
-                                timeout=30)
+        gssapi_available = self._gssapi_with_mic_available()
+        if gssapi_available and self._use_gssapi_with_mic_for_auth():
+            self.logger.info(
+                'Authenticating to remote host (%s) using: gssapi-with-mic',
+                self.remote_host
+            )
+            self.ssh_client.connect(
+                self.remote_host,
+                username=credentials["username"],
+                gss_auth=gssapi_available,
+                timeout=30
+            )
+        else:
+            self.logger.info(
+                'Authenticating to remote host (%s) using: password',
+                self.remote_host
+            )
+            self.ssh_client.connect(
+                self.remote_host,
+                username=credentials["username"],
+                password=credentials["password"],
+                timeout=30
+            )
+
         self.logger.debug('Done setting up ssh')
+
+    def _gssapi_with_mic_available(self) -> bool:
+        """
+        Check if the authentication method `gssapi-with-mic`
+        is available so that Kerberos tickets can be used to
+        authenticate to the target host.
+        """
+        use_gssapi_with_mic = False
+        try:
+            paramiko.ssh_gss.GSSAuth(auth_method="gssapi-with-mic")
+            use_gssapi_with_mic = True
+        except ImportError:
+            pass
+
+        return use_gssapi_with_mic
 
     def setup_ftp(self):
         """
@@ -133,3 +170,11 @@ class SSHExecutor():
             self.ssh_client.close()
             self.ssh_client = None
             self.logger.debug('Closed ssh client')
+
+    def _use_gssapi_with_mic_for_auth(self):
+        """
+        In case `gssapi_with_mic` is available, use a Kerberos ticket
+        for authenticating SSH sessions. Enable this behavior by
+        setting the environment variable: $MCM_GSSAPI_WITH_MIC.
+        """
+        return bool(os.getenv("MCM_GSSAPI_WITH_MIC"))

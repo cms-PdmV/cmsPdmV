@@ -1,4 +1,5 @@
 import paramiko
+import paramiko.ssh_gss
 import time
 import logging
 import random
@@ -33,6 +34,22 @@ class ssh_executor:
     def __exit__(self, t, value, traceback):
         self.close_executor()
 
+    def _gssapi_with_mic_available(self) -> bool:
+        """
+        Check if the authentication method `gssapi-with-mic`
+        is available so that Kerberos tickets can be used to
+        authenticate to the target host.
+        """
+        use_gssapi_with_mic = False
+        try:
+            paramiko.ssh_gss.GSSAuth(auth_method="gssapi-with-mic")
+            use_gssapi_with_mic = True
+        except ImportError:
+            pass
+
+        return use_gssapi_with_mic
+
+
     def __build_ssh_client(self):
         self.ssh_client = paramiko.SSHClient()
         # paramiko.util.log_to_file(self.__ssh_logfile, 10)
@@ -45,7 +62,29 @@ class ssh_executor:
 
         try:
             time.sleep(2 * random.randrange(8))
-            self.ssh_client.connect(self.ssh_server, port=self.ssh_server_port, username=us, password=pw)
+            gssapi_available = self._gssapi_with_mic_available()
+            if gssapi_available and locator().use_gssapi_with_mic_for_auth():
+                self.logger.info(
+                    'Authenticating to remote host (%s) using: gssapi-with-mic',
+                    self.ssh_server
+                )
+                self.ssh_client.connect(
+                    self.ssh_server, 
+                    port=self.ssh_server_port, 
+                    username=us, 
+                    gss_auth=gssapi_available
+                )
+            else:
+                self.logger.info(
+                    'Authenticating to remote host (%s) using: password',
+                    self.ssh_server
+                )
+                self.ssh_client.connect(
+                    self.ssh_server, 
+                    port=self.ssh_server_port, 
+                    username=us, 
+                    password=pw
+                )
         except paramiko.AuthenticationException as ex:
             self.logger.error('Could not authenticate to remote server "%s:%d". Reason: %s' % (self.ssh_server, self.ssh_server_port, ex))
             return
