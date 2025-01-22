@@ -210,6 +210,8 @@ class request(json_base):
                 # "validation-validation", "define-" and "approve-" requests
                 editable['input_dataset'] = True
                 editable['extension'] = True
+                editable['dataset_name'] = True
+                editable['process_string'] = True
 
             if self.current_user_level == 2 and self.get_attribute('approval') in ('validation', 'define', 'approve'):
                 # Allow generator conveners to edit dataset name for
@@ -247,10 +249,31 @@ class request(json_base):
 
     def get_events_for_dataset(self, workflows, dataset):
         self.logger.debug("Running num_events search for dataset")
+        total_events = None
         for elem in workflows:
             if dataset in elem["content"].get("pdmv_dataset_statuses", []):
-                return elem["content"]["pdmv_dataset_statuses"][dataset]["pdmv_evts_in_DAS"]
-        # TO-DO do we need to put a default return? As all the time there must be a DS
+                events = elem["content"]["pdmv_dataset_statuses"][dataset].get("pdmv_evts_in_DAS")
+                if isinstance(events, int):
+                    total_events = events
+                    break
+            if dataset in elem["content"].get("pdmv_dataset_list", []):
+                events = elem["content"].get("pdmv_evts_in_DAS")
+                if isinstance(events, int):
+                    total_events = events
+                    break
+
+        if isinstance(total_events, int):
+            return total_events
+
+        self.logger.error(
+            "Unable to retrieve the number of events for dataset %s checking the following workflows: %s",
+            dataset,
+            dumps(workflows, indent=4)
+        )
+        raise self.BadParameterValue(
+            "Unable to retrieve the number of events for dataset %s"
+            % (dataset)
+        )
 
     def check_with_previous(self, previous_id, rdb, what, and_set=False):
         previous_one = rdb.get(previous_id)
@@ -1732,9 +1755,11 @@ class request(json_base):
         os_name = scram_arch.split('_')[0]
         container_path = '/cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw'
 
-        # Use a valid tag for CentOS 7 available in /cvmfs
+        # Patch old container prefix related to SLC
         if os_name == 'slc7':
             os_name = 'el7'
+        elif os_name == 'slc5':
+            os_name = 'el5'
 
         bash_file += [
             'if [ -e "%s/%s:amd64" ]; then' % (container_path, os_name),
@@ -2349,7 +2374,7 @@ class request(json_base):
                         self.set_attribute('output_dataset', collected)
                         self.set_attribute('completed_events', counted)
 
-                    if not valid:
+                    if not valid and not force:
                         not_good.update({'message' : 'Not all outputs are valid'})
                         saved = db.save(self.json())
                         return not_good
