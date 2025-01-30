@@ -301,6 +301,7 @@ class SubmissionsBase(Handler):
     def make_injection_command(self, mcm_r=None):
         locator_type = locator()
         directory = locator_type.workLocation()
+        wmcontrol_path = locator_type.get_wmcontrol_path()
         prepid = mcm_r.get_attribute('prepid')
         proxy_file_name = '%s%s_voms_proxy.txt' % (directory, prepid)
         executable_file_name = '%sinjection_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
@@ -349,8 +350,8 @@ class SubmissionsBase(Handler):
             '#!/bin/bash',
             '',
             'cd %s' % (directory),
-            'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
             'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
+            'export PATH=%s:${PATH}' % (wmcontrol_path),
             'python3 `which wmcontrol.py` --dont_approve --url-dict %spublic/restapi/%s/get_dict/%s %s' % (
                 locator_type.baseurl(), self.database_name, self.prepid, test_params
             ),
@@ -518,6 +519,7 @@ class RequestApprover(Handler):
 
     def make_command(self):
         l_type = locator()
+        wmcontrol_path = l_type.get_wmcontrol_path()
         proxy_file_name = './%032x_voms_proxy.txt' % (random.getrandbits(128))
         approve_script_name = './approve_%s_file.sh' % (self.batch_id)
 
@@ -581,7 +583,8 @@ class RequestApprover(Handler):
             '',
             'export X509_USER_PROXY=%s' % (proxy_file_name),
             'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
-            'python3 /afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s/wmapprove.py --workflows %s %s' % (test_path, self.workflows, test_params),
+            'export PATH=%s:${PATH}' % (wmcontrol_path),
+            'python3 `which wmapprove.py` --workflows %s %s' % (test_path, self.workflows, test_params),
             '',
             '# End of approve script',
             'EndOfApproveFile',

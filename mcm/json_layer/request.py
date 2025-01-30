@@ -1364,6 +1364,7 @@ class request(json_base):
         loc = locator()
         is_dev = loc.isDev()
         base_url = loc.baseurl()
+        wmcontrol_path = loc.get_wmcontrol_path()
         prepid = self.get_attribute('prepid')
         member_of_campaign = self.get_attribute('member_of_campaign')
         scram_arch = self.get_scram_arch().lower()
@@ -1734,7 +1735,7 @@ class request(json_base):
             bash_file += [
                 '\n\n# Tweak parameters and store them in a file',
                 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
-                'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
+                'export PATH=%s:${PATH}' % (wmcontrol_path),
                 'if [[ $(head -n 1 `which cmsDriver.py`) =~ "python3" ]]; then',
                 '  python3 `which wmupload.py` --create-tweak %s || exit $? ;' % (' '.join(configs_to_upload)),
                 'else',
@@ -1795,7 +1796,7 @@ class request(json_base):
                 '',
                 '# Upload configs',
                 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
-                'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
+                'export PATH=%s:${PATH}' % (wmcontrol_path),
                 'python3 `which wmupload.py` %s -u pdmvserv -g ppd %s --from-tweak || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
                 '',
                 '# End of Request Upload script file: %s' % (upload_script_file),

@@ -68,6 +68,9 @@ services:
       - MCM_SERVICE_ACCOUNT_PASSWORD=${MCM_SERVICE_ACCOUNT_PASSWORD}
       - MCM_WORK_LOCATION_PATH=${MCM_WORK_LOCATION_PATH}
       - MCM_EXECUTOR_HOST=${MCM_EXECUTOR_HOST}
+
+      # Custom `wmcontrol` locations
+      - MCM_WMCONTROL_PATH=${MCM_WMCONTROL_PATH}
     command: |
       /bin/bash -c '
         echo "Warming up for $MCM_WARMUP_SECONDS seconds";

@@ -290,3 +290,17 @@ class locator:
         setting the environment variable: $MCM_GSSAPI_WITH_MIC.
         """
         return bool(os.getenv("MCM_GSSAPI_WITH_MIC"))
+    
+    def get_wmcontrol_path(self):
+        """
+        Return the folder path to the `wmcontrol` module.
+
+        This is useful to overwrite this configuration for development
+        deployments for testing.
+        """
+        custom_wmcontrol_path = os.getenv("MCM_WMCONTROL_PATH")
+        if custom_wmcontrol_path:
+            self.logger.debug("Using wmcontrol module located at: %s", custom_wmcontrol_path)
+            return custom_wmcontrol_path
+
+        return "/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol"
