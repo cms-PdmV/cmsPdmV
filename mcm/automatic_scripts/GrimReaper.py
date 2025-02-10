@@ -1,21 +1,26 @@
-import sys
-import json
-import time
 import os
-from urllib.request import Request, urlopen
-sys.path.append('/afs/cern.ch/cms/PPD/PdmV/tools/McM/')
-from rest import McM
+import tempfile
+import time
+from pathlib import Path
 
+# Make sure the McM package is installed:
+# https://github.com/cms-PdmV/mcm_scripts?tab=readme-ov-file#build-package
+from rest import McM
 
 # McM instance
 dev = False
 dry_run = False
-if dev:
-    database_url = 'http://vocms0485:5984'
-else:
-    database_url = 'http://vocms0490:5984'
+cookie_file = Path(tempfile.TemporaryDirectory().name) / Path("cookie.txt")
 
-mcm = McM(dev=dev, cookie=os.getenv('DEV_COOKIE' if dev else 'PROD_COOKIE'))
+database_url = os.getenv("MCM_COUCHDB_URL")
+if not database_url:
+    raise RuntimeError("Set the McM database URL via: $MCM_COUCHDB_URL")
+
+stats_database_url = os.getenv("MCM_STATS2_DB_URL")
+if not stats_database_url:
+    raise RuntimeError("Set the Stats2 database URL via: $MCM_STATS2_DB_URL")
+
+mcm = McM(dev=dev, cookie=cookie_file)
 
 # Current page of submitted requests
 page = 0
@@ -55,11 +60,13 @@ assistance_manual_prepids = []
 
 
 def make_simple_request(url):
-    req = Request(url)
+    req = mcm.session.get(url=url)
     try:
-        return json.loads(urlopen(req).read().decode('utf-8'))
+        return req.json()
     except Exception as ex:
-        print(('Error while making a request to %s' % (url)))
+        print('Error while making a request to %s' % (url))
+        print('Status code: %s' % (req.status_code))
+        print('Output: %s' % (req.text))
         print(ex)
         return None
 
@@ -131,7 +138,7 @@ while len(submitted_requests) > 0:
     for request in submitted_requests:
         total_submitted += 1
         prepid = request['prepid']
-        stats_url = 'http://vocms074:5984/requests/_design/_designDoc/_view/requests?key="%s"&limit=100&skip=0&include_docs=False' % (prepid)
+        stats_url = '%s/requests/_design/_designDoc/_view/requests?key="%s"&limit=100&skip=0&include_docs=False' % (stats_database_url, prepid)
         stats_workflows = make_simple_request(stats_url)
         stats_workflows = [x['value'] for x in stats_workflows.get('rows', [])]
         mcm_workflows = [x['name'] for x in request.get('reqmgr_name', [])]
@@ -143,7 +150,7 @@ while len(submitted_requests) > 0:
             continue
 
         last_workflow = workflows[-1]
-        stats_last_workflow_url = 'http://vocms074:5984/requests/%s' % (last_workflow)
+        stats_last_workflow_url = '%s/requests/%s' % (stats_database_url, last_workflow)
         stats_last_workflow = make_simple_request(stats_last_workflow_url)
         if not stats_last_workflow:
             print(('Could not fetch %s workflow for %s' % (last_workflow, prepid)))
