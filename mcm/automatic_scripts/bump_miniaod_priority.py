@@ -1,14 +1,18 @@
-import sys
 import os
+import tempfile
 import time
-import json
-import http.client
-from urllib.request import Request, urlopen
-sys.path.append('/afs/cern.ch/cms/PPD/PdmV/tools/McM/')
+from pathlib import Path
+
+# Make sure the McM package is installed:
+# https://github.com/cms-PdmV/mcm_scripts?tab=readme-ov-file#build-package
 from rest import McM
 
+stats_database_url = os.getenv("MCM_STATS2_DB_URL")
+if not stats_database_url:
+    raise RuntimeError("Set the Stats2 database URL via: $MCM_STATS2_DB_URL")
 
-mcm = McM(dev=False, debug=False)
+cookie_file = Path(tempfile.TemporaryDirectory().name) / Path("cookie.txt")
+mcm = McM(dev=False, debug=False, cookie=cookie_file)
 
 requests = mcm.get('requests', query='prepid=*MiniAOD*&status=submitted')
 
@@ -22,37 +26,34 @@ def cmsweb_get(url):
                'Accept': 'application/json'}
     cert = os.getenv('USERCRT')
     key = os.getenv('USERKEY')
-    # print('Using certificate and key from %s' % cert)
     if cert is None:
         print('No user certificate found!')
         return {}
 
-    conn = http.client.HTTPSConnection('cmsweb.cern.ch', cert_file=cert, key_file=key)
-    conn.request("GET", url, headers=headers)
-    response = conn.getresponse()
-    status, data = response.status, response.read()
-    conn.close()
-    # print('HTTP status: %s' % (status))
+    full_url = "https://cmsweb.cern.ch" + url
     try:
-        return json.loads(data)
-    except:
-        print(('Error parsing JSON from:\n\n%s' % (data)))
+        response = mcm.session.get(url=full_url, cert=(cert, key), headers=headers)
+        return response.json()
+    except Exception as ex:
+        print('Error while making a request to %s' % (full_url))
+        print(ex)
         return None
 
-
 def make_simple_request(url):
-    req = Request(url)
+    req = mcm.session.get(url=url)
     try:
-        return json.loads(urlopen(req).read().decode('utf-8'))
+        return req.json()
     except Exception as ex:
-        print(('Error while making a request to %s' % (url)))
+        print('Error while making a request to %s' % (url))
+        print('Status code: %s' % (req.status_code))
+        print('Output: %s' % (req.text))
         print(ex)
         return None
 
 
 for i, request in enumerate(requests):
     prepid = request['prepid']
-    stats_url = 'http://vocms074:5984/requests/_design/_designDoc/_view/requests?key="%s"&limit=100&skip=0&include_docs=False' % (prepid)
+    stats_url = '%s/requests/_design/_designDoc/_view/requests?key="%s"&limit=100&skip=0&include_docs=False' % (stats_database_url, prepid)
     stats_workflows = make_simple_request(stats_url)
     stats_workflows = [x['value'] for x in stats_workflows.get('rows', [])]
     mcm_workflows = [x['name'] for x in request.get('reqmgr_name', [])]
@@ -82,7 +83,7 @@ for i, request in enumerate(requests):
         # Priority increase by number of weeks
         priority += int(last_change_hours / 168)
         print(('Change to %s, last update was %s hours ago' % (priority, last_change_hours)))
-        result = mcm._McM__post('restapi/requests/priority_change', [{'prepid': prepid, 'priority_raw': priority}])
+        result = mcm._post('restapi/requests/priority_change', [{'prepid': prepid, 'priority_raw': priority}])
         print(result)
     else:
         print(('No need to change, last update was %s hours ago' % (last_change_hours)))
