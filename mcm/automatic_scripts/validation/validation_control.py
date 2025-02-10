@@ -19,6 +19,7 @@ from couchdb_layer.mcm_database import database
 from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
 from tools.installer import installer as Locator
+from tools.ssh_executor import ssh_executor
 
 
 class ValidationControl():
@@ -34,10 +35,13 @@ class ValidationControl():
                                         '/home/pdmvserv/private/credentials_json.txt')
         self.storage = ValidationStorage()
         self.logger = logging.getLogger()
-        locator = Locator('validation/tests', care_on_existing=False)
-        self.test_directory_path = locator.location()
-        self.logger.info('Location %s' % (self.test_directory_path))
         self.max_attempts = 2
+
+        # Manage the validation folder
+        with ssh_executor(server=settings.get_value('node_for_test')) as executor:
+            with Locator('validation/tests', executor, care_on_existing=False, clean_on_exit=False) as locator:
+                self.test_directory_path = locator.location()
+                self.logger.info('Location %s' % (self.test_directory_path))
 
     def run(self):
         # Get status of validations in HTCondor
@@ -682,7 +686,7 @@ class ValidationControl():
 
         self.logger.info(item)
         subject = 'Validation failed for %s' % (validation_name)
-        message = 'Hello,\n\nUnfortunatelly %s validation failed.\n%s' % (validation_name, message.decode('utf-8'))
+        message = 'Hello,\n\nUnfortunatelly %s validation failed.\n%s' % (validation_name, message)
         message = re.sub(r'[^\x00-\x7f]', '?', message)
         item.notify(subject, message)
 
