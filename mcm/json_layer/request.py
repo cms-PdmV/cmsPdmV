@@ -1296,7 +1296,7 @@ class request(json_base):
         prepid = self.get_attribute('prepid')
         return should_run
 
-    def build_cmsdriver(self, sequence_dict, fragment):
+    def build_cmsdriver(self, sequence_dict, fragment, pileup_only_from_site=''):
         command = 'cmsDriver.py %s' % (fragment)
         # Add pileup dataset name
         pileup_dataset_name = self.get_attribute('pileup_dataset_name').strip()
@@ -1304,7 +1304,10 @@ class request(json_base):
         seq_datamix = sequence_dict.get('datamix')
         if pileup_dataset_name:
             if (seq_pileup not in ('', 'NoPileUp')) or (seq_pileup == '' and seq_datamix == 'PreMix'):
-                sequence_dict['pileup_input'] = '"dbs:%s"' % (pileup_dataset_name)
+                if pileup_only_from_site:
+                    sequence_dict['pileup_input'] = '"dbs:%s site=%s"' % (pileup_dataset_name, pileup_only_from_site)
+                else:
+                    sequence_dict['pileup_input'] = '"dbs:%s"' % (pileup_dataset_name)
 
         for key, value in list(sequence_dict.items()):
             if not value or key in ('index', 'extra'):
@@ -1369,6 +1372,7 @@ class request(json_base):
         member_of_campaign = self.get_attribute('member_of_campaign')
         scram_arch = self.get_scram_arch().lower()
         release_for_latest_python = settings.get_value('release_for_latest_python') or 'el9:x86_64'
+        pileup_only_from_site = self._pileup_only_from_site()
 
         bash_file = [
             '#!/bin/bash', 
@@ -1646,9 +1650,20 @@ class request(json_base):
             if filein:
                 sequence_dict['filein'] = filein
 
-            bash_file += ['',
-                          '# cmsDriver command',
-                          self.build_cmsdriver(sequence_dict, fragment_name)]
+            if for_validation and automatic_validation:
+                bash_file += [
+                    '',
+                    '# cmsDriver command',
+                    self.build_cmsdriver(
+                        sequence_dict,
+                        fragment_name,
+                        pileup_only_from_site=pileup_only_from_site
+                    )
+                ]
+            else:
+                bash_file += ['',
+                            '# cmsDriver command',
+                            self.build_cmsdriver(sequence_dict, fragment_name)]
 
             if for_validation:
                 report_name = '%s_' % (prepid)
@@ -3233,3 +3248,15 @@ class request(json_base):
                 e, stack_info=True
             )
             return "Unable to retrieve the GEN script output via SSH sessions"
+
+    def _pileup_only_from_site(self):
+        """Get only pileup files from a specific site."""
+
+        pileup_from = ""
+        try:
+            pileup_from = str(settings.get_value("pileup_only_from_site"))
+        except TypeError:
+            # The key does not exists in the database
+            pass
+
+        return pileup_from
