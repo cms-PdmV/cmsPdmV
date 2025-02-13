@@ -15,10 +15,14 @@ if [ -z "$DOCKER_COMPOSE_PROJECT" ]; then
     DOCKER_COMPOSE_PROJECT='default'
 fi
 
-# Sample data URL
-if [ -z "$MCM_EXAMPLE_DATA_URL" ]; then
-    echo 'Set $MCM_EXAMPLE_DATA_URL with the URL for downloading the McM data'
-    exit 1
+# Sample data
+if [ -z "$MCM_EXAMPLE_DATA_PATH" ]; then
+    if [ -z "$MCM_EXAMPLE_DATA_URL" ]; then
+        echo 'Set $MCM_EXAMPLE_DATA_PATH with the path to the compressed database dump'
+        echo 'or'
+        echo 'Set $MCM_EXAMPLE_DATA_URL with the URL for downloading it'
+        exit 1
+    fi
 fi
 
 # Path (or URL) pointing to the Dockerfile definition for the McM application.
@@ -85,6 +89,24 @@ export COUCHDB_DATA="$DATA_PATH/couchdb"
 export LUCENE_DATA_PATH="$DATA_PATH/lucene/data"
 export LUCENE_CONF_PATH="$DATA_PATH/lucene/config"
 
+# Set up the database dump either from a local compressed file
+# or by downloading it from a URL
+function prepare_database_dump() {
+    if [ -n "$MCM_EXAMPLE_DATA_PATH" ]; then
+        # If the local file path is provided, use it.
+        echo "Decompressing file from: ${MCM_EXAMPLE_DATA_PATH}"
+        tar -xzC "${TMP_FOLDER}/" -f "${MCM_EXAMPLE_DATA_PATH}" || exit
+    elif [ -n "$MCM_EXAMPLE_DATA_URL" ]; then
+        # Otherwise attempt to download it
+        echo "Downloading file from: ${MCM_EXAMPLE_DATA_URL}"
+        curl -sf "${MCM_EXAMPLE_DATA_URL}" | tar -xzC "${TMP_FOLDER}/" || exit
+    else
+        # This should never happen!
+        echo "Unable to prepare the database dump"
+        exit 1
+    fi
+}
+
 # Retrieve all the logs related to the containers
 # with an exit code != 0 related to the current project
 function debug_containers() {
@@ -110,9 +132,8 @@ function debug_containers() {
 function up() {
     echo 'Starting deployment...'
 
-    # Download and decompress
-    echo 'Downloading McM data....'
-    curl -s $MCM_EXAMPLE_DATA_URL | tar -xzC "${TMP_FOLDER}/"
+    # Prepare the database dump
+    prepare_database_dump
 
     # Create a temporary folder to store the container's data
     echo 'Creating data folders'
