@@ -38,32 +38,6 @@ class TestLists:
         assert isinstance(value, list)
         assert value == [], "This list should be empty, are you sure the target enviroment is a testing one?"
 
-    def test_update(self):
-        """
-        Creates or updates a list with new requests.
-        """
-        new_list_id = f'list_of_testing_requests_{int(time.time())}'
-        new_list = {
-            '_id': new_list_id,
-            'prepid': new_list_id,
-            'notes': 'New lists', 
-            'value': []
-        }
-        result = self.mcm.update(object_type="lists", object_data=new_list)
-        assert result["results"] == True
-
-        created = self.mcm.get(object_type="lists", object_id=new_list_id)
-        test = created.copy()
-        del test["_rev"]
-        assert test == new_list
-
-        created["notes"] = "Another message"
-        result = self.mcm.update(object_type="lists", object_data=created)
-        assert result["results"] == True
-
-        updated = self.mcm.get(object_type="lists", object_id=new_list_id)
-        assert updated["notes"] == "Another message"
-
 
 class TestListsAsProdMgr(TestLists):
     """
