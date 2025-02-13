@@ -535,10 +535,8 @@ class RequestApprover(Handler):
             release_for_latest_python = 'el9:x86_64'
 
         # Script target
-        test_path = ''
         test_params = ''
         if l_type.isDev():
-            test_path = '_testful'
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
 
         # Create the approve script
@@ -584,7 +582,7 @@ class RequestApprover(Handler):
             'export X509_USER_PROXY=%s' % (proxy_file_name),
             'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
             'export PATH=%s:${PATH}' % (wmcontrol_path),
-            'python3 `which wmapprove.py` --workflows %s %s' % (test_path, self.workflows, test_params),
+            'python3 `which wmapprove.py` --workflows %s %s' % (self.workflows, test_params),
             '',
             '# End of approve script',
             'EndOfApproveFile',
