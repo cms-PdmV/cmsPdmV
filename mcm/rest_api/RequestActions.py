@@ -1483,7 +1483,7 @@ class UpdateMany(RequestRESTResource):
                 else:
                     document[value] = updated_values[value]
             try:
-                return_info.append(self.updateSingle.update_request(dumps(document)))
+                return_info.append(self.updateSingle.update_request(document))
             except Exception as e:
                 return_info.append({"results": False, "message": str(e)})
         self.logger.info('updating requests: %s' % return_info)
