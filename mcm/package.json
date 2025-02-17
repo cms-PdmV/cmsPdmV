@@ -7,5 +7,8 @@
     "html-webpack-plugin": "^1.6.2",
     "webpack": "^2.6.1",
     "webpack-dev-server": "^2.4.5"
+  },
+  "dependencies": {
+    "angular": "^1.8.3"
   }
 }

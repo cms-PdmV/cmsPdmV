@@ -110,7 +110,7 @@ class UpdateSetting(RESTResource):
         # operate a check on whether it can be changed
         previous_version = setting(db.get(new_version.get_attribute('prepid')))
         editable = previous_version.get_editable()
-        for (key, right) in editable.items():
+        for (key, right) in list(editable.items()):
             # does not need to inspect the ones that can be edited
             if right:
                 continue

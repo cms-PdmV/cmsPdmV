@@ -21,5 +21,3 @@ for x in $(ps -e -f | grep kinit.sh | grep bash | grep $USER); do
 done
 
 unset IFS
-
-python main_tenance.py

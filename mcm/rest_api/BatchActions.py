@@ -2,7 +2,7 @@
 
 import flask
 
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from couchdb_layer.mcm_database import database
 from json_layer.batch import batch
 from json_layer.request import request
@@ -74,7 +74,7 @@ class BatchAnnouncer(RESTResource):
             rdb = database('requests')
             priority_coeff = settings.get_value('nanoaod_priority_increase_coefficient')
             if priority_coeff > 0:
-                for wf, requests in map_wf_to_prepid.iteritems():
+                for wf, requests in map_wf_to_prepid.items():
                     if len(requests) == 1 and 'nanoaod' in requests[0].lower():
                         for r_prepid in requests:
                             req = request(rdb.get(r_prepid))
@@ -103,7 +103,8 @@ class AnnounceBatch(BatchAnnouncer):
         """
         Annouce a given batch id, with the provided notes in json content
         """
-        return self.announce(loads(flask.request.data))
+        data: dict = flask.request.json
+        return self.announce(data)
 
     def announce(self, data):
         if 'prepid' not in data or 'notes' not in data:
@@ -277,7 +278,7 @@ class NotifyBatch(RESTResource):
         This allows to send a message to data operation in the same thread
          of the announcement of a given batch
         """
-        data = loads(flask.request.data)
+        data: dict = flask.request.json
         if 'prepid' not in data or 'notes' not in data:
             raise ValueError('no prepid nor notes in batch announcement api')
         bid = data['prepid']

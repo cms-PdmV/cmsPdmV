@@ -1,0 +1,94 @@
+name: API testing for McM
+on:
+  workflow_dispatch:
+
+jobs:
+  components:
+    name: Deploy McM components and execute the test suite
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "repo/mcm/"
+
+    # Job steps
+    steps:
+      - name: Retrieve source code
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - name: Find source code
+        run: |
+          echo "Source code at: $GITHUB_WORKSPACE"
+          ls -alrh $GITHUB_WORKSPACE
+          tree $GITHUB_WORKSPACE
+
+      - name: Deploy components
+        env:
+          COUCHDB_PORT: '5984'
+          COUCHDB_USER: 'test'
+          COUCHDB_PASSWORD: 'test'
+          COUCHDB_NODENAME: '127.0.0.1'
+          LUCENE_PORT: '5985'
+          SECONDS_TO_WAIT: '30'
+          MCM_PORT: '8000'
+          MCM_WARMUP_SECONDS: '10'
+          MCM_COUCHDB_URL: 'http://mcm-couchdb:5984/'
+          COUCH_CRED: 'Basic dGVzdDp0ZXN0'
+          MCM_LUCENE_URL: 'http://mcm-couchdb-lucene:5985/'
+          MCM_EXAMPLE_DATA_URL: ${{ secrets.MCM_EXAMPLE_DATA_URL }}
+
+        run: |
+          echo "Current folder: $(pwd -P)"
+          export REPO_PATH="$(pwd -P)"
+          export TO_INI_PATH="${REPO_PATH}/deploy/couchdb-lucene.ini"
+          export MCM_DOCKERFILE_PATH="../"
+
+          # Create an empty file to be a placeholder for the certificates
+          PLACEHOLDER_CERT='/tmp/placeholder.pem'
+          touch "${PLACEHOLDER_CERT}"
+          export CMSWEB_CERTIFICATE_FILE="${PLACEHOLDER_CERT}"
+          export CMSWEB_KEY_FILE="${PLACEHOLDER_CERT}"
+
+          deploy/action.sh --up
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11.x'
+
+      - name: Install test dependencies
+        run: |
+          export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
+          export TEST_FOLDER_PATH=$REPO_PATH/tests
+
+          # Install Poetry in an isolated `venv`
+          export POETRY_PATH='/opt/poetry'
+          python3 -m venv ${POETRY_PATH}
+          source ${POETRY_PATH}/bin/activate
+
+          # Now, we are using the `venv`, install `poetry`
+          python -m pip install --upgrade pip poetry
+          cd "${TEST_FOLDER_PATH}" && echo "Current folder: $(pwd -P)"
+          poetry install
+
+      - name: Run test suite
+        env:
+          COUCH_CRED: 'Basic dGVzdDp0ZXN0'
+          MCM_COUCHDB_URL: 'http://localhost:5984/'
+          MCM_LUCENE_URL: 'http://localhost:5985/'
+          MCM_HOST: 'localhost'
+          MCM_PORT: '8000'
+
+        run: |
+          # Load the `venv`
+          export POETRY_PATH='/opt/poetry'
+          source ${POETRY_PATH}/bin/activate
+
+          # Access the test module
+          export REPO_PATH=$GITHUB_WORKSPACE/repo/mcm
+          export TEST_FOLDER_PATH=$REPO_PATH/tests
+          cd "${TEST_FOLDER_PATH}"
+
+          # Execute the tests
+          poetry run pytest -s -vv

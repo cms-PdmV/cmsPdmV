@@ -4,7 +4,7 @@ Module that contains ConnectionWrapper class
 try:
     import http.client as client
 except ImportError:
-    import httplib as client
+    import http.client as client
 
 import logging
 import os
@@ -12,6 +12,7 @@ import json
 import time
 import ssl
 from contextlib import contextmanager
+from tools.locator import locator
 
 
 class ConnectionWrapper():
@@ -25,6 +26,7 @@ class ConnectionWrapper():
                  keep_open=False,
                  cert_file=None,
                  key_file=None):
+        self.locator = locator()
         self.logger = logging.getLogger('mcm_error')
         self.connection = None
         host = host.rstrip('/')
@@ -41,8 +43,7 @@ class ConnectionWrapper():
             self.https = False
             self.port = 80
 
-        self.cert_file = cert_file or os.getenv('USERCRT', '/home/pdmvserv/private/usercert.pem')
-        self.key_file = key_file or os.getenv('USERKEY', '/home/pdmvserv/private/userkey.pem')
+        self.cert_file, self.key_file = self.locator.cmsweb_credentials()
         self.keep_open = keep_open
         self.connection_attempts = 3
         self.timeout = 120

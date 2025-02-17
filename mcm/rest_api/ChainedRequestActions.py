@@ -4,14 +4,14 @@ import flask
 
 from json import dumps, loads
 from couchdb_layer.mcm_database import database
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from json_layer.chained_request import chained_request
 from json_layer.request import request
 from json_layer.mccm import mccm
 from tools.user_management import access_rights
 from flask_restful import reqparse
 from tools.locker import locker
-from ChainedRequestPrepId import ChainedRequestPrepId
+from rest_api.ChainedRequestPrepId import ChainedRequestPrepId
 
 
 class CreateChainedRequest(RESTResource):
@@ -27,11 +27,11 @@ class CreateChainedRequest(RESTResource):
         """
         Create a chained request from the provided json content
         """
-        return self.import_request(flask.request.data.strip())
+        return self.import_request(flask.request.json)
 
-    def import_request(self, data):
+    def import_request(self, data: dict):
         db = database(self.db_name)
-        json_input = loads(data)
+        json_input = data
         if 'pwg' not in json_input or 'member_of_campaign' not in json_input:
             self.logger.error('Now pwg or member of campaign attribute for new chained request')
             return {"results": False}
@@ -94,14 +94,14 @@ class UpdateChainedRequest(RESTResource):
         """
         Update a chained request from the provided json content
         """
-        return self.update_request(flask.request.data)
+        return self.update_request(flask.request.json)
 
-    def update_request(self, data):
+    def update_request(self, data: dict):
         if '_rev' not in data:
             return {"results": False, 'message': 'There is no previous revision provided'}
 
         try:
-            chained_req = chained_request(json_input=loads(data))
+            chained_req = chained_request(json_input=data)
         except chained_request.IllegalAttributeName:
             return {"results": False}
 
@@ -220,7 +220,8 @@ class FlowToNextStep(RESTResource):
         """
         Allows to flow a chained request with the dataset and blocks provided in the json
         """
-        return self.flow2(loads(flask.request.data))
+        data: dict = flask.request.json
+        return self.flow2(data)
 
     def get(self, chained_request_id, action='', reserve_campaign=''):
         """
@@ -250,7 +251,7 @@ class FlowToNextStep(RESTResource):
                 flow_results.pop('generated_requests')
             res.append(flow_results)
         if len(chains_requests_dict):
-            chain_id = chains_requests_dict.iterkeys().next()
+            chain_id = next(iter(chains_requests_dict.keys()))
             mccm_ticket = mccm.get_mccm_by_generated_chain(chain_id)
             if mccm_ticket is not None:
                 mccm_ticket.update_mccm_generated_chains(chains_requests_dict)
@@ -716,9 +717,9 @@ class ChainsFromTicket(RESTResource):
         self.before_request()
         self.count_call()
         self.parser = reqparse.RequestParser()
-        self.parser.add_argument('ticket', type=str, required=True)
-        self.parser.add_argument('page', type=int, default=0)
-        self.parser.add_argument('limit', type=int, default=20)
+        self.parser.add_argument('ticket', type=str, required=True, location=('values',))
+        self.parser.add_argument('page', type=int, default=0, location=('values',))
+        self.parser.add_argument('limit', type=int, default=20, location=('values',))
 
     def get(self):
         """
@@ -739,7 +740,7 @@ class ChainsFromTicket(RESTResource):
             self.logger.warning("Mccm prepid %s doesn't exit in db" % ticket_prepid)
             return {}
         self.logger.info("Getting generated chains from ticket %s" % ticket_prepid)
-        generated_chains = list(result[0]['generated_chains'].iterkeys())
+        generated_chains = list(result[0]['generated_chains'].keys())
         generated_chains.sort()
         start = page * limit
         if start > len(generated_chains):
@@ -763,8 +764,8 @@ class TaskChainDict(RESTResource):
         self.before_request()
         self.count_call()
         self.parser = reqparse.RequestParser()
-        self.parser.add_argument('scratch', type=str)
-        self.parser.add_argument('upto', type=int)
+        self.parser.add_argument('scratch', type=str, location=('values',))
+        self.parser.add_argument('upto', type=int, required=False, location=('values',))
         self.representations = {'text/plain': self.output_text}
 
     def get(self, chained_request_id):
@@ -860,7 +861,7 @@ class TaskChainDict(RESTResource):
                 __total_time_evt += mcm_r.get_sum_time_events()
                 __total_size_evt += sum(mcm_r.get_attribute("size_event"))
 
-        for (r, item) in tasktree.items():
+        for (r, item) in list(tasktree.items()):
             # here we should generate unique list of steps+output tiers
             # as we iterate over requests in tasktree
             __uniq_tiers = []
@@ -898,7 +899,7 @@ class TaskChainDict(RESTResource):
 
         task = 1
         pilot_string = None
-        for (r, item) in sorted(tasktree.items(), key=lambda d: d[1]['rank']):
+        for (r, item) in sorted(list(tasktree.items()), key=lambda d: d[1]['rank']):
             for d in item['dict']:
                 if d['priority_'] > wma['RequestPriority']:
                     wma['RequestPriority'] = d['priority_']
@@ -908,7 +909,7 @@ class TaskChainDict(RESTResource):
                 if d.get('pilot_'):
                     pilot_string = d['pilot_']
 
-                for k in d.keys():
+                for k in list(d.keys()):
                     if k.endswith('_'):
                         d.pop(k)
                 wma['Task%d' % task] = d
@@ -955,7 +956,7 @@ class GetSetupForChains(RESTResource):
         self.before_request()
         self.count_call()
         self.parser = reqparse.RequestParser()
-        self.parser.add_argument('scratch', type=str, default='')
+        self.parser.add_argument('scratch', type=str, default='', location=('values',))
         self.kwargs = self.parser.parse_args()
         self.representations = {'text/plain': self.output_text}
 
@@ -1117,7 +1118,8 @@ class ChainedRequestsPriorityChange(RESTResource):
 
     def post(self):
         fails = []
-        for chain in loads(flask.request.data):
+        json_data: dict = flask.request.json
+        for chain in json_data:
             chain_prepid = chain['prepid']
             mcm_chained_request = chained_request(self.chained_requests_db.get(chain_prepid))
             action_parameters = chain['action_parameters']

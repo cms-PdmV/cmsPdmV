@@ -1,0 +1,17 @@
+{
+  "prepid": "",
+  "allowed_campaigns": [],
+  "notes": "",
+  "next_campaign": "",
+  "approval": "tasksubmit",
+  "request_parameters": {
+    "time_event": [2.7827],
+    "size_event": [526.2909],
+    "sequences": [
+      {
+        "default": {}
+      }
+    ]
+  },
+  "history": []
+}

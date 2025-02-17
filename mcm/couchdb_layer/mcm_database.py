@@ -5,8 +5,8 @@ import sys
 import socket
 import base64
 import json
-import urllib2
-import urllib
+import urllib.request, urllib.error, urllib.parse
+import urllib.request, urllib.parse, urllib.error
 from tools.locator import locator
 from tools.locker import locker
 from cachelib import SimpleCache
@@ -36,22 +36,9 @@ class database:
         self.cache_enabled = cache_enabled or db_name in {'campaigns', 'chained_campaigns'}
         self.db_url = self.resolve_hostname_to_ip(url)
         self.lucene_url = self.resolve_hostname_to_ip(lucene_url)
-        self.auth_header = self.get_auth_header()
-        self.opener = urllib2.build_opener(urllib2.HTTPHandler)
+        self.auth_header = locator().database_credentials()
+        self.opener = urllib.request.build_opener(urllib.request.HTTPHandler)
         self.max_attempts = 3
-
-    def get_auth_header(self):
-        """
-        Return authentication to couchdb header
-        """
-        filename = '/home/pdmvserv/private/couchdb_credentials_json.txt'
-        filename = os.getenv('COUCH_CRED', filename)
-        with open(filename) as json_file:
-            credentials = json.load(json_file)
-
-        b64 = '%s:%s' % (credentials['username'], credentials['password'])
-        b64 = base64.b64encode(b64)
-        return 'Basic %s' % (b64)
 
     def resolve_hostname_to_ip(self, hostname):
         """
@@ -92,11 +79,15 @@ class database:
         if data is not None and isinstance(data, dict):
             data = json.dumps(data)
 
+        # Python 3: Encode the request body as <cls: bytes>
+        if isinstance(data, str):
+            data = data.encode(encoding="utf-8")
+
         full_url = url + path.lstrip('/')
         self.logger.debug('Built full url: %s', full_url)
-        request = urllib2.Request(full_url, data=data)
+        request = urllib.request.Request(full_url, data=data)
         request.get_method = lambda: method
-        for key, value in headers.items():
+        for key, value in list(headers.items()):
             request.add_header(key, value)
 
         return request
@@ -131,7 +122,7 @@ class database:
             try:
                 data = self.opener.open(db_request)
                 return json.loads(data.read(self.MAX_READ))
-            except urllib2.HTTPError as http_error:
+            except urllib.error.HTTPError as http_error:
                 code = http_error.code
                 if code == 404 and include_deleted:
                     data = http_error.read(self.MAX_READ)
@@ -318,7 +309,7 @@ class database:
             options['key'] = key # (key.replace('"', '\\"'))
 
         if options:
-            url += '?' + urllib.urlencode(options)
+            url += '?' + urllib.parse.urlencode(options)
 
         self.logger.debug('Query view %s', url)
         request = self.couch_request(url)
@@ -377,7 +368,7 @@ class database:
         Get unique values of key for given field
         """
         startkey = '"%s"' % (key)
-        endkey = '"%s\ufff0"' % (key)
+        endkey = '"%s\\ufff0"' % (key)
         options = {'limit': limit,
                    'group': True,
                    'startkey': startkey,
@@ -429,7 +420,7 @@ class database:
         }
         """
         query = []
-        for attribute, value in args.items():
+        for attribute, value in list(args.items()):
             attribute = attribute.rstrip('_')
             if not isinstance(value, list):
                 value = [value]
@@ -476,7 +467,7 @@ class database:
 
         if options:
             self.logger.debug('Query options %s', options)
-            options = '&%s&' % urllib.urlencode(options)
+            options = '&%s&' % urllib.parse.urlencode(options)
         else:
             options = ''
 
@@ -508,7 +499,7 @@ class database:
 
                 return [r['doc'] for r in data.get('rows', [])]
 
-            except urllib2.HTTPError as http_error:
+            except urllib.error.HTTPError as http_error:
                 code = http_error.code
                 self.logger.error('HTTP error %s %s: %s', url, options, http_error)
                 if 400 <= code < 500:

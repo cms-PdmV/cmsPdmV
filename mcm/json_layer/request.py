@@ -346,7 +346,7 @@ class request(json_base):
                 'The architecture is invalid, probably has the release %s being deprecated' % (self.get_attribute('cmssw_release')))
 
         bad_characters = [' ', '?', '/', '.', '+']
-        if not self.get_attribute('dataset_name') or any(map(lambda char: char in self.get_attribute('dataset_name'), bad_characters)):
+        if not self.get_attribute('dataset_name') or any([char in self.get_attribute('dataset_name') for char in bad_characters]):
             raise self.WrongApprovalSequence(
                 self.get_attribute('status'),
                 'validation',
@@ -359,7 +359,7 @@ class request(json_base):
                 'Dataset name is too long: %s. Max 99 characters' % (len(self.get_attribute('dataset_name'))))
 
         other_bad_characters = [' ', '-']
-        if self.get_attribute('process_string') and any(map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
+        if self.get_attribute('process_string') and any([char in self.get_attribute('process_string') for char in other_bad_characters]):
             raise self.WrongApprovalSequence(
                 self.get_attribute('status'),
                 'validation',
@@ -539,7 +539,7 @@ class request(json_base):
 
         def in_there(seq1, seq2):
             items_that_do_not_matter = ['conditions', 'datatier', 'eventcontent', 'nThreads']
-            for (name, item) in seq1.json().items():
+            for (name, item) in list(seq1.json().items()):
                 if name in items_that_do_not_matter:
                     # there are parameters which do not require specific processing string to be provided
                     continue
@@ -558,7 +558,7 @@ class request(json_base):
         for (i_seq, seqs) in enumerate(mcm_c['sequences']):
             self_sequence = sequence(self.get_attribute('sequences')[i_seq])
             this_matching = set([])
-            for (label, seq_j) in seqs.items():
+            for (label, seq_j) in list(seqs.items()):
                 seq = sequence(seq_j)
                 # label = default , seq = dict
                 if in_there(seq, self_sequence) and in_there(self_sequence, seq):
@@ -812,7 +812,7 @@ class request(json_base):
                 'The architecture is invalid, probably has the release %s being deprecated' % (self.get_attribute('cmssw_release')))
 
         other_bad_characters = [' ', '-']
-        if self.get_attribute('process_string') and any(map(lambda char: char in self.get_attribute('process_string'), other_bad_characters)):
+        if self.get_attribute('process_string') and any([char in self.get_attribute('process_string') for char in other_bad_characters]):
             raise self.WrongApprovalSequence(
                 self.get_attribute('status'),
                 'submit',
@@ -1206,7 +1206,7 @@ class request(json_base):
         ingredients.append(self.get_attribute('sequences')[i]['conditions'].replace('::All', ''))
         if self.get_attribute('extension'):
             ingredients.append("ext%s" % self.get_attribute('extension'))
-        return "_".join(filter(lambda s: s, ingredients))
+        return "_".join([s for s in ingredients if s])
 
     def get_processing_strings(self):
         keeps = self.get_attribute('keep_output')
@@ -1309,7 +1309,7 @@ class request(json_base):
                 else:
                     sequence_dict['pileup_input'] = '"dbs:%s"' % (pileup_dataset_name)
 
-        for key, value in sequence_dict.items():
+        for key, value in list(sequence_dict.items()):
             if not value or key in ('index', 'extra'):
                 continue
 
@@ -1367,6 +1367,7 @@ class request(json_base):
         loc = locator()
         is_dev = loc.isDev()
         base_url = loc.baseurl()
+        wmcontrol_path = loc.get_wmcontrol_path()
         prepid = self.get_attribute('prepid')
         member_of_campaign = self.get_attribute('member_of_campaign')
         scram_arch = self.get_scram_arch().lower()
@@ -1749,7 +1750,7 @@ class request(json_base):
             bash_file += [
                 '\n\n# Tweak parameters and store them in a file',
                 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
-                'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
+                'export PATH=%s:${PATH}' % (wmcontrol_path),
                 'if [[ $(head -n 1 `which cmsDriver.py`) =~ "python3" ]]; then',
                 '  python3 `which wmupload.py` --create-tweak %s || exit $? ;' % (' '.join(configs_to_upload)),
                 'else',
@@ -1810,7 +1811,7 @@ class request(json_base):
                 '',
                 '# Upload configs',
                 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
-                'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
+                'export PATH=%s:${PATH}' % (wmcontrol_path),
                 'python3 `which wmupload.py` %s -u pdmvserv -g ppd %s --from-tweak || exit $? ;' % (test_string, ' '.join(configs_to_upload)),
                 '',
                 '# End of Request Upload script file: %s' % (upload_script_file),
@@ -1974,7 +1975,7 @@ class request(json_base):
 
         stats_reqmgr_name_list = [
             reqmgr_name
-            for reqmgr_name, content in stats_workflows_dict.iteritems()
+            for reqmgr_name, content in stats_workflows_dict.items()
             if content.get('RequestTransition') and
                 len(content['RequestTransition']) > 0 and
                 content['RequestTransition'][0].get('UpdateTime') is not None and
@@ -1988,7 +1989,8 @@ class request(json_base):
         return stats_reqmgr_name_list
 
     def get_stats(self, forced=False):
-        stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
+        l_type = locator()
+        stats_db = database('requests', url=l_type.stats_database_url())
         prepid = self.get_attribute('prepid')
         stats_workflows = stats_db.raw_query_view('_designDoc',
                                                   'requests',
@@ -2066,7 +2068,7 @@ class request(json_base):
             open_evts_in_das = 0
             if event_number_history:
                 event_number_history = event_number_history[-1]
-                for dataset, content in event_number_history.get('Datasets', {}).iteritems():
+                for dataset, content in event_number_history.get('Datasets', {}).items():
                     dataset_statuses[dataset] = {'pdmv_evts_in_DAS': content.get('Events', 0),
                                                  'pdmv_status_in_DAS': content.get('Type', 'NONE'),
                                                  'pdmv_open_evts_in_DAS': 0}
@@ -2179,11 +2181,12 @@ class request(json_base):
         return changes_happen
 
     def get_input_dataset_status(self):
+        l_type = locator()
         input_dataset = self.get_attribute('input_dataset')
         if not input_dataset:
             return
 
-        stats_db = database('requests', url='http://vocms074.cern.ch:5984/')
+        stats_db = database('requests', l_type.stats_database_url())
         stats_workflows = stats_db.raw_query_view('_designDoc',
                                                   'outputDatasets',
                                                   page=0,
@@ -2400,8 +2403,7 @@ class request(json_base):
 
                     # make sure no expected tier was left behind
                     if not force:
-                        if not all(map(lambda t: any(map(lambda dn: t == dn.split('/')[-1],
-                                collected)), tiers_expected)):
+                        if not all([any([t == dn.split('/')[-1] for dn in collected]) for t in tiers_expected]):
 
                             not_good.update({'message': 'One of the expected tiers %s has not been produced'
                                     % ( tiers_expected )})
@@ -2624,7 +2626,8 @@ class request(json_base):
         # create a string that supposedly uniquely identifies the request configuration for step
         uniqueString = ''
         if self.get_attribute('fragment'):
-            fragment_hash = hashlib.sha224(self.get_attribute('fragment')).hexdigest()
+            fragment_as_str: str = self.get_attribute('fragment')
+            fragment_hash = hashlib.sha224(fragment_as_str.encode(encoding="utf-8")).hexdigest()
             uniqueString += fragment_hash
         if self.get_attribute('fragment_tag'):
             uniqueString += self.get_attribute('fragment_tag')
@@ -2638,9 +2641,9 @@ class request(json_base):
         return uniqueString
 
     def configuration_identifier(self, step_i):
-        uniqueString = self.unique_string(step_i)
+        uniqueString: str = self.unique_string(step_i)
         # create a hash value that supposedly uniquely defines the configuration
-        hash_id = hashlib.sha224(uniqueString).hexdigest()
+        hash_id = hashlib.sha224(uniqueString.encode(encoding="utf-8")).hexdigest()
         return hash_id
 
     @staticmethod
@@ -2862,62 +2865,62 @@ class request(json_base):
 
                 command = self.prepare_upload_command([cfgs_to_upload[i] for i in sorted(cfgs_to_upload)], wmtest)
                 if execute:
-                    with installer(prepid, care_on_existing=False):
-                        request_arch = self.get_scram_arch()
-                        if not request_arch:
-                            self.logger.error('the release %s architecture is invalid' % self.get_attribute('member_of_campaign'))
-                            self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
-                            return False
+                    machine_name = l_type.mcm_executor_node()
+                    with ssh_executor(server=machine_name) as executor:
+                        with installer(prepid, executor, care_on_existing=False):
+                            request_arch = self.get_scram_arch()
+                            if not request_arch:
+                                self.logger.error('the release %s architecture is invalid' % self.get_attribute('member_of_campaign'))
+                                self.test_failure('Problem with uploading the configurations. The release %s architecture is invalid' % self.get_attribute('member_of_campaign'), what='Configuration upload')
+                                return False
 
-                        machine_name = "vocms0481.cern.ch"
-                        with ssh_executor(server=machine_name) as executor:
                             _, stdout, stderr = executor.execute(command)
-
                             if not stdout and not stderr:
                                 self.logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
                                 self.inject_logger.error('SSH error for request {0}. Could not retrieve outputs.'.format(prepid))
                                 self.test_failure('SSH error for request {0}. Could not retrieve outputs.'.format(prepid),
                                                 what='Configuration upload')
                                 return False
-                            output = stdout.read()
-                            error = stderr.read()
 
-                        if error and not output:  # money on the table that it will break
-                            self.logger.error('Error in wmupload: {0}'.format(error))
-                            self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')
-                            if '.bashrc: Permission denied' in error:
-                                raise AFSPermissionError(error)
+                            output = stdout.read().decode(encoding="utf-8")
+                            error = stderr.read().decode(encoding="utf-8")
 
-                            return False
-                        cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
+                            if error and not output:  # money on the table that it will break
+                                self.logger.error('Error in wmupload: {0}'.format(error))
+                                self.test_failure('Error in wmupload: {0}'.format(error), what='Configuration upload')
+                                if '.bashrc: Permission denied' in error:
+                                    raise AFSPermissionError(error)
 
-                        if len(cfgs_to_upload) != len(cfgs_uploaded):
-                            self.logger.error(
-                                'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
-                                    cfgs_to_upload, cfgs_uploaded, output, error))
-                            self.inject_logger.error(
-                                'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
-                                    cfgs_to_upload, cfgs_uploaded, output, error))
-                            self.test_failure(
-                                'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
-                                    cfgs_to_upload, cfgs_uploaded, output, error), what='Configuration upload')
-                            return False
+                                return False
+                            cfgs_uploaded = [l for l in output.split("\n") if 'DocID:' in l]
 
-                        for i, line in zip(sorted(cfgs_to_upload),
-                                           cfgs_uploaded):  # filling the config ids for request and config database with uploaded configurations
-                            docid = line.split()[-1]
-                            additional_config_ids[i] = docid
-                            hash_id = self.configuration_identifier(i)
-                            saved = config_db.save({"_id": hash_id, "docid": docid,
-                                    "prepid": prepid, "unique_string": self.unique_string(i)})
-
-                            to_release.remove(hash_id)
-                            locker.release(hash_id)
-                            if not saved:
+                            if len(cfgs_to_upload) != len(cfgs_uploaded):
+                                self.logger.error(
+                                    'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                        cfgs_to_upload, cfgs_uploaded, output, error))
                                 self.inject_logger.error(
-                                    'Could not save the configuration {0}'.format(self.configuration_identifier(i)))
+                                    'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                        cfgs_to_upload, cfgs_uploaded, output, error))
+                                self.test_failure(
+                                    'Problem with uploading the configurations. To upload: {0}, received doc_ids: {1}\nOutput:\n{2}\nError:\n{3}'.format(
+                                        cfgs_to_upload, cfgs_uploaded, output, error), what='Configuration upload')
+                                return False
 
-                        self.inject_logger.info("Full upload result: {0}".format(output))
+                            for i, line in zip(sorted(cfgs_to_upload),
+                                            cfgs_uploaded):  # filling the config ids for request and config database with uploaded configurations
+                                docid = line.split()[-1]
+                                additional_config_ids[i] = docid
+                                hash_id = self.configuration_identifier(i)
+                                saved = config_db.save({"_id": hash_id, "docid": docid,
+                                        "prepid": prepid, "unique_string": self.unique_string(i)})
+
+                                to_release.remove(hash_id)
+                                locker.release(hash_id)
+                                if not saved:
+                                    self.inject_logger.error(
+                                        'Could not save the configuration {0}'.format(self.configuration_identifier(i)))
+
+                            self.inject_logger.info("Full upload result: {0}".format(output))
             if execute:
                 sorted_additional_config_ids = [additional_config_ids[i] for i in additional_config_ids]
                 self.inject_logger.info("New configs for request {0} : {1}".format(prepid, sorted_additional_config_ids))
@@ -2948,14 +2951,19 @@ class request(json_base):
         for seq in self.get_attribute('sequences'):
             local_num = 0
             if 'nThreads' in seq:
-                local_num = seq['nThreads']
+                seq_threads = seq['nThreads']
+                if isinstance(seq_threads, str) and seq_threads.isnumeric():
+                    local_num = int(seq_threads)
+                elif isinstance(seq_threads, int):
+                    local_num = seq_threads
+
             if local_num > num:
                 num = local_num
 
         return int(num)
 
     def get_list_of_steps(self, in_string):
-        if isinstance(in_string, basestring):
+        if isinstance(in_string, str):
             # in case sequence is defined as string -> legacy support
             return [el.split(":")[0] for el in in_string.split(",")]
         else:
@@ -3001,7 +3009,7 @@ class request(json_base):
         settings_db = database('settings')
         __DT_prio = settings_db.get('datatier_input')["value"]
         validation_info = []
-        for threads, sequences in self.get_attribute('validation').get('results', {}).items():
+        for threads, sequences in list(self.get_attribute('validation').get('results', {}).items()):
             if not isinstance(sequences, list):
                 sequences = [sequences]
 
@@ -3227,8 +3235,19 @@ class request(json_base):
         command += '    cat /tmp/%s\n' % (filename)
         command += '    rm /tmp/%s\n' % (filename)
         command += 'fi\n'
-        result = str(os.popen(command).read())
-        return result
+
+        try:
+            machine_name = l_type.mcm_executor_node()
+            with ssh_executor(server=machine_name) as executor:
+                _, stdout, _ = executor.execute(command)
+                output = stdout.read().decode(encoding="utf-8")
+                return output
+        except Exception as e:
+            self.logger.error(
+                "Unable to retrieve the GEN script output via SSH sessions: ",
+                e, stack_info=True
+            )
+            return "Unable to retrieve the GEN script output via SSH sessions"
 
     def _pileup_only_from_site(self):
         """Get only pileup files from a specific site."""

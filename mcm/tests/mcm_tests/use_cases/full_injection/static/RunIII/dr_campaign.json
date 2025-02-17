@@ -1,0 +1,126 @@
+{
+    "status": "started",
+    "www": "",
+    "prepid": "",
+    "no_output": false,
+    "events_per_lumi": {
+      "singlecore": 100,
+      "multicore": 1000
+    },
+    "type": "MCReproc",
+    "energy": 13.6,
+    "sequences": [
+      {
+        "default": {
+          "eventcontent": [
+            "PREMIXRAW"
+          ],
+          "runsScenarioForMC": "",
+          "donotDropOnInput": "",
+          "extra": "",
+          "slhc": "",
+          "runsAndWeightsForMC": "",
+          "outputCommand": "",
+          "dropDescendant": false,
+          "pileup": "",
+          "hltProcess": "",
+          "index": -1,
+          "customise": "",
+          "custom_conditions": "",
+          "datatier": [
+            "GEN-SIM-RAW"
+          ],
+          "processName": "",
+          "inputCommands": "",
+          "particle_table": "",
+          "conditions": "130X_mcRun3_2023_realistic_postBPix_v6",
+          "harvesting": "",
+          "triggerResultsProcess": "",
+          "inputEventContent": "",
+          "beamspot": "",
+          "restoreRNDSeeds": "",
+          "filtername": "",
+          "repacked": "",
+          "customise_commands": "",
+          "step": [
+            "DIGI",
+            "DATAMIX",
+            "L1",
+            "DIGI2RAW",
+            "HLT:2023v12"
+          ],
+          "gflash": "",
+          "procModifiers": "premix_stage2",
+          "magField": "",
+          "himix": false,
+          "nThreads": "4",
+          "scenario": "",
+          "geometry": "DB:Extended",
+          "nStreams": 0,
+          "datamix": "PreMix",
+          "inline_custom": false,
+          "era": ""
+        }
+      },
+      {
+        "default": {
+          "eventcontent": [
+            "AODSIM"
+          ],
+          "runsScenarioForMC": "",
+          "donotDropOnInput": "",
+          "extra": "",
+          "slhc": "",
+          "runsAndWeightsForMC": "",
+          "outputCommand": "",
+          "dropDescendant": false,
+          "pileup": "",
+          "hltProcess": "",
+          "index": -1,
+          "customise": "",
+          "custom_conditions": "",
+          "datatier": [
+            "AODSIM"
+          ],
+          "processName": "",
+          "inputCommands": "",
+          "particle_table": "",
+          "conditions": "130X_mcRun3_2023_realistic_postBPix_v6",
+          "harvesting": "",
+          "triggerResultsProcess": "",
+          "inputEventContent": "",
+          "beamspot": "",
+          "restoreRNDSeeds": "",
+          "filtername": "",
+          "repacked": "",
+          "customise_commands": "",
+          "step": [
+            "RAW2DIGI",
+            "L1Reco",
+            "RECO",
+            "RECOSIM"
+          ],
+          "gflash": "",
+          "procModifiers": "",
+          "magField": "",
+          "himix": false,
+          "nThreads": "4",
+          "scenario": "",
+          "geometry": "DB:Extended",
+          "nStreams": 0,
+          "datamix": "",
+          "inline_custom": false,
+          "era": ""
+        }
+      }
+    ],
+    "cmssw_release": "",
+    "next": [],
+    "input_dataset": "",
+    "generators": [],
+    "memory": 8000,
+    "pileup_dataset_name": "/Neutrino_E-10_gun/Run3Summer21PrePremix-Summer23BPix_130X_mcRun3_2023_realistic_postBPix_v1-v1/PREMIX",
+    "root": 1,
+    "notes": "",
+    "history": []
+}

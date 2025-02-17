@@ -1,0 +1,21 @@
+{
+  "prepid": "",
+  "allowed_campaigns": [],
+  "notes": "",
+  "next_campaign": "",
+  "approval": "tasksubmit",
+  "request_parameters": {
+    "time_event": [5.6088],
+    "size_event": [1717.2582],
+    "keep_output": [false],
+    "process_string": "EpsilonPU",
+    "sequences": [
+      {
+        "default": {
+          "pileup": "'AVE_140_BX_25ns,{\"B\":(-3,3),\"N\":0.01}'"
+        }
+      }
+    ]
+  },
+  "history": []
+}

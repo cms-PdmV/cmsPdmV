@@ -1,0 +1,20 @@
+{
+  "prepid": "",
+  "allowed_campaigns": [],
+  "notes": "",
+  "next_campaign": "",
+  "approval": "tasksubmit",
+  "request_parameters": {
+    "time_event": [0.1796],
+    "size_event": [33.1848],
+    "process_string": "JMECustomTuples",
+    "sequences": [
+      {
+        "default": {
+          "customise_commands": "\"from PhysicsTools.NanoAOD.custom_jme_cff import PrepJMECustomNanoAOD; PrepJMECustomNanoAOD(process)\" "
+        }
+      }
+    ]
+  },
+  "history": []
+}

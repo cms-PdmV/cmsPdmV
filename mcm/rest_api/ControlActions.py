@@ -2,7 +2,7 @@ import flask
 
 from collections import defaultdict
 
-from RestAPIMethod import RESTResource
+from rest_api.RestAPIMethod import RESTResource
 from tools.user_management import access_rights, authenticator, user_pack
 import tools.settings as settings
 from json import dumps, loads
@@ -52,7 +52,7 @@ class Search(RESTResource):
         cls.logger.info('Preparing attribute casting in search')
         import json_layer
         cls.casting = {}
-        for database_name, module_name in cls.modules.items():
+        for database_name, module_name in list(cls.modules.items()):
             module = getattr(json_layer, module_name)
             class_obj = getattr(module, module_name)
             schema = class_obj.class_schema()
@@ -60,7 +60,7 @@ class Search(RESTResource):
                 continue
 
             cls.casting[database_name] = {}
-            for schema_key, schema_value in schema.items():
+            for schema_key, schema_value in list(schema.items()):
                 schema_type = type(schema_value)
                 if schema_type in [int, float]:
                     cls.casting[database_name][schema_key] = '%s<%s>' % (schema_key,
@@ -73,7 +73,7 @@ class Search(RESTResource):
 
     def get(self):
         args = flask.request.args.to_dict()
-        self.logger.debug('Search: %s', ','.join('%s=%s' % (k, v) for k, v in args.items()))
+        self.logger.debug('Search: %s', ','.join('%s=%s' % (k, v) for k, v in list(args.items())))
         db_name = args.pop('db_name', 'requests')
         page = int(args.pop('page', 0))
         limit = int(args.pop('limit', 20))
@@ -92,7 +92,7 @@ class Search(RESTResource):
             return {"results": False, "message": "Why you stupid? Don't be stupid..."}
 
         database = Database(db_name)
-        args = {k: clean_split(v) if k != 'range' else v for k, v in args.items()}
+        args = {k: clean_split(v) if k != 'range' else v for k, v in list(args.items())}
         # range - requests, chained_requests, tickets
         get_range  = args.pop('range', None)
         if get_range and db_name in ('requests', 'chained_requests', 'tickets'):
@@ -104,7 +104,7 @@ class Search(RESTResource):
                     parts = part.split(',')
                     start = parts[0].split('-')
                     end = parts[1].split('-')
-                    numbers = range(int(start[-1]), int(end[-1]) + 1)
+                    numbers = list(range(int(start[-1]), int(end[-1]) + 1))
                     start = '-'.join(start[:-1])
                     args['prepid_'].extend('%s-%05d' % (start, n) for n in numbers)
                 else:
@@ -122,14 +122,14 @@ class Search(RESTResource):
 
             args['prepid__'] = []
             for mccm in mccms:
-                args['prepid__'].extend(mccm.get('generated_chains', []).keys())
+                args['prepid__'].extend(list(mccm.get('generated_chains', []).keys()))
 
         if not args and not sort_on:
             # If there are no args, use simpler fetch
             res = database.get_all(page, limit, with_total_rows=True)
         else:
             # Add types to arguments
-            args = {self.casting[db_name].get(k, k): v for k, v in args.items()}
+            args = {self.casting[db_name].get(k, k): v for k, v in list(args.items())}
             # Construct the complex query
             res = database.search(args, page, limit, include_fields, True, sort_on, sort_asc)
 
