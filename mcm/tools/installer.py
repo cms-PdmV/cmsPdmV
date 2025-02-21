@@ -67,8 +67,9 @@ class installer:
             bool: True if the folder exists, False otherwise.
         """
         try:
-            _ = self.ssh_session.ssh_client.open_sftp().listdir(path)
-            return True
+            with self.ssh_session.ssh_client.open_sftp() as sftp_session: 
+                sftp_session.listdir(path)
+                return True
         except IOError as e:
             if e.errno == errno.ENOENT:
                 # Folder doesn't exists
