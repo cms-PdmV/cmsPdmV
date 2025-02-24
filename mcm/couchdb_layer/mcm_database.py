@@ -118,18 +118,17 @@ class database:
         db_request = self.couch_request('%s/%s' % (self.db_name, document_id))
         for attempt in range(1, self.max_attempts + 1):
             try:
-                data = self.opener.open(db_request)
-                return json.loads(data.read())
+                with self.opener.open(db_request) as data:
+                    return json.loads(data.read())
             except urllib.error.HTTPError as http_error:
                 code = http_error.code
-                if code == 404 and include_deleted:
-                    data = http_error.read()
-                    # Database returned 404 - not found
-                    # Document might have never existed or it could be deleted
-                    data_json = json.loads(data)
-                    return data_json
-
                 self.logger.error('HTTP error fetching %s: %s', document_id, http_error)
+                if code == 404 and include_deleted:
+                    with http_error:
+                        # Database returned 404 - not found
+                        # Document might have never existed or it could be deleted
+                        return json.loads(http_error.read())
+
                 if 400 <= code < 500:
                     # If it's HTTP 4xx - bad request, no point in retry
                     return None
@@ -187,10 +186,11 @@ class database:
         request = self.couch_request('%s/_bulk_get' % (self.db_name),
                                      method='POST',
                                      data={'docs': [{'id': x} for x in ids]})
-        data = self.opener.open(request)
-        results = json.loads(data.read())['results']
-        results = [r['docs'][-1]['ok'] for r in results if r.get('docs') if r['docs'][-1].get('ok')]
-        return results
+
+        with self.opener.open(request) as data:
+            results = json.loads(data.read())['results']
+            results = [r['docs'][-1]['ok'] for r in results if r.get('docs') if r['docs'][-1].get('ok')]
+            return results
 
     def document_exists(self, prepid, include_deleted=False):
         """
@@ -252,13 +252,13 @@ class database:
         self.logger.info('Saving "%s" (%s) in "%s"...', doc_id, doc_rev, self.db_name)
         request = self.couch_request(self.db_name, 'POST', data=doc)
         try:
-            data = self.opener.open(request).read()
-            data = json.loads(data)
-            success = data.get('ok') is True
-            if not success:
-                self.logger.error(data)
+            with self.opener.open(request) as response:
+                data = json.loads(response.read())
+                success = data.get('ok') is True
+                if not success:
+                    self.logger.error(data)
 
-            return success
+                return success
         except Exception as ex:
             self.logger.error('Error saving %s: %s', doc_id, ex)
             return False
@@ -305,19 +305,20 @@ class database:
         self.logger.debug('Query view %s', url)
         request = self.couch_request(url)
         try:
-            data = json.loads(self.opener.open(request).read())
-            if options.get('include_docs'):
-                rows = [r['doc'] for r in data.get('rows', [])]
-            elif design_doc == 'unique':
-                rows = [r['key'] for r in data.get('rows', [])]
-            else:
-                rows = [r['value'] for r in data.get('rows', [])]
+            with self.opener.open(request) as response:
+                data = json.loads(response.read())
+                if options.get('include_docs'):
+                    rows = [r['doc'] for r in data.get('rows', [])]
+                elif design_doc == 'unique':
+                    rows = [r['key'] for r in data.get('rows', [])]
+                else:
+                    rows = [r['value'] for r in data.get('rows', [])]
 
-            if with_total_rows:
-                total_rows = data.get('total_rows', 0)
-                return {'rows': rows, 'total_rows': total_rows}
+                if with_total_rows:
+                    total_rows = data.get('total_rows', 0)
+                    return {'rows': rows, 'total_rows': total_rows}
 
-            return rows
+                return rows
         except Exception as ex:
             self.logger.error('Error querying view %s: %s', url, ex)
             if with_total_rows:
@@ -457,13 +458,13 @@ class database:
                                              data=options)
         for attempt in range(1, self.max_attempts + 1):
             try:
-                data = self.opener.open(lucene_request)
-                data = json.loads(data.read())
-                if total_rows:
-                    return {'rows': [r['doc'] for r in data.get('rows', [])],
-                            'total_rows': data.get('total_rows', 0)}
+                with self.opener.open(lucene_request) as response:
+                    data = json.loads(response.read())
+                    if total_rows:
+                        return {'rows': [r['doc'] for r in data.get('rows', [])],
+                                'total_rows': data.get('total_rows', 0)}
 
-                return [r['doc'] for r in data.get('rows', [])]
+                    return [r['doc'] for r in data.get('rows', [])]
 
             except urllib.error.HTTPError as http_error:
                 code = http_error.code
