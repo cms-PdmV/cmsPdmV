@@ -9,20 +9,7 @@ class locator:
     """
 
     def __init__(self):
-        self.logger = self.__create_logger()
-
-    def __create_logger(self):
-        """
-        Creates a logger for the class
-        """
-        logger = logging.getLogger(__name__)
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(fmt='[%(asctime)s][%(levelname)s]%(message)s')
-
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        return logger
+        self.logger = logging.getLogger("mcm_error")
 
     def isDev(self):
         return not self.isProd()
