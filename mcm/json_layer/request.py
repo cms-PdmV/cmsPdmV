@@ -3009,6 +3009,17 @@ class request(json_base):
         settings_db = database('settings')
         __DT_prio = settings_db.get('datatier_input')["value"]
         validation_info = []
+
+        # Filter efficiency or time per event was not check on validation
+        filter_efficiency = self.get_efficiency()
+        request_skip_check = self.get_allowed_skip_validation_check().get(self.get_attribute("prepid"))
+        skip_filter_eff = False
+        if request_skip_check:
+            # If any of the following options is set
+            skipped_if = set(("filter_efficiency", "time_per_event", "all"))
+            if skipped_if.intersection(set(request_skip_check)):
+                skip_filter_eff = True
+
         for threads, sequences in list(self.get_attribute('validation').get('results', {}).items()):
             if not isinstance(sequences, list):
                 sequences = [sequences]
@@ -3024,13 +3035,13 @@ class request(json_base):
                                     'sequences': sequences})
 
         self.logger.info('Validation info of %s:\n%s', self.get_attribute('prepid'), dumps(validation_info, indent=2, sort_keys=True))
-        filter_efficiency = self.get_efficiency()
         if validation_info:
             # Average filter efficiency
-            filter_efficiency = sum([x['filter_efficiency'] for x in validation_info]) / len(validation_info)
+            filter_efficiency_avg = sum([x['filter_efficiency'] for x in validation_info]) / len(validation_info)
             filter_efficiency_threshold = 0.001
-            if filter_efficiency < filter_efficiency_threshold:
+            if filter_efficiency_avg < filter_efficiency_threshold and not skip_filter_eff:
                 # If filter eff < 10^-3, then filter based on events/lumi first and choose highest cpu efficiency
+                filter_efficiency = filter_efficiency_avg
                 self.logger.info('Filter efficiency lower than %s (%s), choosing cores based on evens/lumi',
                                  filter_efficiency_threshold,
                                  filter_efficiency)
@@ -3067,7 +3078,7 @@ class request(json_base):
             threads = int(self.get_attribute('sequences')[sequence_index].get('nThreads', 1))
             size_per_event = self.get_attribute('size_event')[sequence_index]
             time_per_event = self.get_attribute('time_event')[sequence_index]
-            if validation_info:
+            if validation_info and not skip_filter_eff:
                 # If there are multi-validation results, use them
                 self.logger.info('Using multi-validation values')
                 threads = validation_info['threads']
@@ -3260,3 +3271,21 @@ class request(json_base):
             pass
 
         return pileup_from
+
+    @staticmethod
+    def get_allowed_skip_validation_check():
+        """
+        Get the requests allowed to skip some validation checks
+
+        Returns:
+            dict[str, list[str]]: A dict with the request's ids and the checks
+                allowed to be skipped per each request.
+        """
+        allowed_to_skip = {}
+        try:
+            allowed_to_skip = settings.get_value("validation_skip_check")
+        except TypeError:
+            # The key does not exists in the database
+            pass
+
+        return allowed_to_skip
