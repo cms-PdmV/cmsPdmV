@@ -499,8 +499,9 @@ def setup_access_logging(app, logger, debug):
             method = request.method
             user_agent = request.headers.get('User-Agent', '<unknown user agent>')
             url = '%s' % (request.path)
-            if request.query_string:
-                url += '?%s' % (request.query_string)
+            query_string = request.query_string.decode(encoding="utf-8")
+            if query_string:
+                url += '?%s' % (query_string)
 
             if not debug or not url.endswith(('.html', '.css', '.js')):
                 # During debugging suppress html, css and js file access logging
