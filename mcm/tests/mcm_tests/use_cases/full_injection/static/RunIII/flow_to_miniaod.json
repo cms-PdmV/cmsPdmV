@@ -1,0 +1,21 @@
+{
+    "prepid": "",
+    "allowed_campaigns": [],
+    "notes": "",
+    "next_campaign": "",
+    "approval": "",
+    "request_parameters": {
+      "time_event": [
+        1
+      ],
+      "size_event": [
+        150
+      ],
+      "sequences": [
+        {
+          "default": {}
+        }
+      ]
+    },
+    "history": []
+}

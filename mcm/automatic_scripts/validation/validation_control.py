@@ -19,6 +19,7 @@ from couchdb_layer.mcm_database import database
 from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
 from tools.installer import installer as Locator
+from tools.ssh_executor import ssh_executor
 
 
 class ValidationControl():
@@ -34,10 +35,13 @@ class ValidationControl():
                                         '/home/pdmvserv/private/credentials_json.txt')
         self.storage = ValidationStorage()
         self.logger = logging.getLogger()
-        locator = Locator('validation/tests', care_on_existing=False)
-        self.test_directory_path = locator.location()
-        self.logger.info('Location %s' % (self.test_directory_path))
         self.max_attempts = 2
+
+        # Manage the validation folder
+        with ssh_executor(server=settings.get_value('node_for_test')) as executor:
+            with Locator('validation/tests', executor, care_on_existing=False, clean_on_exit=False) as locator:
+                self.test_directory_path = locator.location()
+                self.logger.info('Location %s' % (self.test_directory_path))
 
     def run(self):
         # Get status of validations in HTCondor
@@ -139,10 +143,10 @@ class ValidationControl():
         """
         self.logger.info('Will update job info in the local storage')
         all_items = self.storage.get_all()
-        for validation_name, storage_item in all_items.iteritems():
+        for validation_name, storage_item in all_items.items():
             self.logger.info('Updating %s information in local storage', validation_name)
             running = storage_item['running']
-            for threads, threads_dict in running.iteritems():
+            for threads, threads_dict in running.items():
                 if threads_dict.get('condor_status') == 'DONE':
                     continue
 
@@ -159,7 +163,7 @@ class ValidationControl():
 
         self.logger.info('Updated local storage:')
         all_items = self.storage.get_all()
-        for validation_name, storage_item in all_items.iteritems():
+        for validation_name, storage_item in all_items.items():
             stage = storage_item['stage']
             self.logger.info('  %s is at stage %s:', validation_name, stage)
             running = storage_item['running']
@@ -177,7 +181,7 @@ class ValidationControl():
         are done - all HTCondor jobs are DONE
         """
         self.logger.info('Will check if any validations changed to DONE')
-        for validation_name, storage_item in self.storage.get_all().iteritems():
+        for validation_name, storage_item in self.storage.get_all().items():
             stage = storage_item['stage']
             self.logger.info('Checking %s at stage %s', validation_name, stage)
             running = storage_item['running']
@@ -200,7 +204,7 @@ class ValidationControl():
 
     def get_report_paths(self, validation_name, threads, expected):
         paths = []
-        for request_prepid, _ in expected.iteritems():
+        for request_prepid, _ in expected.items():
             report_path = '%s%s/%s_%s_threads_report.xml' % (self.test_directory_path,
                                                              validation_name,
                                                              request_prepid,
@@ -218,7 +222,7 @@ class ValidationControl():
 
     def get_reports(self, validation_name, threads, expected):
         reports = {}
-        for request_prepid, expected_dict in expected.iteritems():
+        for request_prepid, expected_dict in expected.items():
             req = self.request_db.get(request_prepid)
             if not req:
                 # Request deleted?
@@ -562,10 +566,10 @@ class ValidationControl():
 
             return False
 
-        self.logger.info('Reports include these requests:\n%s', '\n'.join(reports.keys()))
+        self.logger.info('Reports include these requests:\n%s', '\n'.join(list(reports.keys())))
         if threads_int != 1:
             self.logger.info('Validation was done for %s threads, not checking the values', threads)
-            for request_name, report in reports.iteritems():
+            for request_name, report in reports.items():
                 expected_dict = threads_dict['expected'][request_name]
                 # Add CPU name
                 cpu_name = self.extract_cpu_name(out_file)
@@ -582,7 +586,7 @@ class ValidationControl():
         else:
             attempt_number = threads_dict['attempt_number']
             self.logger.info('This was attempt number %s for %s thread validation', attempt_number, threads)
-            for request_name, report in reports.iteritems():
+            for request_name, report in reports.items():
                 # Check report only for single core validation
                 expected_dict = threads_dict['expected'][request_name]
                 self.logger.info('Checking %s report', request_name)
@@ -682,7 +686,7 @@ class ValidationControl():
 
         self.logger.info(item)
         subject = 'Validation failed for %s' % (validation_name)
-        message = 'Hello,\n\nUnfortunatelly %s validation failed.\n%s' % (validation_name, message.decode('utf-8'))
+        message = 'Hello,\n\nUnfortunatelly %s validation failed.\n%s' % (validation_name, message)
         message = re.sub(r'[^\x00-\x7f]', '?', message)
         item.notify(subject, message)
 
@@ -714,8 +718,8 @@ class ValidationControl():
 
     def get_events_per_lumi(self, storage_item):
         max_events_lumi = 0
-        for threads, threads_dict in storage_item['done'].iteritems():
-            for request, request_dict in threads_dict.iteritems():
+        for threads, threads_dict in storage_item['done'].items():
+            for request, request_dict in threads_dict.items():
                 for sequence in request_dict:
                     events_lumi = sequence['estimated_events_per_lumi']
                     self.logger.info('Request %s in %s core validation estimate %s events/lumi',
@@ -728,7 +732,7 @@ class ValidationControl():
 
     def move_validations_to_next_stage(self):
         all_items = self.storage.get_all()
-        for validation_name, storage_item in all_items.iteritems():
+        for validation_name, storage_item in all_items.items():
             stage = storage_item['stage']
             running = storage_item['running']
             self.logger.info('%s is at stage %s and has %s validations in running',
@@ -835,8 +839,8 @@ class ValidationControl():
 
         requests = {}
         request_dict = self.storage.get(validation_name)
-        for core_number in request_dict['done'].keys():
-            for request_prepid in request_dict['done'][core_number].keys():
+        for core_number in list(request_dict['done'].keys()):
+            for request_prepid in list(request_dict['done'][core_number].keys()):
                 if request_prepid not in requests:
                     requests[request_prepid] = self.request_db.get(request_prepid)
                     requests[request_prepid]['validation']['results'] = {}
@@ -846,7 +850,7 @@ class ValidationControl():
                 request['status'] = 'validation'
                 request['validation']['results'][core_number] = request_dict['done'][core_number][request_prepid]
 
-        for _, request_json in requests.iteritems():
+        for _, request_json in requests.items():
             request = Request(request_json)
             if chain_validation:
                 request.update_history({'action': 'validation', 'step': 'succeeded (chain)'})

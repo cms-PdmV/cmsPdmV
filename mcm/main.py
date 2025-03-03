@@ -17,6 +17,7 @@ from rest_api.ListActions import GetList, UpdateList
 from json_layer.sequence import sequence  # to get campaign sequences
 from tools.communicator import communicator
 from tools.logger import UserFilter
+from tools.locator import locator
 from flask_restful import Api
 from flask import Flask, send_from_directory, request, g
 
@@ -26,7 +27,6 @@ import logging
 import logging.handlers
 import sys
 import os
-import argparse
 import time
 
 
@@ -393,6 +393,8 @@ def setup_error_logger(debug):
     Log to file and rotate for production or log to console in debug mode
     Automatically log user email
     """
+    l_type = locator()
+    logs_folder = l_type.logs_folder()
     logger = logging.getLogger('mcm_error')
     if debug:
         # If debug - log to console
@@ -400,12 +402,12 @@ def setup_error_logger(debug):
         handler.setLevel(logging.DEBUG)
     else:
         # If not debug - log to files
-        if not os.path.isdir('logs'):
-            os.mkdir('logs')
+        if not os.path.isdir(logs_folder):
+            os.mkdir(logs_folder)
 
         log_size = 10 * 1024 * 1024  # 10MB
         log_count = 500  # 500 files
-        log_name = 'logs/error.log'
+        log_name = os.path.join(logs_folder, "error.log")
         handler = logging.handlers.RotatingFileHandler(log_name, 'a', log_size, log_count)
         handler.setLevel(logging.INFO)
 
@@ -422,6 +424,8 @@ def setup_injection_logger(debug):
     Setup logger for injection operations
     It will have an additional handle that shows prepid of item being injected
     """
+    l_type = locator()
+    logs_folder = l_type.logs_folder()
     logger = logging.getLogger('mcm_inject')
     if debug:
         # If debug - log to console
@@ -429,12 +433,12 @@ def setup_injection_logger(debug):
         handler.setLevel(logging.DEBUG)
     else:
         # If not debug - log to files
-        if not os.path.isdir('logs'):
-            os.mkdir('logs')
+        if not os.path.isdir(logs_folder):
+            os.mkdir(logs_folder)
 
         log_size = 10 * 1024 * 1024  # 10MB
         log_count = 500  # 500 files
-        log_name = 'logs/inject.log'
+        log_name = os.path.join(logs_folder, "inject.log")
         handler = logging.handlers.RotatingFileHandler(log_name, 'a', log_size, log_count)
         handler.setLevel(logging.INFO)
 
@@ -450,18 +454,20 @@ def setup_access_logger(debug):
     Setup logger to log all accesses to the tool
     Automatically log user email
     """
+    l_type = locator()
+    logs_folder = l_type.logs_folder()
     logger = logging.getLogger('access_log')
     if debug:
         # If debug - log to console
         handler = logging.StreamHandler(sys.stdout)
     else:
         # If not debug - log to files
-        if not os.path.isdir('logs'):
-            os.mkdir('logs')
+        if not os.path.isdir(logs_folder):
+            os.mkdir(logs_folder)
 
         log_size = 10 * 1024 * 1024  # 10MB
         log_count = 500  # 500 files
-        log_name = 'logs/access.log'
+        log_name = os.path.join(logs_folder, "access.log")
         handler = logging.handlers.RotatingFileHandler(log_name, 'a', log_size, log_count)
 
     handler.setLevel(logging.INFO)
@@ -493,8 +499,9 @@ def setup_access_logging(app, logger, debug):
             method = request.method
             user_agent = request.headers.get('User-Agent', '<unknown user agent>')
             url = '%s' % (request.path)
-            if request.query_string:
-                url += '?%s' % (request.query_string)
+            query_string = request.query_string.decode(encoding="utf-8")
+            if query_string:
+                url += '?%s' % (query_string)
 
             if not debug or not url.endswith(('.html', '.css', '.js')):
                 # During debugging suppress html, css and js file access logging
@@ -510,14 +517,10 @@ def setup_access_logging(app, logger, debug):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='The McM - Monte Carlo Management tool')
-    parser.add_argument('--port', help='Port, default is 8000', type=int, default=8000)
-    parser.add_argument('--host', help='Host IP, default is 0.0.0.0', default='0.0.0.0')
-    parser.add_argument('--debug', help='Run Flask in debug mode', action='store_true')
-    args = vars(parser.parse_args())
-    port = args.get('port')
-    host = args.get('host')
-    debug = args.get('debug')
+    l_type = locator()
+    port = l_type.port()
+    host = l_type.host()
+    debug = l_type.debug()
     # Setup loggers
     logging.root.setLevel(logging.DEBUG if debug else logging.INFO)
     error_logger = setup_error_logger(debug)
@@ -533,13 +536,13 @@ def main():
             pid_file.write(str(pid))
 
     error_logger.info('Starting McM, host=%s, port=%s, debug=%s', host, port, debug)
+    error_logger.info('Running in production mode: %s', l_type.isProd())
     # Run flask
     app.run(host=host, port=port, threaded=True, debug=debug)
 
 
 # Execute this function when stopping flask
 def at_flask_exit(*args):
-    RESTResource.counter.close()
     com = communicator()
     com.flush(0)
 

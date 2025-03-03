@@ -1,6 +1,6 @@
 import logging
 import os
-import shutil
+import errno
 
 from tools.locator import locator
 
@@ -11,8 +11,9 @@ class installer:
     """
     logger = logging.getLogger("mcm_error")
 
-    def __init__(self, sub_directory, care_on_existing=True, clean_on_exit=True, is_abs_path=False):
-
+    def __init__(self, sub_directory, ssh_session, care_on_existing=True, clean_on_exit=True, is_abs_path=False):
+        # self.ssh_session: <class: ssh_executor>
+        self.ssh_session = ssh_session
         self.cleanup = clean_on_exit
         self.careOfExistingDirectory = care_on_existing
         if is_abs_path:
@@ -25,18 +26,15 @@ class installer:
             raise Exception('Data directory is not defined.')
 
         # check if exists (and force)
-        if os.path.exists(self.directory):
+        if self._folder_exists(self.directory):
             if self.careOfExistingDirectory:
-                self.logger.error(os.popen('echo %s; ls -f %s' % (self.directory, self.directory)).read())
                 self.logger.error('Directory ' + self.directory + ' already exists.')
                 raise Exception('Data directory %s already exists' % self.directory)
             else:
                 self.logger.info('Directory ' + self.directory + ' already exists.')
         else:
             self.logger.info('Creating directory :' + self.directory)
-
-            # recursively create any needed parents and the dir itself
-            os.makedirs(self.directory)
+            self._create_folder(self.directory)
 
     @staticmethod
     def build_location(sub_directory):
@@ -54,9 +52,69 @@ class installer:
         if self.cleanup:
             try:
                 self.logger.error('Deleting the directory: %s' % self.directory)
-                shutil.rmtree(self.directory)
+                self._remove_folder(self.directory)
             except Exception as ex:
                 self.logger.error('Could not delete directory "%s". Reason: %s' % (self.directory, ex))
+
+    def _folder_exists(self, path):
+        """
+        Checks if a folder exists using the remote session.
+
+        Arguments:
+            path (str): Absolute path to check.
+
+        Returns:
+            bool: True if the folder exists, False otherwise.
+        """
+        try:
+            with self.ssh_session.ssh_client.open_sftp() as sftp_session: 
+                sftp_session.listdir(path)
+                return True
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                # Folder doesn't exists
+                return False
+            raise
+        
+    def _create_folder(self, path):
+        """
+        Create a folder using the remote session.
+
+        Arguments:
+            path (str): Absolute path to create.
+        """
+        _, stdout, stderr = self.ssh_session.execute("mkdir -p '%s'" % (path))
+        if not stdout and not stderr:
+            msg = "SSH error to create a folder: %s" % (path)
+            self.logger.error(msg)
+            raise RuntimeError(msg)
+        
+        error = stderr.read().decode(encoding="utf-8")
+        if error:
+            raise RuntimeError("Unable to create the folder: %s - Description: %s" % (path, error))
+
+        if not self._folder_exists(path):
+            raise RuntimeError("Folder not found (%s), it should exist" % (path))
+        
+    def _remove_folder(self, path):
+        """
+        Removes a folder using the remote session.
+
+        Arguments:
+            path (str): Absolute path to remove.
+        """
+        _, stdout, stderr = self.ssh_session.execute("rm -rf '%s'" % (path))
+        if not stdout and not stderr:
+            msg = "SSH error to remove a folder: %s" % (path)
+            self.logger.error(msg)
+            raise RuntimeError(msg)
+        
+        error = stderr.read().decode(encoding="utf-8")
+        if error:
+            raise RuntimeError("Unable to remove the folder: %s - Description: %s" % (path, error))
+
+        if self._folder_exists(path):
+            raise RuntimeError("Folder found (%s), it should not exist" % (path))
 
     def __enter__(self):
         return self

@@ -5,7 +5,7 @@ import random
 
 from random import randint
 from threading import Thread, Lock
-from Queue import Queue
+from queue import Queue
 
 from tools.ssh_executor import ssh_executor
 from tools.locator import locator
@@ -38,7 +38,7 @@ class Worker(Thread):
             try:
                 self.logger.info("Worker %s acquired task: %s" % (self.worker_name, func))
                 func(*args, **kargs)
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Exception in '%s' thread: %s Traceback:\n%s" % (
                     self.worker_name, str(e), traceback.format_exc()))
 
@@ -165,6 +165,7 @@ class SubmissionsBase(Handler):
         #     self.inject_logger.error('Could not acquire lock for injection with prepid %s' % (self.prepid))
         #     return False
 
+        l_type = locator()
         self.inject_logger.info('Injection with prepid %s' % (self.prepid))
         try:
             mcm_r = self.requests[-1]
@@ -173,13 +174,13 @@ class SubmissionsBase(Handler):
                 semaphore_events.increment(self.batch_name)
 
             self.inject_logger.info('Got batch name %s for prepid %s' % (self.batch_name, self.prepid))
-            with ssh_executor(server='vocms0481.cern.ch') as ssh:
+            with ssh_executor(server=l_type.mcm_executor_node()) as ssh:
                 cmd = self.make_injection_command(mcm_r)
                 self.inject_logger.info('Command used for injecting requests %s: %s' % (self.prepid, cmd))
                 # modify here to have the command to be executed
                 _, stdout, stderr = ssh.execute(cmd)
-                output = stdout.read()
-                error = stderr.read()
+                output = stdout.read().decode(encoding="utf-8")
+                error = stderr.read().decode(encoding="utf-8")
                 if error:
                     self.inject_logger.error('Error while injecting %s. %s' % (self.prepid, error))
                     if '.bashrc: Permission denied' in error:
@@ -300,6 +301,7 @@ class SubmissionsBase(Handler):
     def make_injection_command(self, mcm_r=None):
         locator_type = locator()
         directory = locator_type.workLocation()
+        wmcontrol_path = locator_type.get_wmcontrol_path()
         prepid = mcm_r.get_attribute('prepid')
         proxy_file_name = '%s%s_voms_proxy.txt' % (directory, prepid)
         executable_file_name = '%sinjection_script_%s.sh' % (directory, mcm_r.get_attribute('prepid'))
@@ -348,8 +350,8 @@ class SubmissionsBase(Handler):
             '#!/bin/bash',
             '',
             'cd %s' % (directory),
-            'export PATH=/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol:${PATH}',
             'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
+            'export PATH=%s:${PATH}' % (wmcontrol_path),
             'python3 `which wmcontrol.py` --dont_approve --url-dict %spublic/restapi/%s/get_dict/%s %s' % (
                 locator_type.baseurl(), self.database_name, self.prepid, test_params
             ),
@@ -517,18 +519,89 @@ class RequestApprover(Handler):
 
     def make_command(self):
         l_type = locator()
-        command = ''
-        proxy_file_name = '/tmp/%032x_voms_proxy.txt' % (random.getrandbits(128))
-        command += 'voms-proxy-init --voms cms --out %s --hours 1\n' % (proxy_file_name)
-        command += 'export X509_USER_PROXY=%s\n\n' % (proxy_file_name)
-        command += 'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh\n'
-        test_path = ''
+        wmcontrol_path = l_type.get_wmcontrol_path()
+        proxy_file_name = './%032x_voms_proxy.txt' % (random.getrandbits(128))
+        approve_script_name = './approve_%s_file.sh' % (self.batch_id)
+
+        # Pick a release including latest Python features
+        try:
+            release_for_latest_python = settings.get_value('release_for_latest_python')
+        except Exception as e:
+            self.logger.error(
+                "Unable to retrieve the Python release for singularity: %s", 
+                e,
+                exc_info=True
+            )
+            release_for_latest_python = 'el9:x86_64'
+
+        # Script target
         test_params = ''
         if l_type.isDev():
-            test_path = '_testful'
             test_params = '--wmtest --wmtesturl cmsweb-testbed.cern.ch'
-        command += 'python /afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol%s/wmapprove.py --workflows %s %s\n' % (test_path, self.workflows, test_params)
-        command += 'rm -f %s\n' % (proxy_file_name)
+
+        # Create the approve script
+        bash_file = [
+            '#!/bin/bash',
+            '',
+            '# Binds for singularity containers',
+            '# Mount /afs, /eos, /cvmfs, /etc/grid-security for xrootd',
+            "export APPTAINER_BINDPATH='/afs,/cvmfs,/cvmfs/grid.cern.ch/etc/grid-security:/etc/grid-security,/eos,/etc/pki/ca-trust,/run/user,/var/run/user'",
+            '',
+            '#############################################################',
+            '#        This script is used by McM to approve requests     #',
+            '#            in ReqMgr2 after batch announcement.           #',
+            '#        Setting the workflow to assignment-approved so     #',
+            '#               computing starts processing it.             #',
+            '#                                                           #',
+            '#      !!! THIS FILE IS NOT MEANT TO BE RUN BY YOU !!!      #',
+            '# If you want to run validation script yourself you need to #',
+            '#     get a "Get test" script. Click on the button that     #',
+            '# says "Get test command" when you hover your mouse over it #',
+            '#      If you try to run this, you will have a bad time     #',
+            '#############################################################',
+            ''
+        ]
+
+        # Folder for storing the approve script and the proxy certificate
+        bash_file += [
+            '',
+            'echo "Executing approve script at: $(hostname)"',
+            '',
+            "export APPROVE_FOLDER=$(mktemp -d -t 'McM_Approve_XXXXXXXXXX')",
+            'echo "Approve folder available at: $APPROVE_FOLDER"',
+            'cd $APPROVE_FOLDER/',
+            'voms-proxy-init --voms cms --out %s --hours 1' % (proxy_file_name),
+            ''
+        ]
+
+        # Create the injection script to execute `wmcontrol`
+        bash_file += [
+            'cat <<\'EndOfApproveFile\' > %s' % (approve_script_name),
+            '#!/bin/bash',
+            '',
+            'export X509_USER_PROXY=%s' % (proxy_file_name),
+            'source /afs/cern.ch/cms/PPD/PdmV/tools/wmclient/current/etc/wmclient.sh',
+            'export PATH=%s:${PATH}' % (wmcontrol_path),
+            'python3 `which wmapprove.py` --workflows %s %s' % (self.workflows, test_params),
+            '',
+            '# End of approve script',
+            'EndOfApproveFile',
+            ''
+        ]
+
+        # Execution using singularity
+        bash_file += [
+            'chmod +x %s' % (approve_script_name),
+            '# Run in singularity container',
+            'singularity run --home $PWD:$PWD /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/%s %s' % (release_for_latest_python, approve_script_name),
+            '',
+            '# Remove the temporary folder',
+            'rm -rf "$APPROVE_FOLDER"',
+            ''
+        ]
+
+        command = '\n'.join(bash_file)
+        self.logger.info('Approve command:\n\n%s\n\n' % (command))
         return command
 
     def send_email_failure(self, output, error):
@@ -538,24 +611,25 @@ class RequestApprover(Handler):
         subject = "There was an error while trying to approve workflows"
         text = "Workflows: %s\nOutput:\n%s\nError output: \n%s" % (self.workflows, output, error)
         com.sendMail(
-            map(lambda u: u['email'], production_managers),
+            [u['email'] for u in production_managers],
             subject,
             text)
 
     def internal_run(self):
+        l_type = locator()
         command = self.make_command()
         try:
-            self.logger.info("Command being used for approve requests: " + command)
             trails = 1
             while trails < 3:
                 self.logger.info("Wmapprove trail number: %s" % trails)
-                with ssh_executor(server='vocms0481.cern.ch') as executor:
+                with ssh_executor(server=l_type.mcm_executor_node()) as executor:
                     _, stdout, stderr = executor.execute(command)
                     if not stdout and not stderr:
                         self.logger.error('ssh error for request approvals, batch id: ' + self.batch_id)
                         return
-                    output = stdout.read()
-                    error = stderr.read()
+
+                    output = stdout.read().decode(encoding="utf-8")
+                    error = stderr.read().decode(encoding="utf-8")
 
                 self.logger.info('Wmapprove output: %s' % output)
                 if not error and 'Something went wrong' not in output:
@@ -571,7 +645,7 @@ class RequestApprover(Handler):
                     'message': message}
         except Exception as e:
             message = 'Error while approving requests, batch id: %s, message: %s' % (self.batch_id, str(e))
-            self.logger.error(message)
+            self.logger.error(message, exc_info=True)
             self.send_email_failure('', message)
             return {
                 'results': False,
