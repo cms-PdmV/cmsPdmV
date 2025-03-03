@@ -260,6 +260,10 @@ class ValidationControl():
         return reports
 
     def check_time_per_event(self, request_name, expected, report):
+        if self.skip_check(request_name, "time_per_event"):
+            self.logger.warning("Skipping the time_per_event check for request %s", request_name)
+            return True, 'Check for time_per_event has been skipped!'
+
         time_per_event_margin = settings.get_value('timing_fraction')
         for sequence_index in range(len(expected)):
             expected_time_per_event = expected[sequence_index]['time_per_event']
@@ -287,6 +291,10 @@ class ValidationControl():
         return True, ''
 
     def check_size_per_event(self, request_name, expected, report):
+        if self.skip_check(request_name, "size_per_event"):
+            self.logger.warning("Skipping the size_per_event check for request %s", request_name)
+            return True, 'Check for size_per_event has been skipped!'
+
         size_per_event_margin = 0.5
         for sequence_index in range(len(expected)):
             expected_size_per_event = expected[sequence_index]['size_per_event']
@@ -313,6 +321,10 @@ class ValidationControl():
         return True, ''
 
     def check_memory(self, request_name, expected, report):
+        if self.skip_check(request_name, "memory"):
+            self.logger.warning("Skipping the memory check for request %s", request_name)
+            return True, 'Check for memory has been skipped!'
+
         for sequence_index in range(len(expected)):
             expected_memory = expected[sequence_index]['memory']
             actual_memory = report[sequence_index]['peak_value_rss']
@@ -332,6 +344,10 @@ class ValidationControl():
         return True, ''
 
     def check_filter_efficiency(self, request_name, expected, report):
+        if self.skip_check(request_name, "filter_efficiency"):
+            self.logger.warning("Skipping the filter_efficiency check for request %s", request_name)
+            return True, 'Check for filter_efficiency has been skipped!'
+
         expected_filter_efficiency = expected[0]['filter_efficiency']  # Because all have same expected eff
         actual_filter_efficiency = self.list_prod([r['filter_efficiency'] for r in report])
         expected_events = report[0]['expected_events']
@@ -1132,6 +1148,47 @@ class ValidationControl():
             requests.append(request)
 
         return requests
+    
+    def _get_allowed_skip_check(self):
+        """
+        Get the requests allowed to skip some validation checks
+
+        Returns:
+            dict[str, list[str]]: A dict with the request's ids and the checks
+                allowed to be skipped per each request.
+        """
+        allowed_to_skip = {}
+        try:
+            allowed_to_skip = settings.get_value("validation_skip_check")
+        except TypeError:
+            # The key does not exists in the database
+            pass
+
+        return allowed_to_skip
+
+    def skip_check(self, request_name, to_skip):
+        """
+        Determines if a given check should be bypassed for a request.
+        """
+        allowed_to_skip = self._get_allowed_skip_check()
+        if request_name not in allowed_to_skip:
+            self.logger.debug("Request %s not in the 'validation_skip_check' object", request_name)
+            return False
+
+        checks_to_skip = allowed_to_skip.get(request_name)
+        if "all" in checks_to_skip:
+            self.logger.debug("All checks are disabled for request: %s", request_name)
+            return True
+
+        if to_skip not in checks_to_skip:
+            self.logger.debug(
+                "Is it not allowed to skip the check %s for request %s. Values allowed: %s",
+                to_skip, request_name, checks_to_skip
+            )
+            return False
+
+        # It is allowed
+        return True
 
 
 if __name__ == '__main__':
