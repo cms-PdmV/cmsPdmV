@@ -29,8 +29,12 @@ class GetBjobs(RESTResource):
 
     def create_command(self, options):
         bcmd = 'module load lxbatch/tzero && condor_q -nobatch '
-        for opt in options.split(','):
-            bcmd += opt
+
+        # Extra options for the dashboard output
+        if '-hold' in options:
+            bcmd += '-hold '
+        if '-long' in options:
+            bcmd += '-long '
 
         bcmd += ' | grep -v RELMON'
         return bcmd
