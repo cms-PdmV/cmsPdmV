@@ -44,20 +44,20 @@ class user_pack:
         """
         if not has_request_context():
             return defaultdict(lambda: None)
-        user_dict = defaultdict(lambda: None, [(key.lower().replace('-', '_'), value) if not key.lower().startswith('adfs-') else (key.lower()[5:], value) for (key, value) in request.headers.items()])
-        return user_dict
 
-    def __getattr__(self, name):
-        if name.startswith('get_'):
-            return lambda: self.user_dict['_'.join(name.split('_')[1:])]
-        else:
-            return self.user_dict[name]
+        user_dict = {
+            "login": request.headers.get("Adfs-Login", ""),
+            "firstname": request.headers.get("Adfs-Firstname", ""),
+            "lastname": request.headers.get("Adfs-Lastname", ""),
+            "email": request.headers.get("Adfs-Email", "")
+        }
+        return user_dict
 
     def get_username(self):
         return self.user_dict['login']
 
     def get_email(self):
-        return self.email if self.email else self.remote_user
+        return self.user_dict['email']
 
     def get_name(self):
         return self.user_dict.get('firstname')
