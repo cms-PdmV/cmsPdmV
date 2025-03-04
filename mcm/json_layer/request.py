@@ -2980,7 +2980,7 @@ class request(json_base):
             for possible in possible_inputs:
                  for taskName, tier in reversed(__prev_outputs):
                     for t in tier:
-                        if t == possible:
+                        if t == possible or (t[-1].isdigit() and t[:-1] == possible):
                             return "%soutput" % (t), taskName
             # return empty values if nothing found
             return "", ""
