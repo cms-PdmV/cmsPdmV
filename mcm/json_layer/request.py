@@ -2829,6 +2829,9 @@ class request(json_base):
             self.set_attribute('approval', self._json_base__approvalsteps[__approval_index - 1])
             self.set_status(step=__status_index, with_notification=True)
 
+        # Update the input dataset field for related requests
+        self._reset_input_dataset_on_invalidation()
+
     def prepare_upload_command(self, cfgs, test_string):
         cmd = ''
         cmd += self.get_setup_file2(False, False, configs_to_upload=cfgs)
@@ -3260,3 +3263,46 @@ class request(json_base):
             pass
 
         return pileup_from
+
+    def _reset_input_dataset_on_invalidation(self):
+        """Reset the input dataset field for requests using a dataset to be invalidated.
+        
+        When a request is reset and creates an invalidation, this scans all other requests
+        using its output datasets as input and remove this entry from them.
+        """
+        # Pick the related requests
+        output_dataset = self.get_attribute("output_dataset")
+        rdb = database("requests")
+        requests_using_as_input = []
+        for dataset in output_dataset:
+            requests_using_as_input += rdb.search({"input_dataset": dataset}, page=-1)
+
+        # Only choose those not already submitted
+        requests = [
+            request(doc) for doc in requests_using_as_input
+            if doc.get("approval") not in ("submit",)
+            and doc.get("status") not in ("submitted", "done")
+        ]
+
+        if not requests:
+            return
+
+        # Reset the field
+        unable_to_reset = []
+        for req in requests:
+            req.set_attribute("input_dataset", "")
+            result = req.save()
+            if not result:
+                unable_to_reset.append(req.get_attribute('prepid'))
+            else:
+                self.logger.info(
+                    "Input dataset field reset for %s as %s was reset",
+                    req.get_attribute("prepid"),
+                    self.get_attribute("prepid")
+                )
+
+        if unable_to_reset:
+            raise ValueError(
+                "Unable to reset the input dataset field for: %s. Operate them manually"
+                % (unable_to_reset)
+            )
