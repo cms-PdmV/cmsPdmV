@@ -9,7 +9,7 @@ cryptography==44.0.1
 Flask==3.0.3
 Flask-RESTful==0.3.10
 itsdangerous==2.2.0
-Jinja2==3.1.5
+Jinja2==3.1.6
 MarkupSafe==2.1.5
 paramiko==3.4.1
 pycparser==2.22
