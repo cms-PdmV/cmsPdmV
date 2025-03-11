@@ -403,6 +403,20 @@ class RewindToPreviousStep(RESTResource):
                     "message": "could not save %s" % (chained_req_id),
                     "prepid": crid}
 
+        # Remove the input_dataset field for all the next requests
+        chained_req_chain = mcm_cr.get_attribute('chain')
+        next_requests = chained_req_chain[chained_req_chain.index(current_prepid) + 1:]
+        for request_prepid in next_requests:
+            req = request(rdb.get(request_prepid))
+            req.set_attribute('input_dataset', '')
+            saved = req.save()
+            if not saved:
+                return {
+                    "results": False,
+                    "message": "Unable to reset the input_dataset field for: %s" % (request_prepid),
+                    "prepid": crid
+                }
+
         current_request.reset()
         current_request.set_attribute('input_dataset', '')
         saved = rdb.update(current_request.json())
