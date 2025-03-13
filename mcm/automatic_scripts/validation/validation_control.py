@@ -67,7 +67,8 @@ class ValidationControl():
         Fetch jobs from HTCondor
         Return a dictionary where key is job id and value is status (IDLE, RUN, DONE)
         """
-        cmd = ['module load lxbatch/tzero',
+        htcondor_pool, _ = settings.get_htcondor_config_for_validation()
+        cmd = ['module load %s' % (htcondor_pool),
                'condor_q -af:h ClusterId JobStatus']
 
         stdout, stderr = self.ssh_executor.execute_command(cmd)
@@ -992,6 +993,7 @@ class ValidationControl():
                 'expected_events': expected_events}
 
     def get_htcondor_submission_file(self, validation_name, job_length, threads, memory, output_prepids):
+        _, accounting_group =  settings.get_htcondor_config_for_validation()
         transfer_input_files = ['voms_proxy.txt']
         transfer_output_files = []
         for output_prepid in output_prepids:
@@ -1029,7 +1031,7 @@ class ValidationControl():
                        'periodic_remove       = (JobStatus == 5 && HoldReasonCode != 1 && HoldReasonCode != 16 && HoldReasonCode != 21 && HoldReasonCode != 26)',
                        '+MaxRuntime           = %s' % (job_length),
                        'RequestCpus           = %s' % (request_cores),
-                       '+AccountingGroup      = "group_u_CMS.CAF.PHYS"',
+                       '+AccountingGroup      = "%s"' % (accounting_group),
                        '+JobPrio              = %s' % (condor_prio),
                        'requirements          = (OpSysAndVer =?= "AlmaLinux9")',
                        # Leave in queue when status is DONE for 30 minutes - 1800 seconds
@@ -1114,10 +1116,11 @@ class ValidationControl():
             f.write(validation_script)
 
         # Condor submit
+        htcondor_pool, _ = settings.get_htcondor_config_for_validation()
         command = ['cd %s' % (validation_directory),
                    'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 168',
                    'chmod +x %s' % (validation_script_file_name.split('/')[-1]),
-                   'module load lxbatch/tzero',
+                   'module load %s' % (htcondor_pool),
                    'condor_submit %s' % (condor_file_name.split('/')[-1])]
         stdout, stderr = self.ssh_executor.execute_command(command)
 
