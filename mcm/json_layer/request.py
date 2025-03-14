@@ -16,6 +16,7 @@ from json import loads, dumps
 from operator import itemgetter
 
 from couchdb_layer.mcm_database import database
+from json_layer import validation
 from json_layer.json_base import json_base
 from json_layer.campaign import campaign
 from json_layer.flow import flow
@@ -1325,7 +1326,12 @@ class request(json_base):
         if sequence_dict.get('extra'):
             command += ' %s' % (sequence_dict['extra'].strip())
 
-        command += ' --no_exec --mc -n $EVENTS || exit $? ;'
+        if "number" not in sequence_dict:
+            command += ' --no_exec --mc -n $EVENTS || exit $? ;'
+        else:
+            # Already set by the number parameter
+            command += ' --no_exec --mc || exit $? ;'
+
         return command
 
     def get_input_file_for_sequence(self, sequence_index):
@@ -1373,6 +1379,7 @@ class request(json_base):
         scram_arch = self.get_scram_arch().lower()
         release_for_latest_python = settings.get_value('release_for_latest_python') or 'el9:x86_64'
         pileup_only_from_site = self._pileup_only_from_site()
+        validation_strategy = validation.get_validation_strategy(validation_name=prepid)
 
         bash_file = [
             '#!/bin/bash', 
@@ -1582,7 +1589,11 @@ class request(json_base):
                           '']
 
         # Events to run
-        events, explanation = self.get_event_count_for_validation(with_explanation=True)
+        events, explanation = validation_strategy.get_event_count_for_validation(
+            request=self,
+            with_explanation=True,
+            threads=threads
+        )
         bash_file += [explanation,
                       'EVENTS=%s' % (events),
                       '']
@@ -1650,6 +1661,18 @@ class request(json_base):
             if filein:
                 sequence_dict['filein'] = filein
 
+            sequence_dict = validation_strategy.tweak_cmsdriver_for_validation(
+                request=self,
+                sequence_dict=sequence_dict,
+                threads=threads
+            )
+            if configs_to_upload and "number_out" in sequence_dict:
+                # This is related to the upload fragment procedure to
+                # ReqMgr2, remove the `--number_out` parameter in case
+                # the strategy sets it!
+                output_events = sequence_dict.pop("number_out")
+                self.logger.info("Removing the output events for the upload procedure, it was %d events", output_events)
+
             if for_validation and automatic_validation:
                 bash_file += [
                     '',
@@ -1677,7 +1700,7 @@ class request(json_base):
                     report_name += 'report.xml'
 
                 if automatic_validation:
-                    kill_timeout = self.get_validation_max_runtime() - 1800 # 30 minutes
+                    kill_timeout = validation_strategy.get_validation_max_runtime(request=self) - 1800 # 30 minutes
                     bash_file += ['',
                                   '# Sleeping killer',
                                   'export VALIDATION_RUN=1',
@@ -2564,64 +2587,6 @@ class request(json_base):
             if eff != 0:
                 target /= eff
         return int(target)
-
-    def get_validation_max_runtime(self):
-        """
-        Return maximum number of seconds that job could run for, i.e. validation duration
-        """
-        multiplier = self.get_attribute('validation').get('time_multiplier', 1)
-        max_runtime = settings.get_value('batch_timeout') * 60. * multiplier
-        return max_runtime
-
-    def get_event_count_for_validation(self, with_explanation=False):
-        # Efficiency
-        efficiency = self.get_efficiency()
-        # Max number of events to run
-        max_events = self.target_for_test()
-        # Max events taking efficiency in consideration
-        max_events_with_eff = max_events / efficiency
-        # Max number of seconds that validation can run for
-        max_runtime = self.get_validation_max_runtime()
-        # "Safe" margin of validation that will not be used for actual running
-        # but as a buffer in case user given time per event is slightly off
-        margin = settings.get_value('test_timeout_fraction')
-        # Time per event
-        time_per_event = self.get_attribute('time_event')
-        # Threads in sequences
-        sequence_threads = [int(sequence.get('nThreads', 1)) for sequence in self.get_attribute('sequences')]
-        while len(sequence_threads) < len(time_per_event):
-            time_per_event = time_per_event[:-1]
-
-        # Time per event for single thread
-        single_thread_time_per_event = [time_per_event[i] * sequence_threads[i] for i in range(len(time_per_event))]
-        # Sum of single thread time per events
-        time_per_event_sum = sum(single_thread_time_per_event)
-        # Max runtime with applied margin
-        max_runtime_with_margin = max_runtime * (1.0 - margin)
-        # How many events can be produced in given "safe" time
-        events = int(max_runtime_with_margin / time_per_event_sum)
-        # Try to produce at least one event
-        clamped_events = int(max(1, min(events, max_events_with_eff)))
-        # Estimate produced events
-        estimate_produced = int(clamped_events * efficiency)
-
-        self.logger.info('Events to run for %s - %s', self.get_attribute('prepid'), clamped_events)
-        if not with_explanation:
-            return clamped_events
-        else:
-            explanation = ['# Maximum validation duration: %ds' % (max_runtime),
-                           '# Margin for validation duration: %d%%' % (margin * 100),
-                           '# Validation duration with margin: %d * (1 - %.2f) = %ds' % (max_runtime, margin, max_runtime_with_margin),
-                           '# Time per event for each sequence: %s' % (', '.join(['%.4fs' % (x) for x in time_per_event])),
-                           '# Threads for each sequence: %s' % (', '.join(['%s' % (x) for x in sequence_threads])),
-                           '# Time per event for single thread for each sequence: %s' % (', '.join(['%s * %.4fs = %.4fs' % (sequence_threads[i], time_per_event[i], single_thread_time_per_event[i]) for i in range(len(single_thread_time_per_event))])),
-                           '# Which adds up to %.4fs per event' % (time_per_event_sum),
-                           '# Single core events that fit in validation duration: %ds / %.4fs = %d' % (max_runtime_with_margin, time_per_event_sum, events),
-                           '# Produced events limit in McM is %d' % (max_events),
-                           '# According to %.4f efficiency, validation should run %d / %.4f = %d events to reach the limit of %s' % (efficiency, max_events, efficiency, max_events_with_eff, max_events),
-                           '# Take the minimum of %d and %d, but more than 0 -> %d' % (events, max_events_with_eff, clamped_events),
-                           '# It is estimated that this validation will produce: %d * %.4f = %d events' % (clamped_events, efficiency, estimate_produced)]
-            return clamped_events, '\n'.join(explanation)
 
     def unique_string(self, step_i):
         # create a string that supposedly uniquely identifies the request configuration for step

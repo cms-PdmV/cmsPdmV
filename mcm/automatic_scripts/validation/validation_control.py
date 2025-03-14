@@ -18,6 +18,7 @@ import tools.settings as settings
 from couchdb_layer.mcm_database import database
 from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
+from json_layer.validation import get_validation_strategy
 from tools.installer import installer as Locator
 from tools.ssh_executor import ssh_executor
 
@@ -521,6 +522,7 @@ class ValidationControl():
         threads_int = int(threads)
         threads_dict = running[threads]
         extra_notifications = storage_item.get('extra_notifications', [])
+        validation_stage = storage_item['stage']
         # Check log output
         log_file, out_file, err_file = self.read_output_files(validation_name, threads)
         if self.removed_due_to_exceeded_walltime(log_file):
@@ -585,8 +587,8 @@ class ValidationControl():
             return False
 
         self.logger.info('Reports include these requests:\n%s', '\n'.join(list(reports.keys())))
-        if threads_int != 1:
-            self.logger.info('Validation was done for %s threads, not checking the values', threads)
+        if validation_stage != 1:
+            self.logger.info('Validation is not related to the first stage, not checking the values for %s threads', threads)
             for request_name, report in reports.items():
                 expected_dict = threads_dict['expected'][request_name]
                 # Add CPU name
@@ -787,9 +789,9 @@ class ValidationControl():
             storage_item['stage'] = stage
             self.storage.save(validation_name, storage_item)
             if stage == 2 and self.can_run_multicore_validations(validation_name):
-                self.submit_item(validation_name, 2)
-                self.submit_item(validation_name, 4)
-                self.submit_item(validation_name, 8)
+                # Pick up a strategy and move to the next stage
+                strategy = get_validation_strategy(validation_name)
+                strategy.move_validation_to_next_stage(validation_control=self, validation_name=validation_name)
             else:
                 min_events_per_lumi = 10
                 max_events_per_lumi = self.get_events_per_lumi(storage_item)
@@ -1052,7 +1054,10 @@ class ValidationControl():
             command = ['rm -rf %s' % (item_directory),
                        'mkdir -p %s' % (item_directory)]
             _, _ = self.ssh_executor.execute_command(command)
-            self.submit_item(validation_name, 1)
+
+            # Pick up a strategy and submit the initial job
+            strategy = get_validation_strategy(validation_name)
+            strategy.submit_initial_validation(validation_control=self, validation_name=validation_name)
 
     def requests_for_validation(self, validation_name):
         if '-chain_' in validation_name:
@@ -1069,6 +1074,7 @@ class ValidationControl():
         # Single request validation will have only that list
         # Chained request validation might have multiple requests in sequence
         self.logger.info('Submitting %s validation with %s threads', validation_name, threads)
+        validation_strategy = get_validation_strategy(validation_name)
         requests = self.requests_for_validation(validation_name)
         expected_dict = {}
         validation_runtime = 0
@@ -1080,7 +1086,7 @@ class ValidationControl():
             request_prepid = request.get_attribute('prepid')
             request_prepids.append(request_prepid)
             # Sum all run times
-            validation_runtime += int(request.get_validation_max_runtime())
+            validation_runtime += int(validation_strategy.get_validation_max_runtime(request))
             # Get max memory of all requests, round it up to next GB
             request_memory = int(math.ceil(request.get_attribute('memory') / 1000.0) * 1000)
             max_memory = max(max_memory, request_memory)
@@ -1092,11 +1098,12 @@ class ValidationControl():
             expected_dict[request_prepid] = []
             sequences = request.get_attribute('sequences')
             for sequence_index in range(len(sequences)):
+                expected_events = validation_strategy.get_event_count_for_validation(request=request, threads=threads)
                 expected_dict[request_prepid].append({'time_per_event': request.get_attribute('time_event')[sequence_index],
                                                       'size_per_event': request.get_attribute('size_event')[sequence_index],
                                                       'memory': request_memory,
                                                       'filter_efficiency': request.get_efficiency(),
-                                                      'events': request.get_event_count_for_validation()})
+                                                      'events': expected_events})
 
         self.logger.info('%s %s thread validation info:', validation_name, threads)
         self.logger.info('PrepIDs: %s', ', '.join(request_prepids))
