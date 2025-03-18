@@ -1988,7 +1988,7 @@ class request(json_base):
 
         return stats_reqmgr_name_list
 
-    def get_stats(self, forced=False):
+    def get_stats(self, forced=False, patch_input_dataset=True):
         l_type = locator()
         stats_db = database('requests', url=l_type.stats_database_url())
         prepid = self.get_attribute('prepid')
@@ -2145,18 +2145,19 @@ class request(json_base):
                 self.set_attribute('output_dataset', collected)
                 changes_happen = True
 
-        crdb = database('chained_requests')
-        rdb = database('requests')
-        chained_requests = crdb.query_view('contains', self.get_attribute('prepid'), page_num=-1)
-        for cr in chained_requests:
-            chain = cr.get('chain', [])
-            index_of_this_request = chain.index(self.get_attribute('prepid'))
-            if index_of_this_request > -1 and index_of_this_request < len(chain) - 1:
-                next_request = request(rdb.get(chain[index_of_this_request + 1]))
-                if not next_request.get_attribute('input_dataset'):
-                    input_dataset = self.get_ds_input(self.get_attribute('output_dataset'), next_request.get_attribute('sequences'))
-                    next_request.set_attribute('input_dataset', input_dataset)
-                    next_request.save()
+        if patch_input_dataset:
+            crdb = database('chained_requests')
+            rdb = database('requests')
+            chained_requests = crdb.query_view('contains', self.get_attribute('prepid'), page_num=-1)
+            for cr in chained_requests:
+                chain = cr.get('chain', [])
+                index_of_this_request = chain.index(self.get_attribute('prepid'))
+                if index_of_this_request > -1 and index_of_this_request < len(chain) - 1:
+                    next_request = request(rdb.get(chain[index_of_this_request + 1]))
+                    if not next_request.get_attribute('input_dataset'):
+                        input_dataset = self.get_ds_input(self.get_attribute('output_dataset'), next_request.get_attribute('sequences'))
+                        next_request.set_attribute('input_dataset', input_dataset)
+                        next_request.save()
 
         # Update priority if it changed
         if new_mcm_reqmgr_list:
@@ -2752,7 +2753,7 @@ class request(json_base):
         ds_to_invalidate = []
 
         # retrieve the latest requests for it
-        self.get_stats()
+        self.get_stats(patch_input_dataset=False)
         # increase the revision only if there was a request in req mng, or a dataset already on the table
         increase_revision = False
 
