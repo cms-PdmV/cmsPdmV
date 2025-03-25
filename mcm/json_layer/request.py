@@ -607,6 +607,11 @@ class request(json_base):
         by_pass = settingsDB.get('validation_bypass')['value']
         if self.get_attribute('prepid') in by_pass:
             do_runtest = False
+            self.update_history({
+                'action': 'validation',
+                'step': f"Validation has been bypassed for request ({self.get_attribute('prepid')}) as it is included in the `validation_bypass` setting"
+            })
+            self.reload()
 
         # if do_runtest, it will be run by a jenkins job, look for ValidationControl.py in this repo
         if not do_runtest:
@@ -2354,6 +2359,7 @@ class request(json_base):
         mcm_rr = self.get_attribute('reqmgr_name')
         db = database('requests')
         ignore_for_status = settings.get_value('ignore_for_status')
+        validation_bypass: list[str] = settings.get_value('validation_bypass')
         if len(mcm_rr):
             wma_r = mcm_rr[-1]  # the one used to check the status
             # pick up the last request of type!='Resubmission'
@@ -2431,6 +2437,12 @@ class request(json_base):
                         saved = db.save(self.json())
                         return not_good
                         # set next status: which can only be done at this stage
+
+                    # Before setting the request to done, remove it from the `validation_bypass`
+                    # list in case it is there
+                    if self.get_attribute('prepid') in validation_bypass:
+                        validation_bypass.remove(self.get_attribute('prepid'))
+                        settings.set_value('validation_bypass', validation_bypass)
 
                     self.set_status(with_notification=True)
                     # save the request back to db
