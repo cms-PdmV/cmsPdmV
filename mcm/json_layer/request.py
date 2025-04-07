@@ -1446,7 +1446,7 @@ class request(json_base):
             # Download the script
             bash_file += ['# GEN Script begin',
                           'rm -f request_fragment_check.py',
-                          'wget -q https://raw.githubusercontent.com/cms-sw/genproductions/master/bin/utils/request_fragment_check.py',
+                          'wget -q https://gitlab.cern.ch/cms-gen/genproductions_scripts/-/raw/master/bin/utils/request_fragment_check.py',
                           'chmod +x request_fragment_check.py',
                           '',]
             
