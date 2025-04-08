@@ -287,16 +287,34 @@ class ShortValidationStrategy(ValidationStrategy):
 
     def tweak_cmsdriver_for_validation(self, request, sequence_dict, threads) -> dict:
         threads_int = threads if isinstance(threads, int) else 1
-        events = self.get_event_count_for_validation(request=request, threads=threads)
+        threads_str = str(threads_int)
+        request_prepid = request.get_attribute('prepid')
+
+        # Run the validation job based on output events
         test_on_output = self._test_on_output_events()
+        # Validation scenarios
+        validation_thread_configurations = self._get_thread_configurations(request=request)
+        validation_scenarios = validation_thread_configurations["scenarios"]
+        thread_config = validation_scenarios.get(threads_str)
+        if not thread_config:
+            self.logger.error(
+                "Unable to retrieve the validation scenario for %s threads for tweaking the cmsDriver for the request %s",
+                threads_str,
+                request_prepid
+            )
+            return sequence_dict
+
+        # Input and output events
+        target_input_events = thread_config["target_input_events"]
+        target_output_events = thread_config["target_output_events"]
 
         # Set the number of event parameters
         sequence_dict["nThreads"] = threads_int
         if test_on_output:
-            sequence_dict["number_out"] = events
-            sequence_dict["number"] = events
+            sequence_dict["number"] = target_input_events
+            sequence_dict["number_out"] = target_output_events
         else:
-            sequence_dict["number"] = events
+            sequence_dict["number"] = target_input_events
 
         return sequence_dict
 
