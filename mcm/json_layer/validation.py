@@ -386,6 +386,29 @@ class ShortValidationStrategy(ValidationStrategy):
 
         return minimum_validation_runtime
 
+    def _get_threads_to_test(self) -> list[int]:
+        """Get the number of threads for each validation scenario."""
+        scenarios = [1, 2, 4, 8]
+        try:
+            scenarios_from_settings = settings.get_value("validation_test_scenarios")
+            if isinstance(scenarios_from_settings, list):
+                scenarios_to_use = [int(value) for value in scenarios_from_settings]
+                scenarios = scenarios_to_use
+            else:
+                logger.warning(
+                    "The given scenarios are not a list: Type: %s - Value: %s",
+                    type(scenarios_from_settings),
+                    scenarios_from_settings
+                )
+        except Exception as e:
+            logger.warning(
+                "Unable to retrieve the number of threads for the validation scenarios from `validation_test_scenarios`: %s",
+                e
+            )
+
+        logger.info("Number of threads to consider for the thread configuration: %s", scenarios)
+        return scenarios
+
     def _get_thread_configurations(self, request) -> dict[str, dict]:
         """
         Get the number of output, input events, and other metadata
@@ -401,7 +424,7 @@ class ShortValidationStrategy(ValidationStrategy):
         """
         threads_configuration = {}
         # Thread configuration to test
-        threads_for_test = [1, 2, 4, 8, 16, 32]
+        threads_for_test = self._get_threads_to_test()
         # Target output events expected for the validation
         output_events = self._get_test_output_events()
         # Minimum output events the validation must produce
