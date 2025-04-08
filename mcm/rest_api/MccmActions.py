@@ -490,6 +490,8 @@ class GenerateChains(RESTResource):
                 chained_campaign_prepid = chained_campaign.get_attribute('prepid')
                 limit = limit_campaign[chained_campaign_prepid] or None
                 for _ in range(repetitions):
+                    # Make sure to always use the last version!
+                    request.reload(save_current=False)
                     generated= self.generate_chained_requests(mccm,
                                                               request,
                                                               chained_campaign,
