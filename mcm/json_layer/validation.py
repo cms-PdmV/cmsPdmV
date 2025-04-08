@@ -405,7 +405,7 @@ class ShortValidationStrategy(ValidationStrategy):
 
         # Event efficiency
         eff = request.get_efficiency()
-        eff_err = request.get_efficiency_error()
+        eff_err = request.get_efficiency_error(relative=False)
         explanation.append("# Event efficiency: Computed using the request efficiency and its error.")
 
         event_efficiency = eff - (2 * eff_err)
