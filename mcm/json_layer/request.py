@@ -446,12 +446,6 @@ class request(json_base):
                     'validation',
                     'The request type: %s should have a positive or null mcdb id' % (self.get_attribute('type')))
 
-        if self.get_core_num() == 1 and int(self.get_attribute("memory")) > 4000:
-            raise self.WrongApprovalSequence(
-                self.get_attribute('status'),
-                'validation',
-                'Single core request should use <= 4GB memory. Try increasing the number of cores')
-
         # Do not allow to validate if there are collisions
         self.check_for_collisions()
 
