@@ -462,6 +462,12 @@ class ChainRequestInjector(SubmissionsBase):
         if len(mcm_crs) == 0:
             return
 
+        # Filter only chained request ready to be used
+        mcm_crs = [
+            cr
+            for cr in mcm_crs
+            if cr.get('action_parameters').get('flag')
+        ]
         mcm_requests = []
         for cr in mcm_crs:
             mcm_cr = chained_request(cr)
