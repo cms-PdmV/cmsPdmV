@@ -3045,31 +3045,30 @@ class request(json_base):
         if validation_info:
             # Average filter efficiency
             filter_efficiency_avg = sum([x['filter_efficiency'] for x in validation_info]) / len(validation_info)
-            filter_efficiency_threshold = 0.001
+            filter_efficiency_threshold = settings.get_value('filter_eff_threshold_for_thread_choice') #by legacy 0.001
+            cpu_efficiency_threshold = settings.get_value('cpu_efficiency_threshold_for_thread_choice')
+            best_efficiency_info = sorted(validation_info, key=lambda v: v['cpu_efficiency'])[-1]
             if filter_efficiency_avg < filter_efficiency_threshold and not skip_filter_eff:
+                filter_efficiency_margin = settings.get_value('filter_eff_margin_for_thread_choice') #0.05 # 5% margin
+                max_efficiency = best_efficiency_info['cpu_efficiency']
+                cpu_efficiency_threshold = max_efficiency - filter_efficiency_margin
                 # If filter eff < 10^-3, then filter based on events/lumi first and choose highest cpu efficiency
-                filter_efficiency = filter_efficiency_avg
-                self.logger.info('Filter efficiency lower than %s (%s), choosing cores based on evens/lumi',
+                
+                self.logger.info('Filter efficiency lower than %s (%s), choosing cores based on highest efficiency (%s) within margin (%s)',
                                  filter_efficiency_threshold,
-                                 filter_efficiency)
-                validation_info = sorted([v for v in validation_info if v['events_per_lumi'] >= 10], key=lambda v: v['cpu_efficiency'])
-                self.logger.info('Validation info after filter (by cpu eff) %s', dumps(validation_info, indent=2, sort_keys=True))
-                if validation_info:
-                    validation_info = validation_info[-1]
-                else:
-                    raise Exception('Cannot choose number of cores: %s' % (self.get_attribute('validation')))
+                                 filter_efficiency_avg,
+                                 max_efficiency,
+                                 filter_efficiency_margin
+                                )
 
+            validation_info = sorted(validation_info, key=lambda v: v['threads'])
+            self.logger.info('Validation info (by threads) %s', dumps(validation_info, indent=2, sort_keys=True))
+            validation_info = [v for v in validation_info if v['cpu_efficiency'] > max_efficiency - filter_efficiency_margin]
+            self.logger.info('Validation info after filter (by cpu eff) %s', dumps(validation_info, indent=2, sort_keys=True))
+            if validation_info:
+                validation_info = validation_info[-1]
             else:
-                # If filter eff >= 10^-3, then choose highest number of threads where cpu efficiency is >= 70%
-                validation_info = sorted(validation_info, key=lambda v: v['threads'])
-                self.logger.info('Validation info (by threads) %s', dumps(validation_info, indent=2, sort_keys=True))
-                cpu_efficiency_threshold = settings.get_value('cpu_efficiency_threshold')
-                for thread_info in reversed(validation_info):
-                    if thread_info['cpu_efficiency'] >= cpu_efficiency_threshold:
-                        validation_info = thread_info
-                        break
-                else:
-                    validation_info = validation_info[0]
+                validation_info = best_efficiency_info
 
             self.logger.info('Selected validation info: %s', dumps(validation_info, indent=2, sort_keys=True))
 
