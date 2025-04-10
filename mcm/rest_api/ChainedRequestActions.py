@@ -817,7 +817,10 @@ class TaskChainDict(RESTResource):
             # so it would be task_prepid-of-current-request same as in top
             __req_id = mcm_crs[0]['chain'][mcm_crs[0]['step']]
             task_name = 'task_' + __req_id
-
+        
+        # Filter only chained request ready to be used
+        mcm_crs = [cr for cr in mcm_crs if cr.get('action_parameters').get('flag')]
+        
         if len(mcm_crs) == 0:
             return {}
 
