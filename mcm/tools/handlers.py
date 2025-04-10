@@ -458,16 +458,16 @@ class ChainRequestInjector(SubmissionsBase):
             task_name = 'task_' + current_step_prepid
 
         batch_name = 'Task_' + mcm_request['member_of_campaign']
-
-        if len(mcm_crs) == 0:
-            return
-
         # Filter only chained request ready to be used
         mcm_crs = [
             cr
             for cr in mcm_crs
             if cr.get('action_parameters').get('flag')
         ]
+
+        if len(mcm_crs) == 0:
+            return
+
         mcm_requests = []
         for cr in mcm_crs:
             mcm_cr = chained_request(cr)
