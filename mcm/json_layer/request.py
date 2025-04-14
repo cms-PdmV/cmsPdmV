@@ -2139,7 +2139,7 @@ class request(json_base):
             # we check for done status so we wouldn't be updating old requests with changed infrastructure
             # also we change it only if we keep any output in request
             output_dataset = self.get_attribute('output_dataset')
-            if (output_dataset != collected) and (self.get_attribute('status') != 'done') and keep_output:
+            if (output_dataset != collected) and (self.get_attribute('status') != 'done' or forced) and keep_output:
                 self.logger.info('Stats update, DS differs. for %s' % (self.get_attribute("prepid")))
                 self.set_attribute('output_dataset', collected)
                 changes_happen = True
