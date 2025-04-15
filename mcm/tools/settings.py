@@ -53,3 +53,29 @@ def clear_cache():
     size = cache_size()
     __cache.clear()
     return size
+
+def get_htcondor_config_for_validation():
+    """
+    Get the HTCondor pool and the AccountingGroup
+    for sending validation jobs.
+    """
+    # HTCondor pools - Get the complete list by running: `module avail`
+    available_pools = ["lxbatch/share", "lxbatch/spool", "lxbatch/tzero"]
+    htcondor_pool_config = {
+        "Pool": "lxbatch/tzero", # By default, we submit to CMS CAF
+        "AccountingGroup": "group_u_CMS.CAF.PHYS" # Using this AccountingGroup
+    }
+
+    try:
+        htcondor_config_settings = dict(get_value("htcondor_config_settings"))
+        requested_pool = str(htcondor_config_settings["Pool"])
+        requested_accounting_group = str(htcondor_config_settings["AccountingGroup"])
+        if requested_pool in available_pools:
+            htcondor_pool_config["Pool"] = requested_pool
+            htcondor_pool_config["AccountingGroup"] = requested_accounting_group
+
+    except Exception:
+        # The key does not exists in the database or it is malformed
+        pass
+
+    return htcondor_pool_config["Pool"], htcondor_pool_config["AccountingGroup"]

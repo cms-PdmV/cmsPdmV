@@ -18,6 +18,7 @@ import tools.settings as settings
 from couchdb_layer.mcm_database import database
 from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
+from json_layer.validation import get_validation_strategy
 from tools.installer import installer as Locator
 from tools.ssh_executor import ssh_executor
 
@@ -67,7 +68,8 @@ class ValidationControl():
         Fetch jobs from HTCondor
         Return a dictionary where key is job id and value is status (IDLE, RUN, DONE)
         """
-        cmd = ['module load lxbatch/tzero',
+        htcondor_pool, _ = settings.get_htcondor_config_for_validation()
+        cmd = ['module load %s' % (htcondor_pool),
                'condor_q -af:h ClusterId JobStatus']
 
         stdout, stderr = self.ssh_executor.execute_command(cmd)
@@ -520,6 +522,7 @@ class ValidationControl():
         threads_int = int(threads)
         threads_dict = running[threads]
         extra_notifications = storage_item.get('extra_notifications', [])
+        validation_stage = storage_item['stage']
         # Check log output
         log_file, out_file, err_file = self.read_output_files(validation_name, threads)
         if self.removed_due_to_exceeded_walltime(log_file):
@@ -584,8 +587,8 @@ class ValidationControl():
             return False
 
         self.logger.info('Reports include these requests:\n%s', '\n'.join(list(reports.keys())))
-        if threads_int != 1:
-            self.logger.info('Validation was done for %s threads, not checking the values', threads)
+        if validation_stage != 1:
+            self.logger.info('Validation is not related to the first stage, not checking the values for %s threads', threads)
             for request_name, report in reports.items():
                 expected_dict = threads_dict['expected'][request_name]
                 # Add CPU name
@@ -786,9 +789,9 @@ class ValidationControl():
             storage_item['stage'] = stage
             self.storage.save(validation_name, storage_item)
             if stage == 2 and self.can_run_multicore_validations(validation_name):
-                self.submit_item(validation_name, 2)
-                self.submit_item(validation_name, 4)
-                self.submit_item(validation_name, 8)
+                # Pick up a strategy and move to the next stage
+                strategy = get_validation_strategy(validation_name)
+                strategy.move_validation_to_next_stage(validation_control=self, validation_name=validation_name)
             else:
                 min_events_per_lumi = 10
                 max_events_per_lumi = self.get_events_per_lumi(storage_item)
@@ -992,6 +995,7 @@ class ValidationControl():
                 'expected_events': expected_events}
 
     def get_htcondor_submission_file(self, validation_name, job_length, threads, memory, output_prepids):
+        _, accounting_group =  settings.get_htcondor_config_for_validation()
         transfer_input_files = ['voms_proxy.txt']
         transfer_output_files = []
         for output_prepid in output_prepids:
@@ -1029,7 +1033,7 @@ class ValidationControl():
                        'periodic_remove       = (JobStatus == 5 && HoldReasonCode != 1 && HoldReasonCode != 16 && HoldReasonCode != 21 && HoldReasonCode != 26)',
                        '+MaxRuntime           = %s' % (job_length),
                        'RequestCpus           = %s' % (request_cores),
-                       '+AccountingGroup      = "group_u_CMS.CAF.PHYS"',
+                       '+AccountingGroup      = "%s"' % (accounting_group),
                        '+JobPrio              = %s' % (condor_prio),
                        'requirements          = (OpSysAndVer =?= "AlmaLinux9")',
                        # Leave in queue when status is DONE for 30 minutes - 1800 seconds
@@ -1050,7 +1054,10 @@ class ValidationControl():
             command = ['rm -rf %s' % (item_directory),
                        'mkdir -p %s' % (item_directory)]
             _, _ = self.ssh_executor.execute_command(command)
-            self.submit_item(validation_name, 1)
+
+            # Pick up a strategy and submit the initial job
+            strategy = get_validation_strategy(validation_name)
+            strategy.submit_initial_validation(validation_control=self, validation_name=validation_name)
 
     def requests_for_validation(self, validation_name):
         if '-chain_' in validation_name:
@@ -1063,11 +1070,11 @@ class ValidationControl():
         return requests
 
     def submit_item(self, validation_name, threads):
-        validation_directory = '%s%s' % (self.test_directory_path, validation_name)
         # Get list of requests that will run in this validation
         # Single request validation will have only that list
         # Chained request validation might have multiple requests in sequence
         self.logger.info('Submitting %s validation with %s threads', validation_name, threads)
+        validation_strategy = get_validation_strategy(validation_name)
         requests = self.requests_for_validation(validation_name)
         expected_dict = {}
         validation_runtime = 0
@@ -1079,7 +1086,7 @@ class ValidationControl():
             request_prepid = request.get_attribute('prepid')
             request_prepids.append(request_prepid)
             # Sum all run times
-            validation_runtime += int(request.get_validation_max_runtime())
+            validation_runtime += int(validation_strategy.get_validation_max_runtime(request))
             # Get max memory of all requests, round it up to next GB
             request_memory = int(math.ceil(request.get_attribute('memory') / 1000.0) * 1000)
             max_memory = max(max_memory, request_memory)
@@ -1091,48 +1098,30 @@ class ValidationControl():
             expected_dict[request_prepid] = []
             sequences = request.get_attribute('sequences')
             for sequence_index in range(len(sequences)):
+                expected_events = validation_strategy.get_event_count_for_validation(request=request, threads=threads)
                 expected_dict[request_prepid].append({'time_per_event': request.get_attribute('time_event')[sequence_index],
                                                       'size_per_event': request.get_attribute('size_event')[sequence_index],
                                                       'memory': request_memory,
                                                       'filter_efficiency': request.get_efficiency(),
-                                                      'events': request.get_event_count_for_validation()})
+                                                      'events': expected_events})
 
         self.logger.info('%s %s thread validation info:', validation_name, threads)
         self.logger.info('PrepIDs: %s', ', '.join(request_prepids))
         self.logger.info('Validation runtime: %s', validation_runtime)
         self.logger.info('Validation memory: %s', max_memory)
-        # Make a HTCondor .sub file
-        condor_file = self.get_htcondor_submission_file(validation_name, validation_runtime, threads, max_memory, request_prepids)
 
-        # Write files straight to afs
-        condor_file_name = '%s/%s_threads.sub' % (validation_directory, threads)
-        with open(condor_file_name, 'w') as f:
-            f.write(condor_file)
-
-        validation_script_file_name = '%s/%s_%s_threads.sh' % (validation_directory, validation_name, threads)
-        with open(validation_script_file_name, 'w') as f:
-            f.write(validation_script)
-
-        # Condor submit
-        command = ['cd %s' % (validation_directory),
-                   'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 168',
-                   'chmod +x %s' % (validation_script_file_name.split('/')[-1]),
-                   'module load lxbatch/tzero',
-                   'condor_submit %s' % (condor_file_name.split('/')[-1])]
-        stdout, stderr = self.ssh_executor.execute_command(command)
-
-        # Get condor job ID from std output
-        if stdout and '1 job(s) submitted to cluster' in stdout:
-            # output is "1 job(s) submitted to cluster xxxxxx"
-            condor_id = int(float(stdout.split()[-1]))
-            self.logger.info('Submitted %s, HTCondor ID %s',
-                             validation_script_file_name.split('/')[-1],
-                             condor_id)
-        else:
-            self.logger.error('Error submitting %s:\nSTDOUT: %s\nSTDERR: %s',
-                              validation_script_file_name.split('/')[-1],
-                              stdout, stderr)
-            return
+        # Submit a HTCondor job and get its id
+        condor_id = self.submit_htcondor_job(
+            validation_name,
+            validation_script,
+            validation_runtime,
+            threads,
+            max_memory,
+            request_prepids
+        )
+        if not condor_id:
+            self.logger.error("Unable to submit a HTCondor job for: %s - %s threads", validation_name, threads)
+            return None
 
         storage_dict = self.storage.get(validation_name)
         if not storage_dict:
@@ -1194,6 +1183,53 @@ class ValidationControl():
 
         # It is allowed
         return True
+
+    def submit_htcondor_job(
+        self,
+        validation_name: str,
+        validation_script: str,
+        validation_runtime: int,
+        threads: int,
+        max_memory: int,
+        request_prepids: list[str],
+    ) -> int | None:
+        # Validation directory in afs
+        validation_directory = '%s%s' % (self.test_directory_path, validation_name)
+
+        # Make a HTCondor .sub file
+        condor_file = self.get_htcondor_submission_file(validation_name, validation_runtime, threads, max_memory, request_prepids)
+
+        # Write files straight to afs
+        condor_file_name = '%s/%s_threads.sub' % (validation_directory, threads)
+        with open(condor_file_name, 'w') as f:
+            f.write(condor_file)
+
+        validation_script_file_name = '%s/%s_%s_threads.sh' % (validation_directory, validation_name, threads)
+        with open(validation_script_file_name, 'w') as f:
+            f.write(validation_script)
+
+        # Condor submit
+        htcondor_pool, _ = settings.get_htcondor_config_for_validation()
+        command = ['cd %s' % (validation_directory),
+                   'voms-proxy-init --voms cms --out $(pwd)/voms_proxy.txt --hours 168',
+                   'chmod +x %s' % (validation_script_file_name.split('/')[-1]),
+                   'module load %s' % (htcondor_pool),
+                   'condor_submit %s' % (condor_file_name.split('/')[-1])]
+        stdout, stderr = self.ssh_executor.execute_command(command)
+
+        # Get condor job ID from std output
+        if stdout and '1 job(s) submitted to cluster' in stdout:
+            # output is "1 job(s) submitted to cluster xxxxxx"
+            condor_id = int(float(stdout.split()[-1]))
+            self.logger.info('Submitted %s, HTCondor ID %s',
+                             validation_script_file_name.split('/')[-1],
+                             condor_id)
+            return condor_id
+        else:
+            self.logger.error('Error submitting %s:\nSTDOUT: %s\nSTDERR: %s',
+                              validation_script_file_name.split('/')[-1],
+                              stdout, stderr)
+            return None
 
 
 if __name__ == '__main__':

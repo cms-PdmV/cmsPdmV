@@ -1,6 +1,7 @@
 import os
 import subprocess
 import datetime
+import tools.settings as settings
 
 from rest_api.RestAPIMethod import RESTResource
 from tools.ssh_executor import ssh_executor
@@ -28,7 +29,8 @@ class GetBjobs(RESTResource):
             return {"results": out}
 
     def create_command(self, options):
-        bcmd = 'module load lxbatch/tzero && condor_q -nobatch '
+        htcondor_pool, _ = settings.get_htcondor_config_for_validation()
+        bcmd = 'module load %s && condor_q -nobatch ' % (htcondor_pool)
 
         # Extra options for the dashboard output
         if '-hold' in options:
