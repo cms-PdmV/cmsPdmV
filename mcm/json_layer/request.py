@@ -3063,7 +3063,7 @@ class request(json_base):
 
             validation_info = sorted(validation_info, key=lambda v: v['threads'])
             self.logger.info('Validation info (by threads) %s', dumps(validation_info, indent=2, sort_keys=True))
-            validation_info = [v for v in validation_info if v['cpu_efficiency'] > max_efficiency - filter_efficiency_margin]
+            validation_info = [v for v in validation_info if v['cpu_efficiency'] > cpu_efficiency_threshold]
             self.logger.info('Validation info after filter (by cpu eff) %s', dumps(validation_info, indent=2, sort_keys=True))
             if validation_info:
                 validation_info = validation_info[-1]
