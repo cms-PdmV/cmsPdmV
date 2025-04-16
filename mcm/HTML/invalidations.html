@@ -77,9 +77,6 @@
                 <a rel="tooltip" title="Edit invalidation" ng-href="edit?db_name=invalidations&prepid={{objectToId(invalidations_info['object'])}}" ng-hide="role(2);" target="_self">
                   <i class="icon-wrench"></i>
                 </a>
-                <a rel="tooltip" title="Clear invalidation" ng-click="do_action(invalidations_info['_id'], 'clear');" ng-hide="role(3);" ng-href="#">
-                  <i class="icon-fire"></i>
-                </a>
                 <a rel="tooltip" title="Announce invalidation" ng-click="do_action(invalidations_info['_id'], 'announce');" ng-hide="role(3);" ng-href="#">
                   <i class="icon-bullhorn"></i>
                 </a>
@@ -112,9 +109,6 @@
       <div class="span4">
         <span>
           Multiple selection buttons
-          <a ng-click="do_action(selected_objects, 'clear');" rel="tooltip" ng-hide="role(3);" title="Clear selected invalidations" ng-href="#">
-            <i class="icon-fire"></i>
-          </a>
           <a ng-click="do_action(selected_objects, 'announce');" rel="tooltip" ng-hide="role(3);" title="Announce selected invalidations" ng-href="#">
             <i class="icon-bullhorn"></i>
           </a>

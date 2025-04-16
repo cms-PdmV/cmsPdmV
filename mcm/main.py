@@ -7,7 +7,7 @@ from rest_api.ChainedRequestActions import ForceChainReqToDone, ForceStatusDoneT
 from rest_api.FlowActions import CreateFlow, UpdateFlow, DeleteFlow, GetFlow, ApproveFlow, CloneFlow
 from rest_api.UserActions import GetUserRole, AddRole, AskRole, ChangeRole, GetUser, SaveUser, GetUserPWG, NotifyPWG
 from rest_api.BatchActions import HoldBatch, GetBatch, AnnounceBatch, InspectBatches, ResetBatch, NotifyBatch
-from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, ClearInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
+from rest_api.InvalidationActions import GetInvalidation, DeleteInvalidation, AnnounceInvalidations, AcknowledgeInvalidation, PutHoldtoNewInvalidations, PutOnHoldInvalidation
 from rest_api.DashboardActions import GetLocksInfo, GetBjobs, GetLogFeed, GetLogs, GetRevision, GetStartTime, GetQueueInfo
 from rest_api.MccmActions import GetMccm, UpdateMccm, CreateMccm, DeleteMccm, CancelMccm, GetEditableMccmFields, GenerateChains, MccMReminderProdManagers, MccMReminderGenConveners, MccMReminderGenContacts, CalculateTotalEvts, CheckIfAllApproved, NotifyMccm
 from rest_api.SettingsActions import GetSetting, UpdateSetting, SaveSetting
@@ -335,7 +335,6 @@ api.add_resource(NotifyBatch, '/restapi/batches/notify')
 api.add_resource(GetInvalidation, '/restapi/invalidations/get/<string:invalidation_id>')
 api.add_resource(DeleteInvalidation, '/restapi/invalidations/delete/<string:invalidation_id>')
 api.add_resource(AnnounceInvalidations, '/restapi/invalidations/announce')
-api.add_resource(ClearInvalidations, '/restapi/invalidations/clear')
 api.add_resource(AcknowledgeInvalidation, '/restapi/invalidations/acknowledge/<string:invalidation_id>')
 api.add_resource(PutOnHoldInvalidation, '/restapi/invalidations/new_to_hold')
 api.add_resource(PutHoldtoNewInvalidations, '/restapi/invalidations/hold_to_new')
