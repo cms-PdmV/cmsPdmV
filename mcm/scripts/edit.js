@@ -145,30 +145,40 @@ angular.module('testApp').controller('ModalDemoCtrl',
           },
           showData: function() {
             return $scope.showData;
-          }
+          },
+          doNotDelete: function() {
+            return $scope.genParam_data.length <= 1;
+          },
         }
       });
 
-      genParamModal.result.then(function(new_gen_params) {
+      genParamModal.result.then(function(resultData) {
+        let new_gen_params = resultData["data"];
+        let finalAction = resultData["action"];
         _.each(new_gen_params, function(elem,key){
           if (_.isString(elem) && key !="$$hashKey"){
             new_gen_params[key] = parseFloat(elem);
           }
         });
-        if(action == "Edit") {
+        if(finalAction == "Edit") {
           _.each(new_gen_params, function(elem,key){
             if (!isNaN(elem)){
               $scope.genParam_data[index][key] = elem;
             }
           });
+        } else if (finalAction == "Delete") {
+          if ($scope.genParam_data.length > 1) {
+            $scope.genParam_data.splice(index, 1);
+          }
         } else { // Add
           $scope.genParam_data.push(new_gen_params);
         }
       });
     };
 
-    var GeneratorParamsInstandeModal = function($scope, $modalInstance, data, action, showData) {
+    var GeneratorParamsInstandeModal = function($scope, $modalInstance, data, action, showData, doNotDelete) {
       $scope.action = action;
+      $scope.doNotDelete = doNotDelete;
       $scope.gen_params = {
         data: data,
         show: showData
@@ -177,8 +187,12 @@ angular.module('testApp').controller('ModalDemoCtrl',
         $modalInstance.dismiss();
       };
       $scope.saveGenParam = function() {
-        $modalInstance.close($scope.gen_params.data);
+        $modalInstance.close({"data": $scope.gen_params.data, "action": action});
       };
+      $scope.deleteGenParam = function() {
+        // Overwrite the action
+        $modalInstance.close({"data": $scope.gen_params.data, "action": "Delete"});
+      }
     };
 
   // Flows Request params shit
@@ -481,6 +495,7 @@ testApp.directive("generatorParams", function($http){
     '    <div class="modal-footer">'+
     '      <button class="btn btn-success" ng-click="saveGenParam()">Save</button>'+
     '      <button class="btn btn-warning cancel" ng-click="closeGenParam()">Cancel</button>'+
+    '      <button class="btn btn-danger" ng-click="deleteGenParam()" ng-hide="action == \'Add\' || doNotDelete">Delete</button>'+
     '    </div>'+ //end of modal footer
     '  </script>'+///END OF MODAL
     '  <ul ng-repeat="elem in genParam_data">'+
