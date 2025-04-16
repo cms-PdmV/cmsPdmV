@@ -54,18 +54,6 @@ class Announcer():
                 idb.update(to_announce.json())
 
 
-class Clearer():
-    def __init__(self):
-        self.db_name = "invalidations"
-
-    def clear(self, ds_to_be_invalidated, r_to_be_rejected):
-        if (len(ds_to_be_invalidated) != 0 or len(r_to_be_rejected) != 0):
-            for to_announce in itertools.chain(r_to_be_rejected, ds_to_be_invalidated):
-                to_announce.set_announced()
-                idb = database(self.db_name)
-                idb.update(to_announce.json())
-
-
 class GetInvalidation(RESTResource):
 
     access_limit = access_rights.administrator
@@ -138,44 +126,6 @@ class AnnounceInvalidations(RESTResource):
         announcer = Announcer()
         announcer.announce(list(map(invalidation, __ds_list)), list(map(invalidation, __r_list)))
         return {"results": True, "ds_to_invalidate": __ds_list, "requests_to_invalidate": __r_list}
-
-
-class ClearInvalidations(RESTResource):
-
-    access_limit = access_rights.production_manager
-
-    def __init__(self):
-        self.db_name = "invalidations"
-        self.before_request()
-        self.count_call()
-
-    def put(self):
-        """
-        Clear selected invalidations without announcing
-        """
-        input_data = loads(request.data)
-        if len(input_data) > 0:
-            return self.clear(input_data)
-        else:
-            return {"results": False, "message": "No elements selected"}
-
-    def clear(self, data):
-        db = database(self.db_name)
-        __ds_list = []
-        __r_list = []
-        for doc_id in data:
-            tmp = db.get(doc_id)  # we don't want to set clear announced objects
-            if tmp["type"] == "dataset" and tmp["status"] == "new":
-                __ds_list.append(tmp)
-            elif tmp["type"] == "request" and tmp["status"] == "new":
-                __r_list.append(tmp)
-            else:
-                self.logger.error("Tried to CLEAN non new invaldation: %s" % (tmp["object"]))
-
-        __clearer = Clearer()
-        __clearer.clear(list(map(invalidation, __ds_list)), list(map(invalidation, __r_list)))
-        return {"results": True, "ds_to_invalidate": __ds_list,
-                "requests_to_invalidate": __r_list}
 
 
 class AcknowledgeInvalidation(RESTResource):
