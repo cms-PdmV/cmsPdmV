@@ -10,7 +10,7 @@ from tools.locator import locator
 
 class GetBjobs(RESTResource):
 
-    access_limit = access_rights.user
+    access_limit = access_rights.generator_contact
 
     def __init__(self):
         self.before_request()
@@ -44,7 +44,7 @@ class GetBjobs(RESTResource):
 
 class GetLogFeed(RESTResource):
 
-    access_limit = access_rights.user
+    access_limit = access_rights.production_manager
 
     def __init__(self):
         self.before_request()
@@ -127,7 +127,7 @@ class GetStartTime(RESTResource):
 
 class GetLogs(RESTResource):
 
-    access_limit = access_rights.user
+    access_limit = access_rights.production_manager
 
     def __init__(self):
         self.path = locator().logs_folder()
@@ -171,7 +171,7 @@ class GetLocksInfo(RESTResource):
 
 class GetQueueInfo(RESTResource):
 
-    access_limit = access_rights.user
+    access_limit = access_rights.generator_contact
 
     def __init__(self):
         self.before_request()
