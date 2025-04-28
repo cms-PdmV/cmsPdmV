@@ -1555,7 +1555,7 @@ class request(json_base):
                 bash_file += ['',
                               '# Check if fragment contais gridpack path ant that it is in cvmfs',
                               'if grep -q "gridpacks" %s; then' % (fragment_name),
-                              '  if ! grep -q "/cvmfs/cms.cern.ch/phys_generator/gridpacks" %s; then' % (fragment_name),
+                              '  if ! grep -q -e "/cvmfs/cms.cern.ch/phys_generator/gridpacks" -e "/cvmfs/cms-griddata.cern.ch/phys_generator/gridpacks_tarball" %s; then' % (fragment_name),
                               '    echo "Gridpack inside fragment is not in cvmfs."',
                               '    exit -1',
                               '  fi',
