@@ -79,6 +79,9 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.update["success"] = false;
         $scope.update["fail"] = true;
         $scope.update["status_code"] = data.status;
+        if (data.data.message) {
+          $scope.results = data.data.message;
+        }
       });
 
       var promise2 = $http.get("restapi/dashboard/queue_info");
@@ -157,7 +160,13 @@ angular.module('testApp').controller('resultsCtrl',
         $scope.logs.list =  data.data.results;
         $scope.selectedLog = $scope.logs.list[0];
       }, function(data){
-        alert("Error getting logs list: " +data.status);
+        $scope.update["success"] = false;
+        $scope.update["fail"] = true;
+        $scope.update["status_code"] = data.status;
+        console.error("Error getting logs list - Unable to display logs: " + data.status);
+        if (data.data.message) {
+          $scope.logs.results = data.data.message;
+        }
       });
     };
 
