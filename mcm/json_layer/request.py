@@ -885,9 +885,11 @@ class request(json_base):
                     mcm_r.approve()
                     mcm_r.reload(save_current=True)
 
+        is_root_in_all_chains = True
         for c in self.get_attribute('member_of_chain'):
             mcm_cr = crdb.get(c)
             is_the_current_one = (mcm_cr['chain'].index(self.get_attribute('prepid')) == mcm_cr['step'])
+            is_root_in_all_chains &= (mcm_cr['chain'].index(self.get_attribute('prepid')) == 0)
             if not is_the_current_one and moveon_with_single_submit:
                 # check that something else in the chain it belongs to is indicating that
                 raise self.WrongApprovalSequence(
@@ -896,6 +898,16 @@ class request(json_base):
                     'The request (%s)is not the current step (%s) of its chain (%s)' % (
                         self.get_attribute('prepid'),
                         mcm_cr['step'], c))
+
+        # Before submitting, check the value of `mcdb_id` is correct.
+        if is_root_in_all_chains and self.get_attribute('mcdb_id') >= 0 and not self.get_attribute('input_dataset'):
+            # This must be `mcdb_id` = -1
+            self.logger.warning(
+                'Attribute mcdb_id was not properly assigned for request (%s) - Input dataset was not provided - Setting to -1',
+                prepid
+            )
+            self.set_attribute('mcdb_id', -1)
+            self.reload()
 
         if is_the_current_one:
             self.logger.info('Doing TaskChain submission for %s', prepid)
