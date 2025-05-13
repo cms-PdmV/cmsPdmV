@@ -5,6 +5,7 @@ import os.path
 import os
 import re
 import math
+import numbers
 import random
 import xml.etree.ElementTree as ET
 from math import ceil, sqrt
@@ -516,6 +517,7 @@ class ValidationControl():
         Parse reports, fail, resubmit or proceed validation to next step
         """
         self.logger.info('Processing done %s %s thread validation', validation_name, threads)
+        store_done_result = True
         storage_item = self.storage.get(validation_name)
         running = storage_item['running']
         cmssw_versions_of_succeeded = []
@@ -591,6 +593,7 @@ class ValidationControl():
             self.logger.info('Validation is not related to the first stage, not checking the values for %s threads', threads)
             for request_name, report in reports.items():
                 expected_dict = threads_dict['expected'][request_name]
+                attempt_number = threads_dict['attempt_number']
                 # Add CPU name
                 cpu_name = self.extract_cpu_name(out_file)
                 if cpu_name:
@@ -603,6 +606,26 @@ class ValidationControl():
                                   self.json_dumps(expected_dict),
                                   request_name,
                                   self.json_dumps(report))
+
+                # Check no measured value is zero
+                last_report_measurements = [value for value in report[-1].values() if isinstance(value, numbers.Real)]
+                any_measurement_zero = any(measure == 0 for measure in last_report_measurements)
+                if any_measurement_zero:
+                    if attempt_number < self.max_attempts:
+                        self.logger.warning(
+                            "Some values are zero for validation (%s) and thread attempt (%s), repeating validation",
+                            validation_name,
+                            threads
+                        )
+                        self.submit_item(validation_name, threads_int)
+                        return True
+                    else:
+                        store_done_result = False
+                        message = (
+                            f"Unfortunately after several attempts ({self.max_attempts}), the validation result for ({validation_name}) "
+                            f"and thread attempt ({threads_int}) has zero values, ignoring this result..."
+                        )
+                        self.logger.error(message)
         else:
             attempt_number = threads_dict['attempt_number']
             self.logger.info('This was attempt number %s for %s thread validation', attempt_number, threads)
@@ -698,8 +721,10 @@ class ValidationControl():
         self.logger.info('Success for %s %s thread validation', validation_name, threads)
         # If there was no break in the loop - nothing was resubmitted
         del running[threads]
-        storage_item['done'][threads] = reports
         storage_item['extra_notifications'] = extra_notifications
+        if store_done_result:
+            storage_item['done'][threads] = reports
+
         self.storage.save(validation_name, storage_item)
         return True
 
