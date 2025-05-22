@@ -1891,15 +1891,20 @@ class request(json_base):
                 else:
                     cmsweb_url = 'https://cmsweb.cern.ch'
 
-                connection = ConnectionWrapper(host=cmsweb_url, keep_open=True)
-                for reqmgr_name in reqmgr_names:
-                    self.logger.info('Changing "%s" priority to %s', reqmgr_name, new_priority)
-                    response = connection.api('PUT',
-                                              '/reqmgr2/data/request/%s' % (reqmgr_name),
-                                              {'RequestPriority': new_priority})
-                    self.logger.debug(response)
-
-                connection.close()
+                with ConnectionWrapper(host=cmsweb_url, keep_open=True) as connection:
+                    for reqmgr_name in reqmgr_names:
+                        self.logger.info('Changing "%s" priority to %s', reqmgr_name, new_priority)
+                        response = connection.api('PUT',
+                                                '/reqmgr2/data/request/%s' % (reqmgr_name),
+                                                {'RequestPriority': new_priority})
+                        self.logger.debug(response)
+                        if not response:
+                            # Unable to perform the HTTP request!
+                            return False
+                        if isinstance(response, tuple):
+                            _, status_code = response
+                            if status_code != 200:
+                                return False
 
             return self.modify_priority(new_priority)
 

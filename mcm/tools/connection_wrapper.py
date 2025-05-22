@@ -51,6 +51,7 @@ class ConnectionWrapper():
     def __enter__(self):
         self.logger.debug('Entering context, host: %s', self.host_url)
         self.keep_open = True
+        return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.logger.debug('Exiting context, host: %s', self.host_url)
@@ -118,7 +119,7 @@ class ConnectionWrapper():
                                       method,
                                       url,
                                       response_to_return)
-                    return response_to_return
+                    return response_to_return, response.status
 
                 if not self.keep_open:
                     self.close()
@@ -129,7 +130,7 @@ class ConnectionWrapper():
                                   self.host_url,
                                   url,
                                   end_time - start_time)
-                return response_to_return
+                return response_to_return, response.status
             except Exception as ex:
                 raise ex
                 self.logger.error('Exception while doing a %s to %s: %s',
