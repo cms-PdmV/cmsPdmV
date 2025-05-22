@@ -72,12 +72,18 @@
                 <a ng-hide="allRequestsApproved[data.prepid] !== undefined" ng-click="checkIfAllApproved(data.prepid)" rel="tooltip" title="Check approval of requests" ng-href="#">
                   <i class="icon-eye-open"></i>
                 </a>
+                <a rel="tooltip" title="View gitlab MccM issues for {{data.prepid}}" ng-href="https://gitlab.cern.ch/cms-gen/mccm/-/issues/?state=all&search={{data.prepid}}" target="_self">
+                  <i class="icon-tasks"></i>
+                </a>
               </div>
               <div ng-switch-when="pwg">
                 <a ng-href='mccms?pwg={{data[column.db_name]}}' rel="tooltip" title="View mccms for {{data[column.db_name]}}" target="_self"> {{data[column.db_name]}}</a>
               </div>
               <div ng-switch-when="meeting">
                 <a ng-href='mccms?meeting={{data[column.db_name]}}' rel="tooltip" title="View mccms for {{data[column.db_name]}}" target="_self"> {{data[column.db_name]}}</a>
+                <a el="tooltip" title="View gitlab MccM issues for meeting of {{data[column.db_name]}}" ng-href="https://gitlab.cern.ch/cms-gen/mccm/-/issues/?state=all&search={{meetingKeyWord(data.prepid)}}" target="_self">
+                 <i class="icon-tasks"></i>
+                </a> 
               </div>
               <div ng-switch-when="status">
                 <a ng-href='mccms?status={{data[column.db_name]}}' rel="tooltip" title="View mccms for {{data[column.db_name]}}" target="_self"> {{data[column.db_name]}}</a>

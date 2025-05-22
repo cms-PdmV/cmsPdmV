@@ -100,7 +100,11 @@ angular.module('testApp').controller('resultsCtrl',
       $scope.findToken = function (tok) {
         $window.location.href = "requests?&tags=" + tok.value
       };
-
+      
+      $scope.meetingKeyWord = function (prepid) {
+        return prepid.split("-")[1]
+      };
+      
       $scope.generateAllRequests = function (input_data) {
         var tmp_url = [];
         if (input_data.length > 0) {
