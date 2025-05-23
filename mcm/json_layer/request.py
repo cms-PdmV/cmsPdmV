@@ -683,11 +683,11 @@ class request(json_base):
         idb = database("invalidations")
         res = idb.search({"prepid": self.get_attribute("prepid")}, page=-1)
         for el in res:
-            if el["status"] in ["new", "announced"]:
+            if (el["type"] == "request") and (el["status"] in ["new", "announced"]):
                 raise self.WrongApprovalSequence(
                     self.get_attribute('status'),
                     'approve',
-                    'There are unacknowledged invalidations for request: %s' % (self.get_attribute("prepid")))
+                    'There are unacknowledged workflow invalidations for request: %s' % (self.get_attribute("prepid")))
 
         crdb = database('chained_requests')
         rdb = database('requests')
