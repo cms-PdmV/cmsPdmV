@@ -1430,7 +1430,7 @@ class request(json_base):
                 report_name += '%s_threads_report.xml' % (threads)
                 bash_file += ['touch %s' % (report_name)]
 
-        run_gen_script = for_validation and self.should_run_gen_script() and (threads == 1 or threads is None)
+        run_gen_script = for_validation and self.should_run_gen_script() and (threads is None or validation_strategy.is_first_validation(self, threads))
         self.logger.info('Should %s run GEN script: %s' % (prepid, 'YES' if run_gen_script else 'NO'))
         if run_gen_script:
             # Run CMS GEN script using Apptainer containers

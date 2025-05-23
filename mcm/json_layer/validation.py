@@ -76,6 +76,17 @@ class ValidationStrategy(abc.ABC):
         """
         pass
 
+    @abc.abstractmethod
+    def is_first_validation(self, request, threads) -> bool:
+        """
+        Check if the given number of threads is related to the first validation scenario.
+
+        Args:
+            request (json_layer.request.request): Request to compute validation runtime.
+            threads (int): Number of threads to check.
+        """
+        pass
+
     def get_validation_max_runtime(self, request) -> int:
         """
         Get the maximum number of seconds that a job could run.
@@ -179,6 +190,9 @@ class LongValidationStrategy(ValidationStrategy):
         sequence_dict["nThreads"] = threads_int
         sequence_dict["number"] = input_events # -n
         return sequence_dict
+
+    def is_first_validation(self, request, threads) -> bool:
+        return threads == 1
 
 
 class ShortValidationStrategy(ValidationStrategy):
@@ -322,6 +336,14 @@ class ShortValidationStrategy(ValidationStrategy):
             sequence_dict["number"] = target_input_events
 
         return sequence_dict
+
+    def is_first_validation(self, request, threads) -> bool:
+        validation_thread_configurations = self._get_thread_configurations(request=request)
+        validation_scenarios = validation_thread_configurations["scenarios"]
+        threads_for_request = {int(thread_str) for thread_str in validation_scenarios.keys()}
+        if not threads_for_request:
+            return False
+        return threads == min(threads_for_request)
 
     def _get_test_output_events(self) -> int:
         """Get the number of output events that the validation job should produce."""
