@@ -1677,6 +1677,9 @@ class request(json_base):
                 sequence_dict=sequence_dict,
                 threads=threads
             )
+            if index != len(sequences) - 1 and "number_out" in sequence_dict and "number" in sequence_dict:
+                sequence_dict["number_out"] = sequence_dict["number"]
+
             if configs_to_upload and "number_out" in sequence_dict:
                 # This is related to the upload fragment procedure to
                 # ReqMgr2, remove the `--number_out` parameter in case
