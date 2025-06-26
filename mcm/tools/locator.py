@@ -291,3 +291,7 @@ class locator:
             return custom_wmcontrol_path
 
         return "/afs/cern.ch/cms/PPD/PdmV/tools/wmcontrol"
+
+    def get_validation_failed_log_folder(self):
+        """Return the folder to store validation failed records for further inspection."""
+        return os.getenv("MCM_VALIDATION_FAILED_EOS_FOLDER")

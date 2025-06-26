@@ -8,6 +8,8 @@ import math
 import numbers
 import random
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
+from pathlib import Path
 from math import ceil, sqrt
 from xml.parsers.expat import ExpatError
 # from xml.etree.ElementTree import ParseError
@@ -20,8 +22,9 @@ from couchdb_layer.mcm_database import database
 from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
 from json_layer.validation import get_validation_strategy
-from tools.installer import installer as Locator
+from tools.installer import installer as Installer
 from tools.ssh_executor import ssh_executor
+from tools.ssh_executor import locator as Locator
 
 
 class ValidationControl():
@@ -41,8 +44,8 @@ class ValidationControl():
 
         # Manage the validation folder
         with ssh_executor(server=settings.get_value('node_for_test')) as executor:
-            with Locator('validation/tests', executor, care_on_existing=False, clean_on_exit=False) as locator:
-                self.test_directory_path = locator.location()
+            with Installer('validation/tests', executor, care_on_existing=False, clean_on_exit=False) as installer:
+                self.test_directory_path = installer.location()
                 self.logger.info('Location %s' % (self.test_directory_path))
 
     def run(self):
@@ -903,9 +906,7 @@ class ValidationControl():
 
         self.storage.delete(validation_name)
         # Delete validation directory
-        item_directory = '%s%s' % (self.test_directory_path, validation_name)
-        command = ['rm -rf %s' % (item_directory)]
-        _, _ = self.ssh_executor.execute_command(command)
+        self.copy_validation_failed_jobs_eos(validation_name)
         self.logger.info('Validation failed for %s', validation_name)
 
     def validation_succeeded(self, validation_name):
@@ -1272,6 +1273,40 @@ class ValidationControl():
                               validation_script_file_name.split('/')[-1],
                               stdout, stderr)
             return None
+
+    def copy_validation_failed_jobs_eos(self, validation_name):
+        """
+        Copy the files related to a failed validation attempt to /eos/
+        """
+        eos_folder = Locator().get_validation_failed_log_folder()
+        if not eos_folder:
+            self.logger.warning("The path of the /eos folder for storing failed validation records is not set, skipping this step...")
+            return
+
+        now = datetime.now(timezone.utc).isoformat()
+        datetime_path = now.replace(":", "-").replace(".", "-")
+        eos_folder_path = Path(eos_folder) / Path(validation_name) / Path(datetime_path)
+        _, stderr = self.ssh_executor.execute_command(['mkdir -p %s' % (str(eos_folder_path))])
+        if stderr:
+            self.logger.error(
+                "Unable to create the folder in /eos for storing the attempt. Not moving content. Details: %s",
+                stderr
+            )
+            return
+
+        item_directory = '%s%s' % (self.test_directory_path, validation_name)
+        # Move all files excluding the `voms_proxy` certificate to the new /eos folder
+        moving_command = ["find %s -type f ! -name 'voms_proxy.txt' | xargs -I {} mv {} %s/" % (item_directory, str(eos_folder_path))]
+        _, stderr = self.ssh_executor.execute_command(moving_command)
+        if stderr:
+            self.logger.error(
+                "Unable to move the failed validation content to the folder. Details: %s",
+                stderr
+            )
+            return
+
+        # Remove the old directory
+        _, _ = self.ssh_executor.execute_command(['rmdir %s' % (item_directory)])
 
 
 if __name__ == '__main__':
