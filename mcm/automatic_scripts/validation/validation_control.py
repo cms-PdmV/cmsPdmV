@@ -646,7 +646,7 @@ class ValidationControl():
                     self.validation_failed(validation_name)
                     message += ('Either time per event is too big or validation duration is not long enough. '
                                 'Please adjust time per event or run a longer validation.')
-                    self.notify_validation_failed(validation_name, message)
+                    self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                     return False
 
                 # Check time per event
@@ -656,12 +656,12 @@ class ValidationControl():
                         adjusted_time_per_event = self.adjust_time_per_event(request_name, expected_dict, report)
                         message += '\nTime per event is adjusted to %s.\nValidation will be automatically retried' % (', '.join(['%.4fs' % (a) for a in adjusted_time_per_event]))
                         self.submit_item(validation_name, threads_int)
-                        self.notify_validation_failed(validation_name, message)
+                        self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                         return True
                     else:
                         self.validation_failed(validation_name)
                         message += '\nValidation failed %s attempts out of allowed %s.\nValidation will NOT be automatically retried.' % (attempt_number, self.max_attempts)
-                        self.notify_validation_failed(validation_name, message)
+                        self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                         return False
 
                 if message:
@@ -674,12 +674,12 @@ class ValidationControl():
                         adjusted_size_per_event = self.adjust_size_per_event(request_name, expected_dict, report)
                         message += '\nSize per event is adjusted to %s.\nValidation will be automatically retried' % (', '.join(['%.4fkB' % (a) for a in adjusted_size_per_event]))
                         self.submit_item(validation_name, threads_int)
-                        self.notify_validation_failed(validation_name, message)
+                        self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                         return True
                     else:
                         self.validation_failed(validation_name)
                         message += '\nValidation failed %s attempts out of allowed %s.\nValidation will NOT be automatically retried.' % (attempt_number, self.max_attempts)
-                        self.notify_validation_failed(validation_name, message)
+                        self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                         return False
 
                 if message:
@@ -690,7 +690,7 @@ class ValidationControl():
                 if not passed:
                     self.validation_failed(validation_name)
                     message += '\nPlease check and adjust memory and retry validation.'
-                    self.notify_validation_failed(validation_name, message)
+                    self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                     return False
 
                 if message:
@@ -701,7 +701,7 @@ class ValidationControl():
                 if not passed:
                     self.validation_failed(validation_name)
                     message += '\nPlease check and adjust generator filter parameter and retry validation.'
-                    self.notify_validation_failed(validation_name, message)
+                    self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                     return False
 
                 if message:
@@ -747,6 +747,23 @@ class ValidationControl():
         message = 'Hello,\n\nUnfortunatelly %s validation failed.\n%s' % (validation_name, message)
         message = re.sub(r'[^\x00-\x7f]', '?', message)
         item.notify(subject, message)
+
+    def notify_validation_failed_for_first_stage(self, validation_name, message, threads, expected, report):
+        """
+        Send an email notification including extra details about the current case running,
+        expected and measured values.
+        """
+        wrapped_mesage = (
+            f'{message}\n\n'
+            f'Number of threads used: {threads}\n'
+            'Please find the expected and measured values for the validation test below:\n'
+            'Expected:\n'
+            f'{json.dumps(expected, indent=4)}\n'
+            'Measured:\n'
+            f'{json.dumps(report, indent=4)}\n'
+        )
+
+        return self.notify_validation_failed(validation_name, wrapped_mesage)
 
     def notify_validation_suceeded(self, validation_name):
         if '-chain_' in validation_name:
