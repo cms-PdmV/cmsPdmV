@@ -8,6 +8,8 @@ import math
 import numbers
 import random
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
+from pathlib import Path
 from math import ceil, sqrt
 from xml.parsers.expat import ExpatError
 # from xml.etree.ElementTree import ParseError
@@ -20,8 +22,9 @@ from couchdb_layer.mcm_database import database
 from json_layer.request import request as Request
 from json_layer.chained_request import chained_request as ChainedRequest
 from json_layer.validation import get_validation_strategy
-from tools.installer import installer as Locator
+from tools.installer import installer as Installer
 from tools.ssh_executor import ssh_executor
+from tools.ssh_executor import locator as Locator
 
 
 class ValidationControl():
@@ -41,8 +44,8 @@ class ValidationControl():
 
         # Manage the validation folder
         with ssh_executor(server=settings.get_value('node_for_test')) as executor:
-            with Locator('validation/tests', executor, care_on_existing=False, clean_on_exit=False) as locator:
-                self.test_directory_path = locator.location()
+            with Installer('validation/tests', executor, care_on_existing=False, clean_on_exit=False) as installer:
+                self.test_directory_path = installer.location()
                 self.logger.info('Location %s' % (self.test_directory_path))
 
     def run(self):
@@ -646,7 +649,7 @@ class ValidationControl():
                     self.validation_failed(validation_name)
                     message += ('Either time per event is too big or validation duration is not long enough. '
                                 'Please adjust time per event or run a longer validation.')
-                    self.notify_validation_failed(validation_name, message)
+                    self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                     return False
 
                 # Check time per event
@@ -656,12 +659,12 @@ class ValidationControl():
                         adjusted_time_per_event = self.adjust_time_per_event(request_name, expected_dict, report)
                         message += '\nTime per event is adjusted to %s.\nValidation will be automatically retried' % (', '.join(['%.4fs' % (a) for a in adjusted_time_per_event]))
                         self.submit_item(validation_name, threads_int)
-                        self.notify_validation_failed(validation_name, message)
+                        self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                         return True
                     else:
                         self.validation_failed(validation_name)
                         message += '\nValidation failed %s attempts out of allowed %s.\nValidation will NOT be automatically retried.' % (attempt_number, self.max_attempts)
-                        self.notify_validation_failed(validation_name, message)
+                        self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                         return False
 
                 if message:
@@ -674,12 +677,12 @@ class ValidationControl():
                         adjusted_size_per_event = self.adjust_size_per_event(request_name, expected_dict, report)
                         message += '\nSize per event is adjusted to %s.\nValidation will be automatically retried' % (', '.join(['%.4fkB' % (a) for a in adjusted_size_per_event]))
                         self.submit_item(validation_name, threads_int)
-                        self.notify_validation_failed(validation_name, message)
+                        self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                         return True
                     else:
                         self.validation_failed(validation_name)
                         message += '\nValidation failed %s attempts out of allowed %s.\nValidation will NOT be automatically retried.' % (attempt_number, self.max_attempts)
-                        self.notify_validation_failed(validation_name, message)
+                        self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                         return False
 
                 if message:
@@ -690,7 +693,7 @@ class ValidationControl():
                 if not passed:
                     self.validation_failed(validation_name)
                     message += '\nPlease check and adjust memory and retry validation.'
-                    self.notify_validation_failed(validation_name, message)
+                    self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                     return False
 
                 if message:
@@ -701,7 +704,7 @@ class ValidationControl():
                 if not passed:
                     self.validation_failed(validation_name)
                     message += '\nPlease check and adjust generator filter parameter and retry validation.'
-                    self.notify_validation_failed(validation_name, message)
+                    self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
                     return False
 
                 if message:
@@ -747,6 +750,23 @@ class ValidationControl():
         message = 'Hello,\n\nUnfortunatelly %s validation failed.\n%s' % (validation_name, message)
         message = re.sub(r'[^\x00-\x7f]', '?', message)
         item.notify(subject, message)
+
+    def notify_validation_failed_for_first_stage(self, validation_name, message, threads, expected, report):
+        """
+        Send an email notification including extra details about the current case running,
+        expected and measured values.
+        """
+        wrapped_mesage = (
+            f'{message}\n\n'
+            f'Number of threads used: {threads}\n'
+            'Please find the expected and measured values for the validation test below:\n'
+            'Expected:\n'
+            f'{json.dumps(expected, indent=4)}\n'
+            'Measured:\n'
+            f'{json.dumps(report, indent=4)}\n'
+        )
+
+        return self.notify_validation_failed(validation_name, wrapped_mesage)
 
     def notify_validation_suceeded(self, validation_name):
         if '-chain_' in validation_name:
@@ -886,9 +906,7 @@ class ValidationControl():
 
         self.storage.delete(validation_name)
         # Delete validation directory
-        item_directory = '%s%s' % (self.test_directory_path, validation_name)
-        command = ['rm -rf %s' % (item_directory)]
-        _, _ = self.ssh_executor.execute_command(command)
+        self.copy_validation_failed_jobs_eos(validation_name)
         self.logger.info('Validation failed for %s', validation_name)
 
     def validation_succeeded(self, validation_name):
@@ -1255,6 +1273,40 @@ class ValidationControl():
                               validation_script_file_name.split('/')[-1],
                               stdout, stderr)
             return None
+
+    def copy_validation_failed_jobs_eos(self, validation_name):
+        """
+        Copy the files related to a failed validation attempt to /eos/
+        """
+        eos_folder = Locator().get_validation_failed_log_folder()
+        if not eos_folder:
+            self.logger.warning("The path of the /eos folder for storing failed validation records is not set, skipping this step...")
+            return
+
+        now = datetime.now(timezone.utc).isoformat()
+        datetime_path = now.replace(":", "-").replace(".", "-")
+        eos_folder_path = Path(eos_folder) / Path(validation_name) / Path(datetime_path)
+        _, stderr = self.ssh_executor.execute_command(['mkdir -p %s' % (str(eos_folder_path))])
+        if stderr:
+            self.logger.error(
+                "Unable to create the folder in /eos for storing the attempt. Not moving content. Details: %s",
+                stderr
+            )
+            return
+
+        item_directory = '%s%s' % (self.test_directory_path, validation_name)
+        # Move all files excluding the `voms_proxy` certificate to the new /eos folder
+        moving_command = ["find %s -type f ! -name 'voms_proxy.txt' | xargs -I {} mv {} %s/" % (item_directory, str(eos_folder_path))]
+        _, stderr = self.ssh_executor.execute_command(moving_command)
+        if stderr:
+            self.logger.error(
+                "Unable to move the failed validation content to the folder. Details: %s",
+                stderr
+            )
+            return
+
+        # Remove the old directory
+        _, _ = self.ssh_executor.execute_command(['rmdir %s' % (item_directory)])
 
 
 if __name__ == '__main__':
