@@ -1310,7 +1310,7 @@ class ValidationControl():
             return
 
         # Remove the old directory
-        _, _ = self.ssh_executor.execute_command(['rmdir %s' % (item_directory)])
+        _, _ = self.ssh_executor.execute_command(['rm -rf %s' % (item_directory)])
 
 
 if __name__ == '__main__':
