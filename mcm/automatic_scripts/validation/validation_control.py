@@ -949,6 +949,7 @@ class ValidationControl():
         item_directory = '%s%s' % (self.test_directory_path, validation_name)
         command = ['rm -rf %s' % (item_directory)]
         _, _ = self.ssh_executor.execute_command(command)
+        self.remove_validation_failed_jobs_eos(validation_name)
         self.logger.info('Validation succeeded for %s', validation_name)
 
     def parse_job_report(self, report_path, threads, default_expected_events):
@@ -1311,6 +1312,23 @@ class ValidationControl():
 
         # Remove the old directory
         _, _ = self.ssh_executor.execute_command(['rm -rf %s' % (item_directory)])
+
+    def remove_validation_failed_jobs_eos(self, validation_name):
+        """
+        Remove all the records from a failed validation in /eos. Mainly, when it succeeds.
+        """
+        eos_folder = Locator().get_validation_failed_log_folder()
+        if not eos_folder:
+            self.logger.warning("The path of the /eos folder for storing failed validation records is not set, skipping this step...")
+            return
+
+        eos_folder_path = Path(eos_folder) / Path(validation_name)
+        _, stderr = self.ssh_executor.execute_command(['rm -rf %s' % (str(eos_folder_path))])
+        if stderr:
+            self.logger.error("Unable to remove the validation failed record located at: %s", stderr)
+            return
+        else:
+            self.logger.error("Validation failed record (%s) has been removed", eos_folder_path)
 
 
 if __name__ == '__main__':
