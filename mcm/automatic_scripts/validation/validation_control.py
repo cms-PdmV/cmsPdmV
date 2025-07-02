@@ -1285,8 +1285,12 @@ class ValidationControl():
 
         now = datetime.now(timezone.utc).isoformat()
         datetime_path = now.replace(":", "-").replace(".", "-")
-        eos_folder_path = Path(eos_folder) / Path(validation_name) / Path(datetime_path)
-        _, stderr = self.ssh_executor.execute_command(['mkdir -p %s' % (str(eos_folder_path))])
+        new_attempt_path = Path(validation_name) / Path(datetime_path)
+        eos_folder_path = Path(eos_folder) / new_attempt_path
+        _, stderr = self.ssh_executor.execute_command([
+            'cd %s' % (str(eos_folder)),
+            'mkdir -p ./%s' % (str(new_attempt_path))
+        ])
         if stderr:
             self.logger.error(
                 "Unable to create the folder in /eos for storing the attempt. Not moving content. Details: %s",
@@ -1306,7 +1310,7 @@ class ValidationControl():
             return
 
         # Remove the old directory
-        _, _ = self.ssh_executor.execute_command(['rmdir %s' % (item_directory)])
+        _, _ = self.ssh_executor.execute_command(['rm -rf %s' % (item_directory)])
 
 
 if __name__ == '__main__':
