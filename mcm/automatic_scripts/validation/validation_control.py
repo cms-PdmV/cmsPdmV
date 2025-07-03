@@ -265,14 +265,15 @@ class ValidationControl():
 
         return reports
 
-    def check_time_per_event(self, request_name, expected, report):
+    def check_time_per_event(self, request_name, expected, report, threads):
         if self.skip_check(request_name, "time_per_event"):
             self.logger.warning("Skipping the time_per_event check for request %s", request_name)
             return True, 'Check for time_per_event has been skipped!'
 
+        threads_int = int(threads)
         time_per_event_margin = settings.get_value('timing_fraction')
         for sequence_index in range(len(expected)):
-            expected_time_per_event = expected[sequence_index]['time_per_event']
+            expected_time_per_event = expected[sequence_index]['time_per_event'] / threads_int
             actual_time_per_event = report[sequence_index]['time_per_event']
             lower_threshold = expected_time_per_event * (1 - time_per_event_margin)
             upper_threshold = expected_time_per_event * (1 + time_per_event_margin)
@@ -378,10 +379,11 @@ class ValidationControl():
 
         return False, message
 
-    def adjust_time_per_event(self, request_name, expected, report):
+    def adjust_time_per_event(self, request_name, expected, report, threads):
+        threads_int = int(threads)
         adjusted_time_per_event = []
         for sequence_index in range(len(expected)):
-            expected_time_per_event = expected[sequence_index]['time_per_event']
+            expected_time_per_event = expected[sequence_index]['time_per_event'] / threads_int
             actual_time_per_event = report[sequence_index]['time_per_event']
             adjusted_time_per_event.append((expected_time_per_event + 9 * actual_time_per_event) / 10)
 
@@ -653,10 +655,10 @@ class ValidationControl():
                     return False
 
                 # Check time per event
-                passed, message = self.check_time_per_event(request_name, expected_dict, report)
+                passed, message = self.check_time_per_event(request_name, expected_dict, report, threads=threads_int)
                 if not passed:
                     if attempt_number < self.max_attempts:
-                        adjusted_time_per_event = self.adjust_time_per_event(request_name, expected_dict, report)
+                        adjusted_time_per_event = self.adjust_time_per_event(request_name, expected_dict, report, threads=threads_int)
                         message += '\nTime per event is adjusted to %s.\nValidation will be automatically retried' % (', '.join(['%.4fs' % (a) for a in adjusted_time_per_event]))
                         self.submit_item(validation_name, threads_int)
                         self.notify_validation_failed_for_first_stage(validation_name, message, threads, expected_dict, report)
