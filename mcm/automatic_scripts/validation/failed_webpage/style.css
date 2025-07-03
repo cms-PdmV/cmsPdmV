@@ -1,0 +1,79 @@
+body {
+  background: #fafafa;
+  color: rgba(0, 0, 0, 0.87);
+  font-family: "Roboto", sans-serif !important
+}
+
+h5 {
+  word-break:break-all;
+}
+
+a {
+  color: rgb(25, 118, 210) !important;
+}
+
+ul {
+  padding-left: 18px;
+  margin-bottom: 0;
+}
+
+.elevation-3 {
+  -webkit-box-shadow: 0 3px 3px -2px rgba(0,0,0,.2),0 3px 4px 0 rgba(0,0,0,.14),0 1px 8px 0 rgba(0,0,0,.12)!important;
+  box-shadow: 0 3px 3px -2px rgba(0,0,0,.2),0 3px 4px 0 rgba(0,0,0,.14),0 1px 8px 0 rgba(0,0,0,.12)!important;
+}
+
+.card {
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+.card-body {
+  padding: 8px 16px;
+}
+
+.bigger-text {
+  font-size: 1.25rem;
+}
+
+.font-weight-light {
+  font-weight: 300 !important;
+}
+
+.headline {
+  line-height: 2rem;
+  font-family: Roboto,sans-serif!important;
+  font-size: 1.5rem!important;
+  font-weight: 400;
+  letter-spacing: normal!important;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+header {
+  background-color: white;
+}
+
+.v-toolbar__content, .v-toolbar__extension {
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    position: relative;
+    z-index: 0;
+    padding: 4px 16px;
+}
+
+.vuetify-button {
+  height: 28px;
+  min-width: 50px;
+  padding: 0 12.4444444444px;
+  background-color:rgb(25, 118, 210);
+  font-size: 12px;
+  text-transform: uppercase;
+  text-decoration-style:solid;
+  color: #FFF;
+  font-weight: 500;
+  border: 0;
+  letter-spacing: 0.0892857143em;
+}
