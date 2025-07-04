@@ -334,6 +334,7 @@
                               <li>Peak Value RSS: {{sequence.peak_value_rss | number:2}} MB</li>
                               <li>Filter efficiency: {{(sequence.filter_efficiency) * 100 | number:1}} %</li>
                               <li>Time per event: {{sequence.time_per_event | number:4}} s</li>
+			      <li>Time per event (single thread): {{sequence.time_per_event_onethread | number:4}} s</li>
                               <li>Size per event: {{sequence.size_per_event | number:4}} kB</li>
                               <li ng-if="sequence.cpu_name">CPU Name: {{sequence.cpu_name}}</li>
                             </ul>
@@ -346,6 +347,7 @@
                           <li>Peak Value RSS: {{threadsResult[0].peak_value_rss | number:2}} MB</li>
                           <li>Filter efficiency: {{(threadsResult[0].filter_efficiency) * 100 | number:1}} %</li>
                           <li>Time per event: {{threadsResult[0].time_per_event | number:4}} s</li>
+			  <li>Time per event (single thread): {{threadsResult[0].time_per_event_onethread | number:4}} s</li>
                           <li>Size per event: {{threadsResult[0].size_per_event | number:4}} kB</li>
                           <li ng-if="threadsResult[0].cpu_name">CPU Name: {{threadsResult[0].cpu_name}}</li>
                         </ul>
@@ -356,6 +358,7 @@
                           <li>Peak Value RSS: {{threadsResult.peak_value_rss | number:2}} MB</li>
                           <li>Filter efficiency: {{(threadsResult.filter_efficiency) * 100 | number:1}} %</li>
                           <li>Time per event: {{threadsResult.time_per_event | number:4}} s</li>
+                          <li>Time per event (single thread): {{threadsResult.time_per_event_onethread | number:4}} s</li>
                           <li>Size per event: {{threadsResult.size_per_event | number:4}} kB</li>
                           <li ng-if="threadsResult.cpu_name">CPU Name: {{threadsResult.cpu_name}}</li>
                         </ul>
@@ -389,7 +392,7 @@
                 <span class="label label-info" ng-show="data[column.db_name]" title="Kegabytes">kB<span>
               </div>
               <div ng-switch-when="time_event" align="center">
-                {{data[column.db_name]}}
+                {{data[column.db_name] | number:4}}
                 <span class="label label-info" ng-show="data[column.db_name]" title="seconds">s<span>
               </div>
               <div ng-switch-when="filter_efficiency" align="center">
