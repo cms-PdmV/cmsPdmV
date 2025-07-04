@@ -273,7 +273,7 @@ class ValidationControl():
         time_per_event_margin = settings.get_value('timing_fraction')
         for sequence_index in range(len(expected)):
             expected_time_per_event = expected[sequence_index]['time_per_event']
-            actual_time_per_event = report[sequence_index]['time_per_event']
+            actual_time_per_event = report[sequence_index]['time_per_event_onethread']
             lower_threshold = expected_time_per_event * (1 - time_per_event_margin)
             upper_threshold = expected_time_per_event * (1 + time_per_event_margin)
             message = ('%s sequence %s/%s expected %.4fs +- %.2f%% (%.4fs - %.4fs) time per '
@@ -382,7 +382,7 @@ class ValidationControl():
         adjusted_time_per_event = []
         for sequence_index in range(len(expected)):
             expected_time_per_event = expected[sequence_index]['time_per_event']
-            actual_time_per_event = report[sequence_index]['time_per_event']
+            actual_time_per_event = report[sequence_index]['time_per_event_onethread']
             adjusted_time_per_event.append((expected_time_per_event + 9 * actual_time_per_event) / 10)
 
         request = self.request_db.get(request_name)
@@ -390,7 +390,7 @@ class ValidationControl():
         self.logger.info('%s expected %s time per event, measured %s, adjusting to %s',
                          request_name,
                          ', '.join(['%.4fs' % (e['time_per_event']) for e in expected]),
-                         ', '.join(['%.4fs' % (r['time_per_event']) for r in report]),
+                         ', '.join(['%.4fs' % (r['time_per_event_onethread']) for r in report]),
                          ', '.join(['%.4fs' % (a) for a in adjusted_time_per_event]))
         self.request_db.save(request)
         return adjusted_time_per_event
@@ -1030,6 +1030,7 @@ class ValidationControl():
         # Estimated events per lumi based on filter efficiency and measured time per event
         estimated_events_per_lumi = (28800 * filter_efficiency / time_per_event) if time_per_event > 0 else 0
         return {'time_per_event': time_per_event,
+                'time_per_event_onethread': time_per_event / threads,
                 'size_per_event': size_per_event,
                 'cpu_efficiency': cpu_efficiency,
                 'estimated_events_per_lumi': estimated_events_per_lumi,
