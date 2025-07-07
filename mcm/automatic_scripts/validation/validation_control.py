@@ -1030,7 +1030,7 @@ class ValidationControl():
         # Estimated events per lumi based on filter efficiency and measured time per event
         estimated_events_per_lumi = (28800 * filter_efficiency / time_per_event) if time_per_event > 0 else 0
         return {'time_per_event': time_per_event,
-                'time_per_event_onethread': time_per_event / threads,
+                'time_per_event_onethread': time_per_event * threads,
                 'size_per_event': size_per_event,
                 'cpu_efficiency': cpu_efficiency,
                 'estimated_events_per_lumi': estimated_events_per_lumi,
