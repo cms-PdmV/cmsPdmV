@@ -2067,6 +2067,13 @@ class request(json_base):
                                      'aborted-archived',
                                      'failed-archived',
                                      'aborted-completed'])
+        ## take this from a setting, of this form
+        #bypass_skippabke_transitions = {
+        #'BPH-RunIII2024Summer24DRPremix-00038' : ['rejected-archived']
+        #}
+        bypass_skippabke_transitions = settings.get_value('bypass_skippabke_transitions')
+        bypass_skippable = bypass_skippabke_transitions.get(prepid,[])
+        skippable_transitions -= set(bypass_skippable)
         total_events = 0
         for reqmgr_name in all_reqmgr_name_list:
             stats_doc = stats_workflows_dict.get(reqmgr_name, None)
