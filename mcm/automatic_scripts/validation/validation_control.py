@@ -1056,6 +1056,8 @@ class ValidationControl():
 
                 transfer_output_files.append(report_name)
 
+        # Also, transfer back the `stdout` file!
+        transfer_output_files.append('%s_threads.out' % (threads))
         transfer_output_files = ','.join(transfer_output_files)
         transfer_input_files = ','.join(transfer_input_files)
         # HTCondor gives 2GB per core, if you want more memory you need to request more cores
