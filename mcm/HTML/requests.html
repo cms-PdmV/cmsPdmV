@@ -392,7 +392,12 @@
                 <span class="label label-info" ng-show="data[column.db_name]" title="Kegabytes">kB<span>
               </div>
               <div ng-switch-when="time_event" align="center">
-                {{data[column.db_name] | number:4}}
+                <ul ng-repeat="time_event_sequence in data[column.db_name] track by $index">
+                  <li>
+                    {{ time_event_sequence | number:4 }}
+                    <span class="label label-info" ng-show="data[column.db_name]" title="seconds">s</span>
+                   </li>
+                </ul>
                 <span class="label label-info" ng-show="data[column.db_name]" title="seconds">s<span>
               </div>
               <div ng-switch-when="filter_efficiency" align="center">
